@@ -1,0 +1,83 @@
+---
+import { siteConfig, navBarConfig } from '../../config';
+import { getLinkPreset } from '../../utils/link-presets';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import { type NavBarLink, type NavBarLinkTable, type PresetNavBarLink, LinkPreset } from '../../type/config.ts';
+import { detectLocale } from '../../utils/i18n';
+import Icon from '../common/Icon.astro';
+import HeaderLink from './HeaderLink.astro';
+
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+const homeConfig = navBarConfig.home;
+const homeIcon = homeConfig?.icon;
+const homeIconName = homeIcon?.name;
+
+const isPresetLink = (item: NavBarLink | LinkPreset | PresetNavBarLink): item is PresetNavBarLink => {
+  return typeof item === 'object' && item !== null && 'preset' in item;
+};
+
+const resolveTableLinks = (linkTable: NavBarLinkTable): NavBarLink[] => {
+  return linkTable.items.map((item: NavBarLink | LinkPreset | PresetNavBarLink): NavBarLink => {
+    if (typeof item === 'number' || isPresetLink(item)) {
+      return getLinkPreset(currentLocale, item);
+    }
+    return item;
+  });
+};
+
+const links = navBarConfig.links.map(item => {
+  if (typeof item === 'object' && 'items' in item) {
+    return {
+      name: item.name,
+      items: resolveTableLinks(item as NavBarLinkTable),
+    };
+  }
+  if (typeof item === 'number' || isPresetLink(item)) {
+    return getLinkPreset(currentLocale, item);
+  }
+  return item as NavBarLink;
+});
+---
+
+<li id="home">
+  <HeaderLink href="/" icon={homeIconName} iconSet={homeIcon?.set}>
+    {homeConfig?.title_as_home ? siteConfig.title : t(I18nKey.home)}
+  </HeaderLink>
+</li>
+<li class="divider"></li>
+{links.map((link) => {
+  if ('items' in link) {
+    return (
+      <li>
+        <details class="closable">
+          <summary>{link.name === '_links' ? t(I18nKey.links) : link.name}</summary>
+          <ul>
+            {link.items.map((subLink) => (
+              <li>
+                <HeaderLink href={subLink.url} icon={subLink.icon?.name} iconSet={subLink.icon?.set}>
+                  {subLink.name}
+                </HeaderLink>
+              </li>
+            ))}
+          </ul>
+        </details>
+      </li>
+    );
+  }
+  return (
+    <li>
+      <HeaderLink href={link.url} icon={link.icon?.name} iconSet={link.icon?.set}>
+        {link.name}
+      </HeaderLink>
+    </li>
+  );
+})}
+{siteConfig.search.enable && (
+  <li id="search">
+    <button id="search-toggle" class="circle">
+      <Icon name="magnifying-glass" />
+    </button>
+  </li>
+)}

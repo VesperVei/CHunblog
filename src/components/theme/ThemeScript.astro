@@ -1,0 +1,8 @@
+---
+import { siteConfig } from '../../config';
+import { createThemeScript } from '../../utils/theme-script';
+
+const themeScript = createThemeScript(siteConfig.theme_color);
+---
+
+<script is:inline set:html={themeScript} />

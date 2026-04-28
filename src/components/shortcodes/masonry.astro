@@ -1,0 +1,35 @@
+---
+interface Props {
+  parent?: boolean,
+  column?: boolean,
+  fancy_list?: boolean,
+}
+
+const {
+  parent,
+  column,
+  fancy_list,
+} = Astro.props;
+
+---
+
+{parent &&
+  <section class="masonry">
+    <slot />
+  </section>
+}
+
+{column &&
+  <div class="column">
+    <slot />
+  </div>
+}
+
+{!column && !parent &&
+  <div class:list={[
+    'item',
+    fancy_list && "fancy_list"
+  ]}>
+    <slot />
+  </div>
+}

@@ -1,0 +1,32 @@
+#comments {
+  margin-block: 2rem;
+
+  --waline-theme-color: var(--accent-color);
+  --waline-active-color: var(--accent-color);
+  --waline-text-color: var(--fg-color);
+  --waline-bg-color: var(--bg-color);
+  --waline-bg-color-light: var(--fg-muted-1);
+  --waline-bg-color-hover: var(--fg-muted-1);
+  --waline-info-bg-color: var(--bg-color);
+  --waline-border-color: var(--fg-muted-2);
+  --waline-disable-bg-color: var(--fg-muted-1);
+  --waline-disable-color: var(--fg-muted-4);
+  --waline-card-bg-color: var(--bg-color);
+  --waline-info-color: var(--fg-muted-5);
+  --waline-meta-color: var(--fg-muted-5);
+  --waline-border: 1px solid var(--fg-muted-2);
+  --waline-box-shadow: none;
+}
+
+#comments iframe.giscus-frame {
+  width: 100%;
+  border: 0;
+}
+
+#comments #waline {
+  width: 100%;
+
+  img {
+    margin: 0;
+  }
+}

@@ -1,0 +1,45 @@
+---
+const {
+  url,
+  full = false,
+  full_bleed = false,
+  start = false,
+  end = false,
+  pixels = false,
+  transparent = false,
+  spoiler = false,
+  solid = false,
+  autoplay = false,
+  controls = false,
+  loop = false,
+  muted = false,
+  playsinline = false,
+  alt = '',
+} = Astro.props;
+
+const videoClasses = [
+  full && 'full',
+  full_bleed && 'full-bleed',
+  start && 'start',
+  end && 'end',
+  pixels && 'pixels',
+  transparent && 'transparent',
+  spoiler && 'spoiler',
+  spoiler && solid && 'solid',
+];
+
+const videoAttrs = {
+  autoplay: autoplay || undefined,
+  controls: controls || undefined,
+  loop: loop || undefined,
+  muted: muted || undefined,
+  playsinline: playsinline || undefined,
+};
+---
+
+<video
+  class:list={videoClasses}
+  src={url}
+  aria-label={alt || undefined}
+  {...videoAttrs}
+></video>

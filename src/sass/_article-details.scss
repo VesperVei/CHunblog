@@ -1,0 +1,37 @@
+.article-details {
+  margin-top: 1rem;
+  font-size: var(--font-size-small);
+
+  @media only screen and (max-width: 480px) {
+    flex-direction: column;
+  }
+
+  div {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-right: 0.5rem;
+    border-radius: var(--rounded-corner-small);
+  }
+
+  a {
+    color: inherit;
+    font-weight: var(--font-weight-normal);
+    font-size: var(--font-size-small);
+    text-decoration-color: transparent;
+
+    &:hover {
+      text-decoration-style: solid;
+      text-decoration-color: var(--fg-muted-1);
+    }
+  }
+
+  .icon {
+    box-shadow: var(--edge-highlight);
+    border-radius: var(--rounded-corner-small);
+    background-color: var(--accent-color);
+    padding: 0.375rem;
+    color: var(--accent-color);
+    font-size: 1.25rem;
+  }
+}

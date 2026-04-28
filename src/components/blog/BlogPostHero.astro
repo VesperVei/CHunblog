@@ -1,0 +1,17 @@
+---
+import { type CollectionEntry } from 'astro:content';
+
+type ArticleData = CollectionEntry<'blog'>['data'] | CollectionEntry<'pages'>['data'];
+
+interface Props {
+  data: ArticleData;
+}
+
+const { data } = Astro.props as Props;
+---
+
+{data.heroImage && (
+  <div id="banner-container">
+    <img id="banner" class="full-bleed" src={data.heroImage.src} alt="" />
+  </div>
+)}

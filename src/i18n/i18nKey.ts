@@ -1,0 +1,47 @@
+enum I18nKey {
+  home = "home",
+  blog = "blog",
+  about = "about",
+  archive = "archive",
+  search = "search",
+  links = "links",
+  feed = "feed",
+  demo = "demo",
+  tags = "tags",
+  lang = "lang",
+  note = "note",
+  tip = "tip",
+  previous = "previous",
+  next = "next",
+  important = "important",
+  warning = "warning",
+  caution = "caution",
+  tags_colon = "tags_colon",
+  skip_to_content = "skip_to_content",
+  go_to_top = "go_to_top",
+  go_home = "go_home",
+  created = "created",
+  updated = "updated",
+  theme = "theme",
+  theme_color = "theme_color",
+  theme_dark = "theme_dark",
+  theme_light = "theme_light",
+  theme_system = "theme_system",
+  table_of_contents = "table_of_contents",
+  powered_by = "powered_by",
+  filter_by_tags = "filter_by_tags",
+  posts_with_tag = "posts_with_tag",
+
+  n_tags = "n_tags", 
+  n_posts = "n_posts", 
+
+  minutes_read = "minutes_read",
+  word_count = "word_count",
+
+  by_author = "by_author",
+
+  not_found = "not_found",
+  not_found_text = "not_found_text",
+}
+
+export default I18nKey;

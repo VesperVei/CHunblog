@@ -1,0 +1,10 @@
+---
+import { siteConfig } from '../../config';
+import GiscusComments from './GiscusComments.astro';
+import WalineComments from './WalineComments.astro';
+
+const commentsConfig = siteConfig.comments;
+---
+
+{commentsConfig?.provider === 'giscus' && <GiscusComments />}
+{commentsConfig?.provider === 'waline' && <WalineComments />}

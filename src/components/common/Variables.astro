@@ -1,0 +1,23 @@
+---
+import { siteConfig } from '../../config';
+import { useTranslations } from "../../i18n/translation";
+import I18nKey from "../../i18n/i18nKey";
+
+const t = useTranslations(Astro.currentLocale);
+const bodyFont = siteConfig.fonts.body || '"Inter Variable", var(--font-system-ui), var(--font-emoji)';
+const headingFont = siteConfig.fonts.heading || '"Inter Variable", var(--font-system-ui), var(--font-emoji)';
+const codeFont = siteConfig.fonts.code || '"JetBrains Mono", var(--font-monospace-code)';
+---
+
+<style is:inline set:html={`
+  :root {
+    --alert-note-text: "${t(I18nKey.note)}";
+    --alert-tip-text: "${t(I18nKey.tip)}";
+    --alert-important-text: "${t(I18nKey.important)}";
+    --alert-warning-text: "${t(I18nKey.warning)}";
+    --alert-caution-text: "${t(I18nKey.caution)}";
+    --body-font-family: ${bodyFont};
+    --heading-font-family: ${headingFont};
+    --code-font-family: ${codeFont};
+  }
+`} />

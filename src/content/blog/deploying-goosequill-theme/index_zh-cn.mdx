@@ -1,0 +1,252 @@
+---
+title: '如何部署这个 Astro 主题'
+description: '从本地开发到正式上线，逐步介绍 Goosequill 主题的部署流程与常见注意事项。'
+created_at: 'Mar 08 2025'
+heroImage: 'blog-placeholder-3.jpg'
+tags:
+    - '标签A'
+    - '标签B'
+author: 'Goose'
+type: 'archive'
+---
+
+## 1. 准备运行环境
+
+这个主题基于 Astro，建议先准备好以下工具：
+
+- Node.js 20+
+- npm
+- Git
+
+克隆项目后，先安装依赖：
+
+```bash
+git clone git@github.com:ErinaYip/goosequill.git
+cd goosequill
+npm install
+```
+
+本地开发使用：
+
+```bash
+npm run dev
+```
+
+生产构建使用：
+
+```bash
+npm run build
+```
+
+这个项目的构建脚本不只是执行 `astro build`，还会额外运行 Pagefind 来生成搜索索引，所以正式部署前最好始终用 `npm run build` 做一次完整验证。
+
+## 2. 先改这几个关键配置
+
+部署前，建议优先检查下面几个文件。
+
+### `astro.config.mjs`
+
+这里最重要的是 `site` 和 `base`：
+
+- `site`：你的正式站点地址，例如 `https://blog.example.com`
+- `base`：如果站点部署在子路径下，比如 `https://example.com/blog/`，这里需要改成 `/blog`
+
+如果你部署到根域名，通常保持：
+
+```js
+site: 'https://blog.example.com',
+base: '/',
+```
+
+### `src/config.ts`
+
+这里控制站点标题、描述、RSS、搜索、目录和分页等行为。
+
+你至少应该确认这些字段：
+
+- `title`
+- `description`
+- `defaultLocale`
+- `rss.enable`
+- `search.enable`
+- `pagination.posts_per_page`
+
+如果你想用单语言模式：
+
+```ts
+defaultLocale: 'en'
+```
+
+如果你想开启多语言模式：
+
+```ts
+defaultLocale: undefined
+```
+
+这个项目现在的路由行为是：
+
+- 单语言模式：页面走无前缀路径，如 `/about`、`/blog/post`
+- 多语言模式：页面走带语言前缀路径，如 `/en/about`、`/zh-cn/blog/post`
+
+## 3. 内容文件怎么组织
+
+博客文章放在 `src/content/blog/` 下，每篇文章一个目录。
+
+例如：
+
+```text
+src/content/blog/my-post/
+  index_en.mdx
+  index_zh-cn.mdx
+```
+
+推荐做法：
+
+- 单语言项目：至少提供当前默认语言的那份内容
+- 多语言项目：为每种语言分别提供一份 `index_<locale>.mdx`
+
+如果你只维护英文，最简单的方式就是写英文内容文件并保持：
+
+```ts
+defaultLocale: 'en'
+```
+
+## 4. 本地验证上线前状态
+
+正式部署前，建议按这个顺序检查：
+
+```bash
+npm run build
+npm run preview
+```
+
+`npm run preview` 会使用构建后的产物进行本地预览，这比开发模式更接近真实线上环境。
+
+建议重点检查：
+
+- 首页、博客列表页、文章详情页是否能打开
+- 图片路径是否正常
+- RSS 是否可访问
+- 搜索是否工作
+- 多语言切换链接是否正确
+- `sitemap-index.xml` 是否生成
+
+## 5. 最省事的部署方式：Vercel / Netlify / Cloudflare Pages
+
+这是一个静态站点，因此部署到常见静态平台都比较直接。
+
+### 方案 A：Vercel
+
+在 Vercel 中导入仓库后，通常可以直接使用：
+
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+如果没有特殊需求，其他选项保持默认即可。
+
+### 方案 B：Netlify
+
+Netlify 也适合这个主题，配置通常是：
+
+- Build command: `npm run build`
+- Publish directory: `dist`
+
+### 方案 C：Cloudflare Pages
+
+如果你想把博客托管在 Cloudflare 上，也可以使用相同思路：
+
+- Build command: `npm run build`
+- Build output directory: `dist`
+
+## 6. GitHub Pages 部署要注意什么
+
+如果你部署到 GitHub Pages，一般最容易踩坑的是 `base`。
+
+例如你的仓库地址是：
+
+```text
+https://<user>.github.io/goosequill/
+```
+
+那么你通常需要：
+
+```js
+base: '/goosequill'
+```
+
+同时 `site` 也建议改为对应的最终地址。
+
+如果 `base` 不正确，常见现象包括：
+
+- CSS 资源 404
+- JS 资源 404
+- 图片不显示
+- 页面链接跳错
+- 搜索资源加载失败
+
+## 7. 自定义域名上线前的最后检查
+
+在绑定正式域名之前，建议再确认下面几项：
+
+- `astro.config.mjs` 里的 `site` 已替换为真实域名
+- `base` 与部署路径一致
+- RSS 链接可访问
+- `robots.txt`、sitemap 与站点地址一致
+- 社交分享卡片中的图片和标题正常
+
+如果你启用了 RSS 和 sitemap，但 `site` 还保留示例地址，生成出来的绝对链接通常会是错误的。
+
+## 8. 常见问题
+
+### 构建成功，但页面样式丢失
+
+优先检查：
+
+- `base` 是否正确
+- 静态资源路径是否写成了错误的绝对路径
+- 托管平台是否真的发布了 `dist/`
+
+### 搜索框能打开，但搜不到内容
+
+这个主题使用 Pagefind，搜索依赖构建后的索引文件。请确认：
+
+- 你部署的是 `npm run build` 产物
+- `dist/pagefind/` 已随站点一起发布
+
+### 多语言页面 404
+
+优先检查：
+
+- `src/config.ts` 中 `defaultLocale` 是否符合预期
+- 文章或页面文件是否按语言后缀命名
+- 当前语言对应的内容文件是否真实存在
+
+## 9. 一套推荐上线流程
+
+如果你想用一套稳妥又简单的流程，可以直接照着做：
+
+1. Fork 或克隆项目
+2. 修改 `astro.config.mjs` 中的 `site` 和 `base`
+3. 修改 `src/config.ts` 中的站点名称、描述和语言模式
+4. 添加你自己的文章内容
+5. 本地执行 `npm run build`
+6. 本地执行 `npm run preview`
+7. 推送到 Git 仓库
+8. 连接到 Vercel、Netlify 或 Cloudflare Pages
+9. 上线后再检查 RSS、sitemap 和搜索
+
+## 总结
+
+这个主题的部署本质上并不复杂，核心就三件事：
+
+- 配好 `site` 和 `base`
+- 确认 `src/config.ts` 的语言模式与内容文件结构一致
+- 始终用 `npm run build` 验证最终产物
+
+只要这三点处理正确，部署到大多数静态托管平台都会比较顺利。
+
+如果你后续还想继续完善这篇文章，可以再补一节专门介绍：
+
+- 如何部署到 GitHub Pages
+- 如何开启自定义域名
+- 如何接入评论或统计服务

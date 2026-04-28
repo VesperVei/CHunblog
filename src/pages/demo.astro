@@ -1,0 +1,22 @@
+---
+import BlogPost from '../layouts/BlogPost.astro';
+import ExtendMarkdown from '../components/markdown/ExtendMarkdown.astro';
+import { getPageBySlug, isMultiLangMode } from '../utils/pages';
+
+if (isMultiLangMode()) {
+  return Astro.redirect('/en/demo/');
+}
+
+const page = await getPageBySlug('demo');
+
+if (!page) {
+  return Astro.redirect('/404');
+}
+
+---
+
+<BlogPost
+  post={page}
+>
+  <ExtendMarkdown page={page} />
+</BlogPost>

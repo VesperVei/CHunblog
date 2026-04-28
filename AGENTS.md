@@ -1,0 +1,37 @@
+# Goosequill Agent Notes
+
+## 先读这些
+- `package.json`：只有 3 个常用脚本，仓库不是 monorepo。
+- `astro.config.mjs`：MDX、Pagefind、Expressive Code、数学公式、Mermaid、i18n 都在这里接线。
+- `src/config.ts`：站点级行为入口；导航、页脚、评论、主题色、分页、RSS、搜索都应优先改这里，不要散落到组件里。
+- `src/content.config.ts`：内容 schema 和 `blog`/`pages` collection 的真实约束。
+- `src/utils/pages.ts`：语言选择、slug 解析、分页、标签、静态路径的中心逻辑。
+- `docs/agent-guide.md`：已有维护约定，尤其是多语言、主题、文档同步规则。
+
+## 仓库事实
+- 单包 Astro 站点，不是 workspace；核心命令只有 `pnpm dev`、`pnpm build`、`pnpm preview`。
+- `pnpm build` 实际执行 `astro build && pagefind --site dist`。搜索索引不是 Astro 自动产物，改搜索或构建逻辑时必须记住 Pagefind 这一步。
+- 部署工作流在 `.forgejo/workflows/deploy.yml`，CI 只跑 `pnpm install` 和 `pnpm run build`，Node 版本固定为 `20`。
+- `public/icons` 是 git submodule，来自 `.gitmodules`。不要把它当普通本地目录处理；缺图标时先确认 submodule 是否已初始化。
+- README 明确要求遵守 “No GitHub” 原则：不要把此仓库上传或镜像到 GitHub。
+
+## 多语言与路由
+- `siteConfig.defaultLocale === undefined` 时是多语言模式；设置后才是单语言模式。这个开关在 `src/utils/site-config.ts`，不要自行推断。
+- 多语言模式下，真实页面在 `src/pages/[lang]/...`；许多无前缀路由会重定向到 `/en` 或直接返回 `/404`。改路由时需要同时检查有前缀和无前缀两套页面文件。
+- 内容语言靠文件名后缀解析，规则在 `getLangFromId()` / `getSlugFromId()`：如 `_en`、`_zh-cn`。后缀写错会让内容直接从对应语言路由里消失。
+- `src/content/blog` 只收 `**/*/index*.{md,mdx}`；博客文章应放在 `src/content/blog/<slug>/index*.mdx`，不是任意文件名。
+- `src/content/` 下页面内容也走 collection；页面或文章的语言选择、slug 生成、分页、tag 路由都应复用 `src/utils/pages.ts`，不要在页面里重新实现。
+
+## 主题与渲染
+- 主题切换逻辑集中在 `src/utils/theme-script.ts`；`data-theme="light"` / `"dark"` 和“无属性表示 system mode”是既有约定，改主题时不要破坏。
+- 主题色模式由 `siteConfig.theme_color` 决定；如果要改主题色行为，先看 `src/config.ts`，再看 `src/utils/theme-script.ts`。
+- Markdown/MDX 扩展由 `astro.config.mjs` 接线：`remark-math`、`rehype-katex`、`remark-mermaid`、Expressive Code。改 Markdown 表现时不要只改组件。
+- 评论系统是配置驱动的，当前 `src/config.ts` 启用了 Waline；评论 provider 切换入口在 `src/components/blog/Comments.astro`。
+
+## 验证
+- 最小有效验证通常是 `pnpm build`，因为它会同时暴露 Astro 内容编译错误和 Pagefind 索引问题。
+- 只改局部 UI/文案时可用 `pnpm dev`；需要检查构建产物或搜索时再跑 `pnpm build` / `pnpm preview`。
+
+## 变更约定
+- 若改动影响路由、内容命名、多语言行为、主题行为、构建流程或 agent 工作流，同步更新 `docs/` 下对应文档；`docs/README.md` 已把这条作为维护规则写死。
+- 仓库可能存在无关改动；`docs/agent-guide.md` 已注明 `.codex` 和 `public/icons/` 可能出现在 worktree 中，不要顺手回滚或提交无关文件。

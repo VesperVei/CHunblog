@@ -1,0 +1,26 @@
+---
+import BlogPost from '../../../layouts/BlogPost.astro';
+import ExtendMarkdown from '../../../components/markdown/ExtendMarkdown.astro';
+import { render } from 'astro:content';
+import { getLocalizedBlogPostStaticPaths, isMultiLangMode } from '../../../utils/pages';
+
+export async function getStaticPaths() {
+  return isMultiLangMode() ? getLocalizedBlogPostStaticPaths() : [];
+}
+
+if (!isMultiLangMode()) {
+  return Astro.redirect('/404');
+}
+
+const { post, prevPost, nextPost } = Astro.props;
+const { headings } = await render(post);
+---
+
+<BlogPost
+  post={post}
+  headings={headings}
+  prev={prevPost}
+  next={nextPost}
+>
+  <ExtendMarkdown page={post} />
+</BlogPost>

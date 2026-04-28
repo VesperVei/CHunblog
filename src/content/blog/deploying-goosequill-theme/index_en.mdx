@@ -1,0 +1,250 @@
+---
+title: 'How to Deploy This Astro Theme'
+description: 'A practical guide to taking the Goosequill theme from local development to production deployment.'
+created_at: 'Mar 08 2025'
+heroImage: 'blog-placeholder-3.jpg'
+tags:
+    - 'TagA'
+    - 'TagB'
+author: 'Goose'
+type: 'archive'
+---
+
+## 1. Prepare your environment
+
+This theme is built with Astro, so you should have these tools ready:
+
+- Node.js 20+
+- npm
+- Git
+
+After cloning the project, install dependencies:
+
+```bash
+git clone git@github.com:ErinaYip/goosequill.git
+cd goosequill
+npm install
+```
+
+Start local development with:
+
+```bash
+npm run dev
+```
+
+Create a production build with:
+
+```bash
+npm run build
+```
+
+This project does more than run `astro build`: it also runs Pagefind to generate search indexes. Because of that, `npm run build` is the best pre-deployment check.
+
+## 2. Update the most important configuration first
+
+Before deploying, review these files first.
+
+### `astro.config.mjs`
+
+The two most important fields here are `site` and `base`:
+
+- `site`: your production URL, such as `https://blog.example.com`
+- `base`: required if the site is deployed under a subpath, such as `https://example.com/blog/`
+
+For a root-domain deployment, a typical setup looks like this:
+
+```js
+site: 'https://blog.example.com',
+base: '/',
+```
+
+### `src/config.ts`
+
+This file controls the site title, description, RSS, search, table of contents, and pagination behavior.
+
+At minimum, review these fields:
+
+- `title`
+- `description`
+- `defaultLocale`
+- `rss.enable`
+- `search.enable`
+- `pagination.posts_per_page`
+
+For single-language mode:
+
+```ts
+defaultLocale: 'en'
+```
+
+For multi-language mode:
+
+```ts
+defaultLocale: undefined
+```
+
+In this theme, routing works like this:
+
+- Single-language mode uses unprefixed routes such as `/about` and `/blog/post`
+- Multi-language mode uses locale-prefixed routes such as `/en/about` and `/zh-cn/blog/post`
+
+## 3. Organize your content correctly
+
+Blog posts live under `src/content/blog/`, with one directory per post.
+
+For example:
+
+```text
+src/content/blog/my-post/
+  index_en.mdx
+  index_zh-cn.mdx
+```
+
+A practical recommendation:
+
+- For a single-language site, keep at least the file for your default locale
+- For a multilingual site, create one `index_<locale>.mdx` file per locale
+
+If you only publish in English, the simplest setup is to keep English files and set:
+
+```ts
+defaultLocale: 'en'
+```
+
+## 4. Validate the production build locally
+
+Before going live, run:
+
+```bash
+npm run build
+npm run preview
+```
+
+`npm run preview` serves the production output locally, which is much closer to the real deployed environment than development mode.
+
+Check these pages and features carefully:
+
+- Home page, blog index, and blog post pages
+- Image loading
+- RSS feed accessibility
+- Search behavior
+- Language switcher links
+- `sitemap-index.xml` generation
+
+## 5. Easiest deployment targets: Vercel / Netlify / Cloudflare Pages
+
+Because this is a static site, it works well on most static hosting providers.
+
+### Option A: Vercel
+
+When importing the repo into Vercel, you can usually use:
+
+- Build Command: `npm run build`
+- Output Directory: `dist`
+
+### Option B: Netlify
+
+Typical Netlify settings:
+
+- Build command: `npm run build`
+- Publish directory: `dist`
+
+### Option C: Cloudflare Pages
+
+Typical Cloudflare Pages settings:
+
+- Build command: `npm run build`
+- Build output directory: `dist`
+
+## 6. What to watch for on GitHub Pages
+
+If you deploy to GitHub Pages, `base` is usually the most important setting.
+
+If your site is published at:
+
+```text
+https://<user>.github.io/goosequill/
+```
+
+then you will typically want:
+
+```js
+base: '/goosequill'
+```
+
+You should also update `site` to match the final public URL.
+
+If `base` is wrong, common symptoms include:
+
+- CSS returning 404
+- JavaScript returning 404
+- images not loading
+- broken internal links
+- search assets failing to load
+
+## 7. Final checks before connecting a custom domain
+
+Before switching to your real domain, verify that:
+
+- `site` in `astro.config.mjs` matches the real domain
+- `base` matches the actual deployment path
+- RSS is accessible
+- sitemap output matches the site URL
+- social share metadata renders correctly
+
+If RSS and sitemap are enabled while `site` still points to a placeholder domain, the generated absolute URLs will be wrong.
+
+## 8. Common problems
+
+### The build succeeds, but styles are missing
+
+Check these first:
+
+- whether `base` is correct
+- whether your assets use the correct paths
+- whether your platform actually published the `dist/` directory
+
+### Search opens but returns no results
+
+This theme uses Pagefind, so search depends on the generated index files. Confirm that:
+
+- you deployed the output from `npm run build`
+- `dist/pagefind/` was published together with the rest of the site
+
+### Multilingual pages return 404
+
+Check these first:
+
+- whether `defaultLocale` in `src/config.ts` matches your intended mode
+- whether page and post files use the expected locale suffixes
+- whether the matching content files actually exist for the current locale
+
+## 9. A simple recommended deployment workflow
+
+If you want a reliable workflow, use this one:
+
+1. Fork or clone the project
+2. Update `site` and `base` in `astro.config.mjs`
+3. Update the site title, description, and language mode in `src/config.ts`
+4. Add your own content
+5. Run `npm run build`
+6. Run `npm run preview`
+7. Push to your Git repository
+8. Connect the repository to Vercel, Netlify, or Cloudflare Pages
+9. After deployment, verify RSS, sitemap, and search
+
+## Summary
+
+Deploying this theme is not complicated. In practice, it comes down to three things:
+
+- configure `site` and `base` correctly
+- make sure the language mode in `src/config.ts` matches your content files
+- always validate with `npm run build`
+
+If those three parts are correct, deployment on most static hosting providers should be smooth.
+
+A useful follow-up expansion for this post would be a dedicated section on:
+
+- deploying to GitHub Pages
+- configuring a custom domain
+- adding comments or analytics

@@ -1,0 +1,30 @@
+---
+import Base from "../../layouts/Base.astro";
+import BlogCard from './BlogCard.astro'
+import { detectLocale, buildLocaleUrl } from "../../utils/i18n";
+import I18nKey from "../../i18n/i18nKey";
+import { useTranslations } from "../../i18n/translation";
+import Paginator from './Paginator.astro';
+
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+
+const {
+  page,
+  title,
+  description,
+} = Astro.props
+---
+
+<Base title={title} description={description} ignoreSearch>
+  <slot />
+  <p>
+    <small>
+      <a href={buildLocaleUrl(currentLocale, 'tags')}>{t(I18nKey.filter_by_tags)}</a>
+      <br>
+      {t(I18nKey.n_posts, { count: page.total })}
+    </small>
+  </p>
+  <BlogCard posts={page.data} />
+  <Paginator page={page} />
+</Base>

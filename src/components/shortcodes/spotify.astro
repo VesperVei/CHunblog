@@ -1,0 +1,58 @@
+---
+interface Props {
+  type?: 'track' | 'album' | 'artist' | 'playlist' | 'episode' | 'show';
+  id?: string;
+  track?: string;
+  album?: string;
+  artist?: string;
+  playlist?: string;
+  episode?: string;
+  show?: string;
+  height?: string | number;
+}
+
+const {
+  type,
+  id,
+  track,
+  album,
+  artist,
+  playlist,
+  episode,
+  show,
+  height,
+} = Astro.props;
+
+const shorthandEntries = [
+  ['track', track],
+  ['album', album],
+  ['artist', artist],
+  ['playlist', playlist],
+  ['episode', episode],
+  ['show', show],
+].filter((entry): entry is [Props['type'], string] => Boolean(entry[1]));
+
+const shorthandType = shorthandEntries[0]?.[0];
+const shorthandId = shorthandEntries[0]?.[1];
+
+const resolvedType = shorthandType ?? type;
+const resolvedId = shorthandId ?? id;
+
+if (!resolvedType || !resolvedId) {
+  throw new Error('Spotify shortcode requires a shorthand prop like `album`, or both `type` and `id`.');
+}
+
+const embedUrl = `https://open.spotify.com/embed/${resolvedType}/${resolvedId}`;
+const frameHeight = height ?? (resolvedType === 'track' ? 152 : 352);
+---
+
+<iframe
+  data-testid="embed-iframe"
+  src={embedUrl}
+  width="100%"
+  height={frameHeight}
+  style="border: 0;"
+  allowfullscreen
+  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+  loading="lazy"
+></iframe>

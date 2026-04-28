@@ -1,0 +1,332 @@
+---
+title: 'Goosequill Shortcodes Reference'
+description: 'A complete reference for Goosequill built-in shortcodes, including purposes, props, defaults, and usage examples.'
+created_at: 'Apr 20 2026'
+heroImage: 'blog-placeholder-4.jpg'
+author:
+  - 'Goose'
+  - 'Quill'
+type: 'featured'
+tags:
+  - 'TagA'
+  - 'TagZ'
+toc_depth: 2
+---
+
+Currently available shortcodes:
+
+- `Alert`
+- `ImageCode`
+- `Video`
+- `Youtube`
+- `Bilibili`
+- `Steam`
+- `Spotify`
+- `CRT`
+
+## How to use them
+
+In MDX, these components are already injected through `ExtendMarkdown.astro`, so you can write them directly like this:
+
+```mdx
+<Alert type="note">Hello</Alert>
+```
+
+No extra import is required.
+
+## 1. `Alert`
+
+Renders a GitHub-style alert block.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `'note' \| 'tip' \| 'important' \| 'warning' \| 'caution'` | `'note'` | Alert style |
+
+### Example
+
+```mdx
+<Alert type="note">
+This is a note.
+</Alert>
+
+<Alert type="warning">
+This is a warning.
+</Alert>
+```
+
+### Notes
+
+- Content is passed through the default slot.
+- If `type` is omitted, `note` is used.
+
+## 2. `ImageCode`
+
+Renders an image with a set of combinable style classes.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `url` | `string` | — | Original image URL, required |
+| `url_min` | `string` | `undefined` | Preview/compressed image URL; when provided, the preview is shown and links to `url` |
+| `alt` | `string` | `''` | Alt text |
+| `full` | `boolean` | `false` | Makes the image fill the content width |
+| `full_bleed` | `boolean` | `false` | Lets the image extend beyond the content column |
+| `start` | `boolean` | `false` | Floats the image to the start side |
+| `end` | `boolean` | `false` | Floats the image to the end side |
+| `pixels` | `boolean` | `false` | Uses pixel-art style rendering |
+| `transparent` | `boolean` | `false` | Better suited for transparent images |
+| `no_hover` | `boolean` | `false` | Disables hover zoom |
+| `spoiler` | `boolean` | `false` | Applies spoiler masking |
+| `solid` | `boolean` | `false` | Stronger spoiler masking, used with `spoiler` |
+
+### Example
+
+```mdx
+<ImageCode
+  url="/images/example.png"
+  alt="Example image"
+  no_hover="true"
+/>
+
+<ImageCode
+  url="/images/original.png"
+  url_min="/images/preview.png"
+  alt="Clickable preview"
+  full="true"
+/>
+```
+
+### Notes
+
+- `solid` only has an effect when `spoiler` is enabled.
+- When `url_min` is present, the component renders a linked preview image pointing to `url`.
+- Layout flags like `full`, `full_bleed`, `start`, and `end` are best used intentionally rather than all together.
+
+## 3. `Video`
+
+Renders a local or remote video and supports most of the same presentation classes as `ImageCode`.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `url` | `string` | — | Video URL, required |
+| `alt` | `string` | `''` | Accessibility text used as `aria-label` |
+| `full` | `boolean` | `false` | Fills the content width |
+| `full_bleed` | `boolean` | `false` | Wider presentation |
+| `start` | `boolean` | `false` | Floats to the start side |
+| `end` | `boolean` | `false` | Floats to the end side |
+| `pixels` | `boolean` | `false` | Pixel-art rendering style |
+| `transparent` | `boolean` | `false` | Transparent presentation style |
+| `spoiler` | `boolean` | `false` | Spoiler masking |
+| `solid` | `boolean` | `false` | Stronger masking when used with `spoiler` |
+| `autoplay` | `boolean` | `false` | Autoplays the video |
+| `controls` | `boolean` | `false` | Shows native controls |
+| `loop` | `boolean` | `false` | Loops playback |
+| `muted` | `boolean` | `false` | Starts muted |
+| `playsinline` | `boolean` | `false` | Requests inline playback |
+
+### Example
+
+```mdx
+<Video
+  url="/videos/demo.webm"
+  alt="Demo video"
+  controls="true"
+/>
+
+<Video
+  url="/videos/hero.webm"
+  full_bleed="true"
+  autoplay="true"
+  muted="true"
+  loop="true"
+  playsinline="true"
+/>
+```
+
+### Notes
+
+- The component passes `url` directly to `<video src>` and does not infer formats.
+- `solid` only matters when `spoiler` is enabled.
+- Unlike `ImageCode`, `Video` does not support `url_min` or `no_hover`.
+
+## 4. `Youtube`
+
+Embeds a YouTube video using the `youtube-nocookie.com` domain.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | — | YouTube video ID, required |
+| `autoplay` | `boolean` | `false` | Whether to autoplay |
+| `start` | `number` | `undefined` | Start time in seconds |
+
+### Example
+
+```mdx
+<Youtube id="0Da8ZhKcNKQ" />
+
+<Youtube id="0Da8ZhKcNKQ" autoplay="true" start={30} />
+```
+
+### Notes
+
+- The embed URL format is `https://www.youtube-nocookie.com/embed/<id>`.
+- Query parameters are only appended when corresponding props are provided.
+
+## 5. `Bilibili`
+
+Embeds the Bilibili player.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `bvid` | `string` | `undefined` | BV ID |
+| `aid` | `string` | `undefined` | AV ID |
+| `cid` | `string` | `undefined` | Resource / danmaku ID |
+| `page` | `number` | `1` | Part number |
+| `autoplay` | `boolean` | `false` | Whether to autoplay |
+
+### Example
+
+```mdx
+<Bilibili bvid="BV1yt4y1Q7SS" />
+
+<Bilibili
+  bvid="BV1yt4y1Q7SS"
+  page={2}
+  autoplay="true"
+/>
+```
+
+### Notes
+
+- The component builds a URL like `//player.bilibili.com/player.html?...`.
+- It always appends `isOutside=true`.
+- All ID props are technically optional, but in practice you should usually provide at least `bvid` or `aid`.
+
+## 6. `Spotify`
+
+Embeds Spotify content such as albums, playlists, tracks, shows, and episodes.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `'track' \| 'album' \| 'artist' \| 'playlist' \| 'episode' \| 'show'` | `undefined` | Generic type form |
+| `id` | `string` | `undefined` | Content ID used with `type` |
+| `track` | `string` | `undefined` | Track ID shorthand |
+| `album` | `string` | `undefined` | Album ID shorthand |
+| `artist` | `string` | `undefined` | Artist ID shorthand |
+| `playlist` | `string` | `undefined` | Playlist ID shorthand |
+| `episode` | `string` | `undefined` | Episode ID shorthand |
+| `show` | `string` | `undefined` | Show ID shorthand |
+| `height` | `string \| number` | auto | Custom iframe height |
+
+### Example
+
+```mdx
+<Spotify album="5gDJVilnZpPt8zwBC467UH" />
+
+<Spotify type="track" id="11dFghVXANMlKmJXsNCbNl" />
+
+<Spotify playlist="37i9dQZF1DXcBWIGoYBM5M" height={480} />
+```
+
+### Notes
+
+- You can pass props in two ways:
+  - shorthand: `album="..."`, `track="..."`, etc.
+  - generic: `type="album" id="..."`
+- If both are present, shorthand props take priority.
+- If neither shorthand props nor a valid `type + id` pair is provided, the component throws an error.
+- Default height:
+  - `track` → `152`
+  - all other types → `352`
+
+## 7. `Steam`
+
+Displays a Steam store card.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `appid` | `string \| number` | — | Steam App ID, required |
+| `variant` | `'horizontal' \| 'vertical'` | `'horizontal'` | Card layout |
+
+### Example
+
+```mdx
+<Steam appid="1127400" />
+
+<Steam appid="730" variant="vertical" />
+```
+
+### Notes
+
+- The component builds:
+  - Store URL: `https://store.steampowered.com/app/<appid>/`
+  - Horizontal image: `header.jpg`
+  - Vertical image: `library_600x900_2x.jpg`
+- In `vertical` mode, the media container gets a fixed width of `200px`.
+- It does not call the Steam API; it only constructs URLs from the given `appid`.
+
+## 8. `CRT`
+
+Renders a CRT-styled code container.
+
+### Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `code` | `string` | — | Code text to display, required |
+| `no_scanlines` | `boolean` | `false` | Disables scanline effect |
+
+### Example
+
+```mdx
+<CRT code={`
+Hello, CRT
+`} />
+
+<CRT
+  no_scanlines="true"
+  code={`
+No scanlines here
+`}
+/>
+```
+
+### Notes
+
+- If `code` starts with a newline, the component strips that first newline for cleaner multiline template usage.
+- When `no_scanlines` is `false`, the component also adds the `scanlines` class.
+
+## Practical suggestions
+
+### Media
+
+- Need a preview image that links to the original: use `ImageCode` with `url_min`
+- Need spoiler masking: use `spoiler`, and add `solid` for a stronger effect
+- Need a full-width image inside the content column: use `full`
+- Need content that breaks beyond the column: use `full_bleed`
+
+### Embeds
+
+- YouTube: pass `id`
+- Bilibili: prefer `bvid`
+- Spotify: prefer shorthand props like `album="..."`
+- Steam: pass `appid`, then choose `variant` based on layout needs
+
+### Alerts and presentation
+
+- Use `Alert` for callouts
+- Use `CRT` for retro terminal-styled code
+- Use normal Markdown code fences for regular syntax-highlighted code unless you specifically want the CRT look

@@ -1,0 +1,138 @@
+body[data-modern-hr] {
+  hr {
+    box-shadow: var(--edge-highlight);
+    border: none;
+    border-radius: 999px;
+    background-color: var(--fg-muted-2);
+    width: 50%;
+    height: 0.25rem;
+
+    &::after {
+      display: none;
+    }
+  }
+}
+
+body[data-navbar-style="sticked"] {
+  #site-nav {
+    margin-block-start: 0;
+    inset-block-start: 0;
+    border-radius: 0 0 calc(var(--rounded-corner) + 0.5rem)
+      calc(var(--rounded-corner) + 0.5rem);
+
+    &::before {
+      box-shadow: var(--shadow-glass);
+      border-radius: 0 0 calc(var(--rounded-corner) + 0.5rem)
+        calc(var(--rounded-corner) + 0.5rem);
+    }
+
+    nav ul li {
+      a,
+      summary,
+      &#search button,
+      &#language-switcher details summary,
+      &#theme-switcher details summary {
+        border-radius: var(--rounded-corner);
+      }
+    }
+
+    #search-container {
+      #search-bar {
+        border-radius: var(--rounded-corner);
+      }
+    }
+  }
+}
+
+body[data-navbar-style="classic"] {
+  #site-nav {
+    margin-block-start: 0;
+    inset-block-start: 0;
+    border-radius: 0;
+    width: 100%;
+    max-width: 100%;
+
+    &::before {
+      box-shadow: var(--shadow-glass);
+      border-radius: 0;
+    }
+
+    nav,
+    #search-container {
+      margin: 0 auto;
+      width: min(var(--container-width), 90%);
+    }
+
+    nav ul li {
+      a,
+      summary,
+      &#search button,
+      &#language-switcher details summary,
+      &#theme-switcher details summary {
+        border-radius: var(--rounded-corner);
+      }
+    }
+
+    #home {
+      margin-inline-end: auto;
+    }
+
+    .divider {
+      display: none;
+    }
+
+    #search-container {
+      #search-bar {
+        border-radius: var(--rounded-corner);
+      }
+    }
+  }
+}
+
+body[data-article-list-style="classic"] {
+  #article-list {
+    gap: 2rem;
+
+    article {
+      position: relative;
+      transition: none;
+      box-shadow: none;
+      border-radius: 0;
+      border-block-end: max(1px, 0.0625rem) solid var(--fg-muted-2);
+      background: none;
+      padding: 0;
+      padding-block-end: 1rem;
+      overflow: visible;
+
+      &:last-of-type {
+        border-block-end: none;
+      }
+
+      &:active {
+        transform: none;
+      }
+
+      & > a {
+        border-radius: 0;
+      }
+
+      &.draft,
+      &.archive,
+      &.featured,
+      &.hot,
+      &.poor {
+        background-color: transparent;
+
+        &::before {
+          display: none;
+        }
+      }
+
+      .details {
+        margin-block-start: 0;
+        border-block-start: none;
+        padding-block-start: 0;
+      }
+    }
+  }
+}

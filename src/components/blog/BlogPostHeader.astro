@@ -1,0 +1,27 @@
+---
+import { type CollectionEntry } from 'astro:content';
+import ArticleDetails from './ArticleDetails.astro';
+
+type ArticleData = CollectionEntry<'blog'>['data'] | CollectionEntry<'pages'>['data'];
+
+interface Props {
+  data: ArticleData;
+  words: number;
+  minutes: number;
+}
+
+const { data, words, minutes } = Astro.props as Props;
+---
+
+<div id="heading">
+  <h1>{data.title}</h1>
+  <ArticleDetails
+    createdAt={data.created_at}
+    updatedAt={data.updated_at}
+    author={data.author}
+    tags={data.tags}
+    minutes={minutes}
+    words={words}
+  />
+  <hr />
+</div>

@@ -1,0 +1,32 @@
+---
+import { render } from 'astro:content';
+
+import CRT from '../shortcodes/crt.astro'
+import Alert from '../shortcodes/alert.astro'
+import ImageCode from '../shortcodes/image.astro'
+import Video from '../shortcodes/video.astro'
+import Youtube from '../shortcodes/youtube.astro'
+import Bilibili from '../shortcodes/bilibili.astro'
+import Steam from '../shortcodes/steam.astro'
+import Spotify from '../shortcodes/spotify.astro'
+import Masonry from '../shortcodes/masonry.astro'
+import NumberWheel from "../shortcodes/numberWheel.astro"
+
+const shortCode = {
+  CRT,
+  Alert,
+  ImageCode,
+  Video,
+  Youtube,
+  Bilibili,
+  Steam,
+  Spotify,
+  Masonry,
+  NumberWheel,
+};
+
+const { page } = Astro.props;
+const { Content } = await render(page);
+---
+
+<Content components={shortCode} />

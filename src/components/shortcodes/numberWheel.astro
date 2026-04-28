@@ -1,0 +1,59 @@
+---
+interface Props {
+  date: string | number | Date;
+  unit?: 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year';
+  maxLength?: number;
+}
+
+const { date, unit = 'year', maxLength = 7 } = Astro.props;
+
+const SECONDS_IN_UNIT = {
+  second: 1,
+  minute: 60,
+  hour: 3600,
+  day: 86400,
+  week: 604800,
+  month: 2629800,
+  year: 31556926,
+};
+
+const targetTimestamp = Math.floor(new Date(date).getTime() / 1000);
+const now = Math.floor(Date.now() / 1000);
+
+const diffInSeconds = Math.abs(now - targetTimestamp);
+
+const diffValue = diffInSeconds / SECONDS_IN_UNIT[unit];
+
+const chars = diffValue.toString().substring(0, maxLength).split("");
+
+const getRandom = (min: number, max: number) => 
+  Math.floor(Math.random() * (max - min + 1)) + min;
+
+const offsets = Array.from({ length: 9 }, (_, i) => i + 1);
+---
+
+<span id="wheel">
+  {chars.map((ch) => {
+    if (ch === ".") {
+      return <span class="char dot">.</span>;
+    }
+
+    const digit = parseInt(ch, 10);
+    if (isNaN(digit)) return null; 
+
+    const randomDelay = getRandom(200, 800);
+
+    return (
+      <span class="char digit" style={`--delay: ${randomDelay}ms`}>
+        <span class="true">{digit}</span>
+        {offsets.map((offset) => {
+
+          const value = (digit + offset) % 10;
+          return <span aria-hidden="true">{value}</span>;
+        })}
+        <span aria-hidden="true" class="true">{digit}</span>
+
+      </span>
+    );
+  })}
+</span>

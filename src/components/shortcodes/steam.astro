@@ -1,0 +1,42 @@
+---
+import { undefined } from 'astro:schema';
+
+interface Props {
+  appid: string | number;
+  variant?: 'horizontal' | 'vertical';
+}
+
+const {
+  appid,
+  variant = 'horizontal',
+} = Astro.props;
+
+const steamStoreUrl = `https://store.steampowered.com/app/${appid}/`;
+const gridImage = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/library_600x900_2x.jpg`
+const capsuleImage = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appid}/header.jpg`
+const coverImage = variant === 'vertical'
+  ? gridImage
+  : capsuleImage;
+const width = variant === 'vertical'
+  ? 200
+  : undefined;
+---
+
+<a
+  class:list={[
+    'steam-card',
+    `steam-card-${variant}`,
+  ]}
+  data-appid={appid}
+  href={steamStoreUrl}
+  target="_blank"
+  rel="noopener noreferrer"
+>
+  <div class="steam-card-media" style=`width: ${width}px;`>
+    {coverImage ? (
+      <img src={coverImage} alt={`Steam app ${appid}`} loading="lazy" />
+    ) : (
+      <div class="steam-card-placeholder">Missing Steam App ID</div>
+    )}
+  </div>
+</a>

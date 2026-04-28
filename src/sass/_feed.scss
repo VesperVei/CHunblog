@@ -1,0 +1,12 @@
+h1 a:has(.icon.feed) {
+  color: currentColor;
+}
+
+h1 .icon.feed {
+  -webkit-mask-image: url('/icons/phosphor/rss-simple.svg');
+  vertical-align: -0.375rem;
+  mask-image: url('/icons/phosphor/rss-simple.svg');
+  margin-inline-start: 0.5rem;
+  width: 1em;
+  height: 1em;
+}

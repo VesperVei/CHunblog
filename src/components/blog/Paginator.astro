@@ -1,0 +1,55 @@
+---
+import Icon from '../common/Icon.astro';
+
+interface Props {
+  page: any;
+}
+
+const { page } = Astro.props;
+---
+
+<nav id="paginator">
+  {page.url.prev ? (
+    <>
+      <a id="paginator-first" href={page.url.first} title="">
+        <Icon name="caret-double-left" />
+      </a>
+      <a id="paginator-previous" href={page.url.prev} title="">
+        <Icon name="caret-left" />
+      </a>
+    </>
+  ) : (
+    <>
+      <span id="paginator-first" title="">
+        <Icon name="caret-double-left" />
+      </span>
+      <span id="paginator-previous" title="">
+        <Icon name="caret-left" />
+      </span>
+    </>
+  )}
+
+  <span id="paginator-counter">
+    {page.currentPage}/{page.lastPage}
+  </span>
+
+  {page.url.next ? (
+    <>
+      <a id="paginator-next" href={page.url.next} title="">
+        <Icon name="caret-right" />
+      </a>
+      <a id="paginator-last" href={page.url.last} title="">
+        <Icon name="caret-double-right" />
+      </a>
+    </>
+  ) : (
+    <>
+      <span id="paginator-next" title="">
+        <Icon name="caret-right" />
+      </span>
+      <span id="paginator-last" title="">
+        <Icon name="caret-double-right" />
+      </span>
+    </>
+  )}
+</nav>

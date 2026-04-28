@@ -1,0 +1,18 @@
+i.icon {
+  display: inline-block;
+  -webkit-mask-image: var(--icon-url, var(--icon));
+  mask-image: var(--icon-url, var(--icon));
+  mask-size: cover;
+  -webkit-mask-size: cover;
+  mask-repeat: no-repeat;
+  -webkit-mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-position: center;
+  background-color: currentColor;
+  width: var(--icon-size, 1rem);
+  height: var(--icon-size, 1rem);
+  font-style: normal;
+  font-variant: normal;
+  line-height: 0;
+  text-rendering: auto;
+}

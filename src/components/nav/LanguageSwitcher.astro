@@ -1,0 +1,33 @@
+---
+import { languages } from "../../i18n/translation"
+import { getTranslation } from "../../i18n/translation.ts"
+import I18nKey from "../../i18n/i18nKey";
+import { detectLocale, buildLocaleUrl, shouldShowLanguageSwitcher, getCurrentUrlWithoutLocale } from "../../utils/i18n";
+import Icon from '../common/Icon.astro';
+
+const { pathname } = Astro.url;
+const currentLocale = detectLocale(pathname);
+const pathWithoutLocale = getCurrentUrlWithoutLocale(pathname);
+
+const showSwitcher = shouldShowLanguageSwitcher();
+---
+
+{showSwitcher && (
+  <li id="language-switcher">
+    <details class="closable">
+      <summary class="circle"> <Icon name="translate" /> </summary>
+      <ul>
+        {Object.keys(languages).map((lang) => {
+          if (lang !== currentLocale) {
+            const targetUrl = buildLocaleUrl(lang, pathWithoutLocale);
+            return (
+              <li>
+                <a lang={lang} href={targetUrl}>{getTranslation(lang)[I18nKey.lang]}</a>
+              </li>
+            );
+          }
+        })}
+      </ul>
+    </details>
+  </li>
+)}

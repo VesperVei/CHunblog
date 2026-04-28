@@ -1,0 +1,18 @@
+---
+const { id, autoplay = false, start } = Astro.props;
+
+const query = [
+  autoplay ? 'autoplay=1' : null,
+  start !== undefined ? `start=${start}` : null,
+].filter(Boolean).join('&');
+
+const src = `https://www.youtube-nocookie.com/embed/${id}${query ? '?' + query : ''}`;
+---
+
+<iframe
+  class="youtube-embed"
+  src={src}
+  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+  referrerpolicy="strict-origin-when-cross-origin"
+  allowfullscreen
+></iframe>

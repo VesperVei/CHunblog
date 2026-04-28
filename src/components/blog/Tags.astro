@@ -1,0 +1,35 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getTagList, siteConfig } from "../../utils/pages";
+import I18nKey from "../../i18n/i18nKey";
+import { useTranslations } from "../../i18n/translation";
+import { detectLocale, buildLocaleUrl } from "../../utils/i18n";
+
+interface Props {
+  lang?: string;
+  pageTitle?: string;
+  pageDescription?: string;
+}
+
+const { lang, pageTitle, pageDescription } = Astro.props;
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+const tags = await getTagList(lang);
+const title = pageTitle || t(I18nKey.tags);
+const description = pageDescription || t(I18nKey.n_tags, { count: tags.length });
+---
+
+<Base title={title} description={description} ignoreSearch>
+  <slot />
+  <p>{t(I18nKey.n_tags, { count: tags.length })}</p>
+  <ul class="tags">
+    {tags.map(tag => (
+      <li>
+      <a href={buildLocaleUrl(currentLocale, `/tags/${tag.name}`)}>
+          <span class="tag">{tag.name}</span>
+          <span class="count">{tag.count}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</Base>

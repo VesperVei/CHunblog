@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+import ExtendMarkdown from '../components/markdown/ExtendMarkdown.astro';
+import { getRenderedPageBySlug, isMultiLangMode } from '../utils/pages';
+
+if (isMultiLangMode()) {
+  return Astro.redirect('/en');
+}
+
+const pageData = await getRenderedPageBySlug('index');
+
+if (!pageData) {
+  return Astro.redirect('/404');
+}
+
+const { page: contentPage, title, description } = pageData;
+---
+
+<Base title={title} description={description}>
+  <ExtendMarkdown page={contentPage} />
+</Base>

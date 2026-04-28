@@ -1,0 +1,52 @@
+---
+import { siteConfig } from '../../config';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import Icon from '../common/Icon.astro';
+
+const t = useTranslations(Astro.currentLocale);
+const themeColorMode = siteConfig.theme_color.mode;
+const showThemeColorControls = themeColorMode !== 'fixed';
+const isHueMode = themeColorMode === 'hue';
+const isHslMode = themeColorMode === 'hsl';
+---
+
+{showThemeColorControls && (
+  <li id="theme-color">
+    <details class="closable">
+      <summary class="circle" title={t(I18nKey.theme_color)}>
+        <Icon name="palette" />
+      </summary>
+      <ul>
+        <li>
+          <button class="circle" id="reset-color" title={t(I18nKey.theme_color)}>
+            <span>{t(I18nKey.theme_color)}</span>
+            {isHueMode && <label for="colorSlider"><code><span id="range-value" /></code></label>}
+            {isHslMode && (
+              <code>hsl(<span id="range-h-value" />, <span id="range-s-value" />, <span id="range-l-value" />)</code>
+            )}
+            <Icon name="arrow-clockwise" />
+          </button>
+        </li>
+        {isHueMode && (
+          <li>
+            <input id="colorSlider" type="range" min="0" max="360" />
+          </li>
+        )}
+        {isHslMode && (
+          <>
+            <li>
+              <input id="range-h" type="range" min="0" max="360" />
+            </li>
+            <li>
+              <input id="range-s" type="range" min="0" max="100" />
+            </li>
+            <li>
+              <input id="range-l" type="range" min="0" max="100" />
+            </li>
+          </>
+        )}
+      </ul>
+    </details>
+  </li>
+)}

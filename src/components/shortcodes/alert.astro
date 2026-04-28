@@ -1,0 +1,19 @@
+---
+enum AlertType {
+  note = "note",
+  tip = "tip",
+  important = "important",
+  warning = "warning",
+  caution = "caution",
+}
+
+interface Props {
+  type: AlertType
+}
+
+const { type = "note" } = Astro.props;
+---
+
+<blockquote class=`markdown-alert-${type}`>
+  <slot />
+</blockquote>

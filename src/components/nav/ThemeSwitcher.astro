@@ -1,0 +1,37 @@
+---
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import Icon from '../common/Icon.astro';
+
+const t = useTranslations(Astro.currentLocale);
+---
+
+<li id="theme-switcher">
+  <details class="closable">
+    <summary class="circle" title={t(I18nKey.theme)}>
+      <i
+        id="theme-current-icon"
+        class="icon"
+        style="--icon-url: url('/icons/phosphor/desktop.svg')"
+        aria-hidden="true"
+      />
+    </summary>
+    <ul>
+      <li>
+        <button class="circle" id="theme-light" title={t(I18nKey.theme_light)}>
+          <Icon name="sun" />
+        </button>
+      </li>
+      <li>
+        <button class="circle" id="theme-dark" title={t(I18nKey.theme_dark)}>
+          <Icon name="moon" />
+        </button>
+      </li>
+      <li>
+        <button class="circle" id="theme-system" title={t(I18nKey.theme_system)}>
+          <Icon name="desktop" />
+        </button>
+      </li>
+    </ul>
+  </details>
+</li>

@@ -1,0 +1,41 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+import { detectLocale, buildLocaleUrl } from '../../utils/i18n';
+import Icon from '../common/Icon.astro';
+
+interface Props extends HTMLAttributes<'a'> {
+  href: string;
+  icon?: string;
+  iconSet?: 'phosphor' | 'simple';
+}
+
+const {
+  href = '',
+  icon = '',
+  iconSet = 'phosphor',
+  class: className,
+  ...props
+} = Astro.props as Props;
+
+const { pathname } = Astro.url;
+const currentLocale = detectLocale(pathname);
+
+const isExternal = typeof href === 'string' && /^https?:\/\//.test(href);
+const localizedHref = isExternal ? href : buildLocaleUrl(currentLocale, href.toString());
+
+const normalize = (path: string) => path.replace(/\/$/, "");
+const cleanPathname = normalize(pathname);
+const cleanHref = normalize(localizedHref);
+
+const isActive = href === '/'
+  ? cleanPathname === cleanHref
+  : cleanPathname === cleanHref || cleanPathname.startsWith(cleanHref + '/');
+---
+
+<a href={localizedHref} {...props}
+  target={isExternal ? '_blank' : undefined}
+  rel={isExternal ? 'noopener noreferrer' : undefined}
+  class:list={[className, { external: isExternal, active: isActive }]}>
+  {icon && <Icon name={icon} set={iconSet} />}
+  <slot />
+</a>

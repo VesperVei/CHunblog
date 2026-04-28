@@ -1,0 +1,30 @@
+---
+interface Props {
+  bvid?: string;
+  aid?: string;
+  cid?: string;
+  page?: number;
+  autoplay?: boolean;
+}
+
+const { bvid, aid, cid, page = 1, autoplay = false } = Astro.props;
+
+const query = [
+  bvid ? `bvid=${bvid}` : null,
+  aid ? `aid=${aid}` : null,
+  cid ? `cid=${cid}` : null,
+  `p=${page}`,
+  `autoplay=${autoplay ? 1 : 0}`,
+  'isOutside=true',
+].filter(Boolean).join('&');
+
+const src = `//player.bilibili.com/player.html?${query}`;
+---
+
+<iframe
+  class="bilibili-embed"
+  src={src}
+  allowfullscreen="true"
+>
+</iframe>
+

@@ -1,0 +1,60 @@
+---
+import { siteConfig } from '../../config';
+import type { MarkdownHeading } from 'astro';
+
+interface TocItem extends MarkdownHeading {
+  children: TocItem[];
+}
+
+interface Props {
+  headings?: MarkdownHeading[];
+  items?: TocItem[];
+  isChild?: boolean;
+  maxLevel?: number;
+}
+
+const { headings, items, isChild = false, maxLevel = siteConfig.toc.depth } = Astro.props;
+
+function buildTree(flatHeadings: MarkdownHeading[], max: number) {
+  const toc: TocItem[] = [];
+  const stack: TocItem[] = [];
+  const filteredHeadings = flatHeadings.filter(h => h.depth <= max);
+
+  filteredHeadings.forEach((h) => {
+    const item: TocItem = { ...h, children: [] };
+    while (stack.length > 0 && stack[stack.length - 1].depth >= item.depth) {
+      stack.pop();
+    }
+    if (stack.length === 0) {
+      toc.push(item);
+    } else {
+      stack[stack.length - 1].children.push(item);
+    }
+    stack.push(item);
+  });
+  return toc;
+}
+
+const displayItems = isChild ? items : (headings ? buildTree(headings, maxLevel) : []);
+const hasItems = displayItems && displayItems.length > 0;
+const Label = siteConfig.toc.index ? "ol" : "ul";
+---
+
+{hasItems && (
+  !isChild ? (
+    <Label>
+      <Astro.self items={displayItems} isChild={true} />
+    </Label>
+  ) : (
+    displayItems.map((item) => (
+      <li>
+        <a href={`#${item.slug}`}>{item.text}</a>
+        {item.children.length > 0 && (
+          <Label>
+            <Astro.self items={item.children} isChild={true} />
+          </Label>
+        )}
+      </li>
+    ))
+  )
+)}

@@ -1,0 +1,19 @@
+---
+import { useTranslations } from "../../i18n/translation";
+import I18nKey from "../../i18n/i18nKey";
+import { detectLocale } from "../../utils/i18n";
+
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+
+interface Props {
+  k: I18nKey;
+  p?: Record<string, string>;
+}
+
+const { k, p } = Astro.props; 
+
+const content = t(k, p);
+---
+
+<Fragment set:html={content} />

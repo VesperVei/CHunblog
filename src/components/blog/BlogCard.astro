@@ -1,0 +1,48 @@
+---
+import { type CollectionEntry } from "astro:content";
+import ArticleDetails from './ArticleDetails.astro'
+import { detectLocale, buildLocaleUrl } from "../../utils/i18n";
+import { getSlugFromId } from "../../utils/pages";
+import Icon from '../common/Icon.astro';
+
+const { pathname } = Astro.url;
+const currentLocale = detectLocale(pathname);
+
+interface Props {
+  posts: CollectionEntry<"blog">[]
+}
+
+const { posts } = Astro.props;
+
+const postTypeIcons: Record<string, string> = {
+  draft: 'pencil-simple',
+  archive: 'archive',
+  featured: 'star',
+  hot: 'fire',
+  poor: 'smiley-x-eyes',
+};
+---
+
+<div id="article-list">
+  {posts.map((post) => {
+    const baseSlug = getSlugFromId(post.id);
+    const postUrl = buildLocaleUrl(currentLocale, `/blog/${baseSlug}/`);
+    const typeIcon = post.data.type ? postTypeIcons[post.data.type] : undefined;
+    return (
+    <article
+      class:list={post.data.type}
+      style={post.data.heroImage && `--blurnail:url('${post.data.heroImage.src}')`}
+    >
+      {post.data.type &&
+        <span class="badge">{typeIcon && <Icon name={typeIcon} />}{post.data.type}</span>
+      }
+      <h3>
+        <a href={postUrl}>{post.data.title}</a>
+        <Icon class="title-arrow" name="caret-right" />
+      </h3>
+      <p>{post.data.description}</p>
+      <ArticleDetails createdAt={post.data.created_at} updatedAt={post.data.updated_at} author={post.data.author} tags={post.data.tags} />
+    </article>
+    )
+  })}
+</div>

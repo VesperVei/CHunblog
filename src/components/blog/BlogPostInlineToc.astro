@@ -1,0 +1,22 @@
+---
+import { siteConfig } from '../../config';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import TOC from './TOC.astro';
+
+interface Props {
+  headings: any[];
+  showToc?: boolean;
+  tocDepth?: number;
+}
+
+const t = useTranslations(Astro.currentLocale);
+const { headings, showToc, tocDepth } = Astro.props;
+---
+
+{(showToc ?? siteConfig.toc.inline) && (
+  <>
+    <h2>{t(I18nKey.table_of_contents)}</h2>
+    <TOC headings={headings} maxLevel={tocDepth ?? 3} />
+  </>
+)}

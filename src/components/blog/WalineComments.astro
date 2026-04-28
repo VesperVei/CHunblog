@@ -1,0 +1,115 @@
+---
+import { siteConfig } from '../../config';
+
+const commentsConfig = siteConfig.comments;
+const waline = commentsConfig?.provider === 'waline' ? commentsConfig : undefined;
+
+const isConfigured = Boolean(
+  waline?.serverURL
+);
+
+const lang = waline?.lang ?? 'en';
+const emoji = waline?.emoji ?? false;
+const meta = waline?.meta ?? ['nick', 'mail', 'link'];
+const requiredMeta = waline?.requiredMeta ?? [];
+const login = waline?.login ?? 'enable';
+const wordLimit = waline?.wordLimit ?? 100;
+const pageSize = waline?.pageSize ?? 10;
+const search = waline?.search ?? false;
+const reaction = waline?.reaction ?? false;
+const pageview = waline?.pageview ?? false;
+const noCopyright = waline?.noCopyright ?? false;
+const noRss = waline?.noRss ?? false;
+---
+
+{isConfigured && waline && (
+  <>
+    <hr />
+    <link rel="stylesheet" href="https://unpkg.com/@waline/client@v3/dist/waline.css" />
+    <section id="comments">
+      <div id="waline"></div>
+    </section>
+    <script
+      is:inline
+      define:vars={{
+        serverURL: waline.serverURL,
+        lang,
+        emoji,
+        meta,
+        requiredMeta,
+        login,
+        wordLimit,
+        pageSize,
+        search,
+        reaction,
+        pageview,
+        noCopyright,
+        noRss,
+      }}
+      type="module"
+    >
+      const commentsRoot = document.getElementById('comments');
+
+      if (commentsRoot && !commentsRoot.dataset.walineInitialized) {
+        commentsRoot.dataset.walineInitialized = 'true';
+
+        const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+        let walineInstance;
+
+        const getResolvedThemeMode = () => {
+          const explicitTheme = document.documentElement.getAttribute('data-theme');
+          if (explicitTheme === 'dark') return 'dark';
+          if (explicitTheme === 'light') return 'light';
+          return colorScheme.matches ? 'dark' : 'light';
+        };
+
+        const getWalineDarkMode = () => getResolvedThemeMode() === 'dark';
+
+        const loadWaline = async () => {
+          const { init } = await import('https://unpkg.com/@waline/client@v3/dist/waline.js');
+
+          walineInstance = init({
+            el: '#waline',
+            serverURL,
+            path: window.location.pathname,
+            lang,
+            emoji,
+            meta,
+            requiredMeta,
+            login,
+            wordLimit,
+            pageSize,
+            search,
+            reaction,
+            pageview,
+            noCopyright,
+            noRss,
+            dark: getWalineDarkMode(),
+          });
+        };
+
+        const syncWalineTheme = () => {
+          walineInstance?.update({
+            dark: getWalineDarkMode(),
+          });
+        };
+
+        loadWaline();
+
+        const themeObserver = new MutationObserver(() => {
+          syncWalineTheme();
+        });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme'],
+        });
+
+        colorScheme.addEventListener('change', () => {
+          if (!document.documentElement.getAttribute('data-theme')) {
+            syncWalineTheme();
+          }
+        });
+      }
+    </script>
+  </>
+)}

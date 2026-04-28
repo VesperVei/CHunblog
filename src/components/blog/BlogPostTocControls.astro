@@ -1,0 +1,33 @@
+---
+import { siteConfig } from '../../config';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import Icon from '../common/Icon.astro';
+import TOC from './TOC.astro';
+
+interface Props {
+  headings: any[];
+  showToc?: boolean;
+  tocDepth?: number;
+}
+
+const t = useTranslations(Astro.currentLocale);
+const { headings, showToc, tocDepth } = Astro.props;
+---
+
+<div id="buttons-container">
+  {(showToc ?? siteConfig.toc.enable) && (
+    <details id="toc" class="closable">
+      <summary title={t(I18nKey.table_of_contents)}>
+        <Icon name="list" />
+      </summary>
+      <div>
+        <strong class="title">{t(I18nKey.table_of_contents)}</strong>
+        <div>
+          <TOC headings={headings} maxLevel={tocDepth} />
+        </div>
+      </div>
+    </details>
+  )}
+  <a id="go-to-top" href="#top" title={t(I18nKey.go_to_top)}><Icon name="arrow-up" /></a>
+</div>

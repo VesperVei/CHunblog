@@ -1,0 +1,113 @@
+---
+title: 'Goosequill Comments Configuration Reference'
+description: 'A compact reference for Goosequill comment system configuration, covering both Giscus and Waline options.'
+created_at: 'Apr 23 2026'
+author:
+  - 'Goose'
+  - 'Quill'
+type: 'featured'
+tags:
+  - 'comments'
+  - 'configuration'
+toc_depth: 2
+---
+
+Goosequill currently supports two comment providers through `siteConfig.comments`:
+
+- `giscus`
+- `waline`
+
+You should configure exactly one provider at a time.
+
+## Config shape
+
+Set `comments` in `src/config.ts`:
+
+```ts
+comments: {
+  provider: "giscus" | "waline",
+}
+```
+
+## Giscus
+
+### Minimal example
+
+```ts
+comments: {
+  provider: "giscus",
+  repo: "owner/repo",
+  repoId: "R_kgDOExample",
+  category: "Announcements",
+  categoryId: "DIC_kwDOExample",
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `provider` | `"giscus"` | yes | — | Selects Giscus |
+| `repo` | `string` | yes | — | GitHub repo in `owner/name` form |
+| `repoId` | `string` | yes | — | Giscus repository ID |
+| `category` | `string` | yes | — | GitHub Discussions category name |
+| `categoryId` | `string` | yes | — | GitHub Discussions category ID |
+| `mapping` | `"pathname" \| "url" \| "title" \| "og:title" \| "specific" \| "number"` | no | `"pathname"` | How pages map to discussion threads |
+| `strict` | `"0" \| "1"` | no | `"0"` | Whether mapping must match strictly |
+| `reactionsEnabled` | `"0" \| "1"` | no | `"1"` | Enables reactions in the comments UI |
+| `emitMetadata` | `"0" \| "1"` | no | `"0"` | Emits discussion metadata into the page |
+| `inputPosition` | `"top" \| "bottom"` | no | `"top"` | Composer position |
+| `theme` | `string` | no | fallback only | Shared theme fallback for both light and dark |
+| `theme_light` | `string` | no | `"light"` | Giscus theme used in light mode |
+| `theme_dark` | `string` | no | `"dark"` | Giscus theme used in dark mode |
+| `lang` | `string` | no | `"en"` | Giscus UI language |
+| `loading` | `"lazy" \| "eager"` | no | `"lazy"` | Script loading strategy |
+
+### Notes
+
+- `repo`, `repoId`, `category`, and `categoryId` are the hard requirements in Goosequill.
+- Goosequill syncs Giscus theme with the site `data-theme` state and system color scheme.
+- If `theme_light` or `theme_dark` is omitted, Goosequill falls back to `theme`, then to `light` or `dark`.
+
+## Waline .
+
+### Minimal example
+
+```ts
+comments: {
+  provider: "waline",
+  serverURL: "https://your-waline-server.example.com",
+}
+```
+
+### Parameters
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `provider` | `"waline"` | yes | — | Selects Waline |
+| `serverURL` | `string` | yes | — | Waline server endpoint |
+| `lang` | `"zh" \| "zh-CN" \| "zh-TW" \| "en" \| "en-US" \| "jp" \| "jp-JP" \| "pt-BR" \| "ru" \| "ru-RU" \| "fr-FR" \| "fr" \| "vi" \| "vi-vn" \| "es" \| "es-MX"` | no | `"en"` | Waline UI language |
+| `emoji` | `string[] \| false` | no | `false` | Emoji source list, or disable emojis |
+| `meta` | `("nick" \| "mail" \| "link")[]` | no | `["nick", "mail", "link"]` | Input fields shown in the form |
+| `requiredMeta` | `("nick" \| "mail" \| "link")[]` | no | `[]` | Fields that become required |
+| `login` | `"enable" \| "disable" \| "force"` | no | `"enable"` | Login mode |
+| `wordLimit` | `number \| [number, number]` | no | `0` | Text length limit |
+| `pageSize` | `number` | no | `10` | Comments per page |
+| `search` | `boolean` | no | `false` | Enables admin search in the panel |
+| `reaction` | `boolean \| string[]` | no | `false` | Enables reactions or provides custom reaction images |
+| `pageview` | `boolean` | no | `false` | Enables pageview counter |
+| `noCopyright` | `boolean` | no | `false` | Hides Waline copyright |
+| `noRss` | `boolean` | no | `false` | Disables RSS entry output |
+
+### Notes
+
+- Goosequill currently keys Waline threads by `window.location.pathname`.
+- The site theme is converted to a Waline `dark` boolean and updated when theme mode changes.
+- `serverURL` is the only hard requirement besides `provider`.
+
+## Recommended starting point
+
+If you want the smallest working configuration:
+
+- Use Giscus when your content and identity already live around GitHub Discussions.
+- Use Waline when you want a self-hosted backend and more form-level controls.

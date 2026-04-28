@@ -1,0 +1,131 @@
+---
+import { siteConfig } from '../../config';
+
+const commentsConfig = siteConfig.comments;
+const giscus = commentsConfig?.provider === 'giscus' ? commentsConfig : undefined;
+
+const isConfigured = Boolean(
+  giscus?.repo
+  && giscus.repoId
+  && giscus.category
+  && giscus.categoryId
+);
+
+const lang = giscus?.lang ?? 'en';
+const mapping = giscus?.mapping ?? 'pathname';
+const strict = giscus?.strict ?? '0';
+const reactionsEnabled = giscus?.reactionsEnabled ?? '1';
+const emitMetadata = giscus?.emitMetadata ?? '0';
+const inputPosition = giscus?.inputPosition ?? 'top';
+const lightTheme = giscus?.theme_light ?? giscus?.theme ?? 'light';
+const darkTheme = giscus?.theme_dark ?? giscus?.theme ?? 'dark';
+const loading = giscus?.loading ?? 'lazy';
+---
+
+{isConfigured && giscus && (
+  <>
+    <hr />
+    <section id="comments"></section>
+    <script
+      is:inline
+      define:vars={{
+        repo: giscus.repo,
+        repoId: giscus.repoId,
+        category: giscus.category,
+        categoryId: giscus.categoryId,
+        mapping,
+        strict,
+        reactionsEnabled,
+        emitMetadata,
+        inputPosition,
+        lightTheme,
+        darkTheme,
+        lang,
+        loading,
+      }}
+    >
+      const commentsRoot = document.getElementById('comments');
+
+      if (commentsRoot && !commentsRoot.dataset.giscusInitialized) {
+        commentsRoot.dataset.giscusInitialized = 'true';
+
+        const colorScheme = window.matchMedia('(prefers-color-scheme: dark)');
+
+        const getResolvedThemeMode = () => {
+          const explicitTheme = document.documentElement.getAttribute('data-theme');
+          if (explicitTheme === 'dark') return 'dark';
+          if (explicitTheme === 'light') return 'light';
+          return colorScheme.matches ? 'dark' : 'light';
+        };
+
+        const getGiscusTheme = () => {
+          return getResolvedThemeMode() === 'dark' ? darkTheme : lightTheme;
+        };
+
+        const loadGiscus = () => {
+          if (commentsRoot.querySelector('script[data-giscus-script]')) {
+            return;
+          }
+
+          const script = document.createElement('script');
+          script.src = 'https://giscus.app/client.js';
+          script.async = true;
+          script.crossOrigin = 'anonymous';
+          script.setAttribute('data-giscus-script', 'true');
+          script.setAttribute('data-repo', repo);
+          script.setAttribute('data-repo-id', repoId);
+          script.setAttribute('data-category', category);
+          script.setAttribute('data-category-id', categoryId);
+          script.setAttribute('data-mapping', mapping);
+          script.setAttribute('data-strict', strict);
+          script.setAttribute('data-reactions-enabled', reactionsEnabled);
+          script.setAttribute('data-emit-metadata', emitMetadata);
+          script.setAttribute('data-input-position', inputPosition);
+          script.setAttribute('data-theme', getGiscusTheme());
+          script.setAttribute('data-lang', lang);
+          script.setAttribute('data-loading', loading);
+          commentsRoot.appendChild(script);
+        };
+
+        const syncGiscusTheme = () => {
+          const iframe = commentsRoot.querySelector('iframe.giscus-frame');
+          if (!iframe || !iframe.contentWindow) {
+            return;
+          }
+
+          iframe.contentWindow.postMessage(
+            {
+              giscus: {
+                setConfig: {
+                  theme: getGiscusTheme(),
+                },
+              },
+            },
+            'https://giscus.app'
+          );
+        };
+
+        loadGiscus();
+
+        const commentsObserver = new MutationObserver(() => {
+          syncGiscusTheme();
+        });
+        commentsObserver.observe(commentsRoot, { childList: true, subtree: true });
+
+        const themeObserver = new MutationObserver(() => {
+          syncGiscusTheme();
+        });
+        themeObserver.observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ['data-theme'],
+        });
+
+        colorScheme.addEventListener('change', () => {
+          if (!document.documentElement.getAttribute('data-theme')) {
+            syncGiscusTheme();
+          }
+        });
+      }
+    </script>
+  </>
+)}

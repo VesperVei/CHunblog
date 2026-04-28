@@ -1,0 +1,24 @@
+<script type="module" is:inline>
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+  mermaid.initialize({
+    startOnLoad: false,
+    securityLevel: 'loose',
+    theme: 'neutral',
+  });
+
+  const renderMermaid = async () => {
+    const charts = document.querySelectorAll('.mermaid');
+    if (charts.length === 0) {
+      return;
+    }
+
+    await mermaid.run({ querySelector: '.mermaid' });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderMermaid, { once: true });
+  } else {
+    renderMermaid();
+  }
+</script>

@@ -1,0 +1,61 @@
+---
+import { type CollectionEntry } from 'astro:content';
+import { detectLocale } from '../../utils/i18n';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import FormattedDate from '../common/FormattedDate.astro';
+import Icon from '../common/Icon.astro';
+import TagsList from './TagsList.astro';
+
+interface Props {
+  createdAt?: CollectionEntry<'blog'>['data']['created_at'];
+  updatedAt?: CollectionEntry<'blog'>['data']['updated_at'];
+  author?: CollectionEntry<'blog'>['data']['author'];
+  tags?: CollectionEntry<'blog'>['data']['tags'];
+  minutes?: number;
+  words?: number;
+}
+
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+
+const {
+  createdAt,
+  updatedAt,
+  author = [],
+  minutes,
+  words,
+  tags = [],
+} = Astro.props;
+---
+
+<div class="article-details">
+  {createdAt && (
+    <div>
+      <Icon name="calendar" />
+      <FormattedDate date={createdAt} text={`${t(I18nKey.created)} `} />
+    </div>
+  )}
+
+  {updatedAt && (
+    <div>
+      <Icon name="clock-clockwise" />
+      <FormattedDate date={updatedAt} text={`${t(I18nKey.updated)} `} />
+    </div>
+  )}
+
+  {author.length > 0 && (
+    <div>
+      <Icon name="users" />
+      <span>{t(I18nKey.by_author, author)}</span>
+    </div>
+  )}
+
+  {minutes !== undefined && (
+    <div title={words !== undefined ? t(I18nKey.word_count, { count: words }) : undefined}>
+      <Icon name="clock-countdown" />
+      <span>{t(I18nKey.minutes_read, { count: minutes })}</span>
+    </div>
+  )}
+</div>
+<TagsList tags={tags} />

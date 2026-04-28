@@ -1,0 +1,24 @@
+---
+import Base from "../layouts/Base.astro";
+import NotFoundPNG from "../assets/404.png"
+import NotFoundGIF from "../assets/404.gif"
+import { useTranslations } from "../i18n/translation";
+import I18nKey from "../i18n/i18nKey";
+const t = useTranslations(Astro.currentLocale);
+const title = t(I18nKey.not_found);
+const description = t(I18nKey.not_found_text);
+---
+
+<Base title={title} description={description}>
+  <picture>
+    <source srcset={NotFoundPNG.src} media="(prefers-reduced-motion: reduce)"></source>
+    <img id="not-found" class="pixels transparent no-hover" alt="404" src={NotFoundGIF.src}>
+  </picture>
+
+  <h1>{t(I18nKey.not_found)}</h1>
+  <p>{t(I18nKey.not_found_text)}</p>
+
+  <div class="buttons">
+    <a href="/">{t(I18nKey.go_home)}</a>
+  </div>
+</Base>

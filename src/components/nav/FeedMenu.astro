@@ -1,0 +1,26 @@
+---
+import { siteConfig } from '../../config';
+import { isMultiLangMode } from '../../utils/site-config';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import { detectLocale } from '../../utils/i18n';
+import Icon from '../common/Icon.astro';
+
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+---
+
+{siteConfig.rss.enable && (
+  <li id="feed">
+    <details class="closable">
+      <summary class="circle" title={t(I18nKey.feed)}>
+        <Icon name="rss-simple" />
+      </summary>
+      <ul>
+        <li>
+          <a href={isMultiLangMode() ? `/${currentLocale}/rss.xml` : '/rss.xml'}>RSS</a>
+        </li>
+      </ul>
+    </details>
+  </li>
+)}

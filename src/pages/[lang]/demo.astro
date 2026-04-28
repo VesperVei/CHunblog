@@ -1,0 +1,27 @@
+---
+import BlogPost from '../../layouts/BlogPost.astro';
+import ExtendMarkdown from '../../components/markdown/ExtendMarkdown.astro';
+import { getLocalizedStaticPaths, getPageBySlug, isMultiLangMode } from '../../utils/pages';
+
+export function getStaticPaths() {
+  return getLocalizedStaticPaths();
+}
+
+const { lang } = Astro.params;
+
+if (!isMultiLangMode()) {
+  return Astro.redirect('/404');
+}
+
+const page = await getPageBySlug('demo', lang);
+
+if (!page) {
+  return Astro.redirect('/404');
+}
+---
+
+<BlogPost
+  post={page}
+>
+  <ExtendMarkdown page={page} />
+</BlogPost>

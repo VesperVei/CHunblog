@@ -1,0 +1,20 @@
+---
+interface Props {
+  no_scanlines?: boolean;
+  code: string;
+}
+
+const {
+  no_scanlines = false,
+  code,
+} = Astro.props;
+---
+
+<div
+  class={`crt ${no_scanlines ? "" : "scanlines"}`}
+>
+  <pre><code>{
+    code[0] === "\n" ? code.slice(1) : code
+  }</code></pre>
+</div>
+

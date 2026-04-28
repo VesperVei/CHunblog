@@ -1,0 +1,25 @@
+---
+import { siteConfig } from '../../config';
+import ThemeScript from '../theme/ThemeScript.astro';
+import Pagefind from '../search/Pagefind.astro';
+import FeedMenu from './FeedMenu.astro';
+import LanguageSwitcher from './LanguageSwitcher.astro';
+import NavLinks from './NavLinks.astro';
+import ThemeColorControls from './ThemeColorControls.astro';
+import ThemeSwitcher from './ThemeSwitcher.astro';
+---
+
+<ThemeScript />
+
+<header id="site-nav">
+  <nav>
+    <ul>
+      <NavLinks />
+      <LanguageSwitcher />
+      <ThemeColorControls />
+      <ThemeSwitcher />
+      <FeedMenu />
+    </ul>
+  </nav>
+  {siteConfig.search.enable && <Pagefind />}
+</header>

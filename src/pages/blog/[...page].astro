@@ -1,0 +1,22 @@
+---
+import BlogList from '../../components/blog/BlogList.astro';
+import ExtendMarkdown from '../../components/markdown/ExtendMarkdown.astro';
+import { getBlogListPage, getBlogPaginationPaths, isMultiLangMode } from '../../utils/pages';
+
+if (isMultiLangMode()) {
+  return Astro.redirect('/404');
+}
+
+const pageData = await getBlogListPage();
+const { page: contentPage, title, description } = pageData ?? {};
+
+export async function getStaticPaths({ paginate }) {
+  return getBlogPaginationPaths(paginate);
+}
+
+const { page: paginatedPage } = Astro.props;
+---
+
+<BlogList title={title} description={description} page={paginatedPage}>
+  {contentPage ? <ExtendMarkdown page={contentPage} /> : null}
+</BlogList>

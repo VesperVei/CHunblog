@@ -1,0 +1,26 @@
+---
+import I18nKey from "../../i18n/i18nKey";
+import { useTranslations } from "../../i18n/translation";
+import { detectLocale, buildLocaleUrl } from "../../utils/i18n";
+
+const t = useTranslations(Astro.currentLocale);
+const currentLocale = detectLocale(Astro.url.pathname);
+
+interface Props {
+  tags: string[];
+}
+
+const { tags } = Astro.props;
+---
+
+
+{tags.length > 0 && (
+  <ul class="tags">
+      <li>
+        <a href={buildLocaleUrl(currentLocale, '/tags')}>{t(I18nKey.tags_colon)}</a>
+      </li>
+      {tags.map((tag) => (
+      <li><a href={buildLocaleUrl(currentLocale, `/tags/${tag}`)}>{tag}</a></li>
+      ))}
+  </ul>
+)}

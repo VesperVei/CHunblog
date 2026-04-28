@@ -1,0 +1,21 @@
+---
+import Tags from '../../../components/blog/Tags.astro';
+import ExtendMarkdown from '../../../components/markdown/ExtendMarkdown.astro';
+import { getLocalizedStaticPaths, getRenderedPageBySlug, isMultiLangMode } from '../../../utils/pages';
+
+export function getStaticPaths() {
+  return getLocalizedStaticPaths();
+}
+
+const { lang } = Astro.params;
+if (!isMultiLangMode()) {
+  return Astro.redirect('/404');
+}
+
+const pageData = await getRenderedPageBySlug('tags', lang);
+const { page: contentPage, title: pageTitle, description: pageDescription } = pageData ?? {};
+---
+
+<Tags lang={lang} pageTitle={pageTitle} pageDescription={pageDescription}>
+  {contentPage ? <ExtendMarkdown page={contentPage} /> : null}
+</Tags>

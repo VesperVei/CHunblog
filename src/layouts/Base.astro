@@ -1,0 +1,40 @@
+---
+import Head from '../components/shell/Head.astro';
+import Footer from '../components/shell/Footer.astro';
+import Header from '../components/nav/Header.astro';
+import ClosableDetailsScript from '../components/common/ClosableDetailsScript.astro';
+import MermaidScript from '../components/common/MermaidScript.astro';
+import { siteConfig, navBarConfig } from '../config';
+import { detectLocale } from '../utils/i18n';
+import { localesConfig } from '../i18n/locales';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ignoreSearch?: boolean;
+}
+
+const { title, description, ignoreSearch = false } = Astro.props;
+const currentLocale = detectLocale(Astro.url.pathname);
+const htmlLang = localesConfig[currentLocale]?.lang || 'en';
+---
+
+<!DOCTYPE html>
+<html lang={htmlLang}>
+  <head>
+    <Head title={title} description={description} />
+  </head>
+  <body
+    data-navbar-style={navBarConfig.style ?? 'default'}
+    data-article-list-style={siteConfig.classic_article_list ? 'classic' : undefined}
+    data-modern-hr={siteConfig.modern_hr ? '' : undefined}
+  >
+    <Header />
+    <main id="main-content" {...(ignoreSearch ? { 'data-pagefind-ignore': true } : {})}>
+      <slot />
+    </main>
+    <Footer />
+    <ClosableDetailsScript />
+    <MermaidScript />
+  </body>
+</html>

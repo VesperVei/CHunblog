@@ -1,0 +1,332 @@
+---
+title: 'Goosequill Shortcodes 全量用法速查'
+description: '整理 Goosequill 内置 shortcodes 的用途、参数、默认值与示例，方便写作时快速查阅。'
+created_at: 'Apr 20 2026'
+heroImage: 'blog-placeholder-4.jpg'
+author:
+  - 'Goose'
+  - 'Quill'
+type: 'featured'
+tags:
+  - '标签A'
+  - '标签Z'
+toc_depth: 2
+---
+
+目前可用的 shortcodes 如下：
+
+- `Alert`
+- `ImageCode`
+- `Video`
+- `Youtube`
+- `Bilibili`
+- `Steam`
+- `Spotify`
+- `CRT`
+
+## 使用方式
+
+在 MDX 中，这些组件已经通过 `ExtendMarkdown.astro` 注入，所以你可以直接写：
+
+```mdx
+<Alert type="note">Hello</Alert>
+```
+
+无需单独 import。
+
+## 1. `Alert`
+
+用于渲染 GitHub 风格的提示块。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `type` | `'note' \| 'tip' \| 'important' \| 'warning' \| 'caution'` | `'note'` | 提示块类型 |
+
+### 示例
+
+```mdx
+<Alert type="note">
+这是一条提示信息。
+</Alert>
+
+<Alert type="warning">
+这是一条警告信息。
+</Alert>
+```
+
+### 说明
+
+- 内容通过默认插槽传入。
+- 未传 `type` 时使用 `note`。
+
+## 2. `ImageCode`
+
+用于渲染图片，并附带一组可组合的样式类。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `url` | `string` | — | 原图地址，必填 |
+| `url_min` | `string` | `undefined` | 压缩图地址；传入后页面展示压缩图，点击跳转原图 |
+| `alt` | `string` | `''` | 图片替代文本 |
+| `full` | `boolean` | `false` | 让图片占满内容宽度 |
+| `full_bleed` | `boolean` | `false` | 让图片突破内容区，使用更宽展示 |
+| `start` | `boolean` | `false` | 图片靠左浮动 |
+| `end` | `boolean` | `false` | 图片靠右浮动 |
+| `pixels` | `boolean` | `false` | 使用像素风缩放效果 |
+| `transparent` | `boolean` | `false` | 去掉背景式装饰，更适合透明图片 |
+| `no_hover` | `boolean` | `false` | 关闭悬停缩放效果 |
+| `spoiler` | `boolean` | `false` | 启用剧透遮挡效果 |
+| `solid` | `boolean` | `false` | 与 `spoiler` 配合使用，显示更强遮挡 |
+
+### 示例
+
+```mdx
+<ImageCode
+  url="/images/example.png"
+  alt="示例图片"
+  no_hover="true"
+/>
+
+<ImageCode
+  url="/images/original.png"
+  url_min="/images/preview.png"
+  alt="可点击查看原图"
+  full="true"
+/>
+```
+
+### 说明
+
+- `solid` 只有在 `spoiler` 为真时才会生效。
+- `url_min` 存在时，组件会输出一个包裹图片的链接，点击后打开 `url`。
+- `full`、`full_bleed`、`start`、`end` 这些布局类最好按场景选择，不建议同时混用太多。
+
+## 3. `Video`
+
+用于渲染本地或远程视频，同样支持与图片一致的大部分样式类。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `url` | `string` | — | 视频地址，必填 |
+| `alt` | `string` | `''` | 作为 `aria-label` 使用的可访问性文本 |
+| `full` | `boolean` | `false` | 占满内容宽度 |
+| `full_bleed` | `boolean` | `false` | 更宽展示 |
+| `start` | `boolean` | `false` | 靠左浮动 |
+| `end` | `boolean` | `false` | 靠右浮动 |
+| `pixels` | `boolean` | `false` | 像素风渲染样式 |
+| `transparent` | `boolean` | `false` | 透明样式 |
+| `spoiler` | `boolean` | `false` | 剧透遮挡 |
+| `solid` | `boolean` | `false` | 与 `spoiler` 搭配时增强遮挡 |
+| `autoplay` | `boolean` | `false` | 自动播放 |
+| `controls` | `boolean` | `false` | 显示控制条 |
+| `loop` | `boolean` | `false` | 循环播放 |
+| `muted` | `boolean` | `false` | 静音 |
+| `playsinline` | `boolean` | `false` | 尽量以内联方式播放 |
+
+### 示例
+
+```mdx
+<Video
+  url="/videos/demo.webm"
+  alt="演示视频"
+  controls="true"
+/>
+
+<Video
+  url="/videos/hero.webm"
+  full_bleed="true"
+  autoplay="true"
+  muted="true"
+  loop="true"
+  playsinline="true"
+/>
+```
+
+### 说明
+
+- 组件不会自动推断视频格式，直接把 `url` 填到 `<video src>`。
+- `solid` 同样只在 `spoiler` 开启时有意义。
+- 与 `ImageCode` 不同，`Video` 不支持 `url_min` 和 `no_hover`。
+
+## 4. `Youtube`
+
+用于嵌入 YouTube 视频，使用 `youtube-nocookie.com` 域名。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `string` | — | YouTube 视频 ID，必填 |
+| `autoplay` | `boolean` | `false` | 是否自动播放 |
+| `start` | `number` | `undefined` | 起播秒数 |
+
+### 示例
+
+```mdx
+<Youtube id="0Da8ZhKcNKQ" />
+
+<Youtube id="0Da8ZhKcNKQ" autoplay="true" start={30} />
+```
+
+### 说明
+
+- 生成的嵌入地址格式为：`https://www.youtube-nocookie.com/embed/<id>`。
+- 只有在传入参数时才会拼接查询字符串。
+
+## 5. `Bilibili`
+
+用于嵌入 Bilibili 播放器。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `bvid` | `string` | `undefined` | BV 号 |
+| `aid` | `string` | `undefined` | AV 号 |
+| `cid` | `string` | `undefined` | 资源 ID / 弹幕 ID |
+| `page` | `number` | `1` | 分 P 页码 |
+| `autoplay` | `boolean` | `false` | 是否自动播放 |
+
+### 示例
+
+```mdx
+<Bilibili bvid="BV1yt4y1Q7SS" />
+
+<Bilibili
+  bvid="BV1yt4y1Q7SS"
+  page={2}
+  autoplay="true"
+/>
+```
+
+### 说明
+
+- 组件会把已传入的参数拼接到 `//player.bilibili.com/player.html?...`。
+- 除了你传入的参数外，还会固定附加 `isOutside=true`。
+- `bvid`、`aid`、`cid` 都是可选的，但实际嵌入通常至少应提供 `bvid` 或 `aid`。
+
+## 6. `Spotify`
+
+用于嵌入 Spotify 的专辑、歌单、单曲、播客等内容。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `type` | `'track' \| 'album' \| 'artist' \| 'playlist' \| 'episode' \| 'show'` | `undefined` | 通用类型写法 |
+| `id` | `string` | `undefined` | 与 `type` 搭配使用的内容 ID |
+| `track` | `string` | `undefined` | 单曲 ID 简写 |
+| `album` | `string` | `undefined` | 专辑 ID 简写 |
+| `artist` | `string` | `undefined` | 艺人 ID 简写 |
+| `playlist` | `string` | `undefined` | 歌单 ID 简写 |
+| `episode` | `string` | `undefined` | 单集播客 ID 简写 |
+| `show` | `string` | `undefined` | 播客节目 ID 简写 |
+| `height` | `string \| number` | 自动推断 | 自定义 iframe 高度 |
+
+### 示例
+
+```mdx
+<Spotify album="5gDJVilnZpPt8zwBC467UH" />
+
+<Spotify type="track" id="11dFghVXANMlKmJXsNCbNl" />
+
+<Spotify playlist="37i9dQZF1DXcBWIGoYBM5M" height={480} />
+```
+
+### 说明
+
+- 可以用两种方式传参：
+  - 简写：`album="..."`、`track="..."`
+  - 通用：`type="album" id="..."`
+- 如果两种方式同时存在，组件优先使用简写参数。
+- 如果既没有简写参数，也没有完整的 `type + id`，组件会直接抛错。
+- 默认高度：
+  - `track` 为 `152`
+  - 其他类型为 `352`
+
+## 7. `Steam`
+
+用于展示 Steam 商店卡片。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `appid` | `string \| number` | — | Steam App ID，必填 |
+| `variant` | `'horizontal' \| 'vertical'` | `'horizontal'` | 卡片样式 |
+
+### 示例
+
+```mdx
+<Steam appid="1127400" />
+
+<Steam appid="730" variant="vertical" />
+```
+
+### 说明
+
+- 组件会自动生成：
+  - 商店链接：`https://store.steampowered.com/app/<appid>/`
+  - 横版封面：`header.jpg`
+  - 竖版封面：`library_600x900_2x.jpg`
+- `vertical` 模式下会给媒体容器写入固定宽度 `200px`。
+- 组件本身不请求 Steam API，只是按固定 URL 规则拼接资源地址。
+
+## 8. `CRT`
+
+用于输出带 CRT 风格的代码块容器。
+
+### 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `code` | `string` | — | 要显示的代码文本，必填 |
+| `no_scanlines` | `boolean` | `false` | 是否关闭扫描线效果 |
+
+### 示例
+
+```mdx
+<CRT code={`
+Hello, CRT
+`} />
+
+<CRT
+  no_scanlines="true"
+  code={`
+No scanlines here
+`}
+/>
+```
+
+### 说明
+
+- 如果 `code` 的首字符是换行，组件会自动裁掉这个首个换行，方便你在 MDX 里写多行模板字符串。
+- `no_scanlines` 为 `false` 时会额外附加 `scanlines` 类。
+
+## 参数选择建议
+
+### 媒体类
+
+- 需要图片缩略图跳原图：优先用 `ImageCode` + `url_min`
+- 需要剧透遮挡：使用 `spoiler`，需要更强遮挡再叠加 `solid`
+- 需要大图铺满版心：用 `full`
+- 需要突破版心：用 `full_bleed`
+
+### 嵌入类
+
+- YouTube：传 `id`
+- Bilibili：优先传 `bvid`
+- Spotify：优先用简写参数，如 `album="..."`
+- Steam：传 `appid`，再按展示需要选择 `variant`
+
+### 提示与展示类
+
+- 提示块：用 `Alert`
+- 复古代码块：用 `CRT`
+- 常规代码高亮：直接用 Markdown 代码块，除非你明确想要 CRT 风格
