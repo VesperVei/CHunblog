@@ -52,15 +52,8 @@ const blog = defineCollection({
 });
 
 const pages = defineCollection({
-  loader: glob({
-    base: './src/content',
-    pattern: [
-      '*.{md,mdx}',
-      '**/*.{md,mdx}',
-      '!blog/**/*',
-      '!my_md/**/*',
-    ],
-  }),
+  // Published pages currently live at the content root; keep import sources out of the collection.
+  loader: glob({ base: './src/content', pattern: '*.{md,mdx}' }),
   schema: ({ image }) =>
     articleMetaSchema.extend({
       created_at: obsidianDate.optional(),
