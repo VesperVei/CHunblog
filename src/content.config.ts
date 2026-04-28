@@ -52,7 +52,15 @@ const blog = defineCollection({
 });
 
 const pages = defineCollection({
-  loader: glob({ base: './src/content', pattern: '**/*.{md,mdx}' }),
+  loader: glob({
+    base: './src/content',
+    pattern: [
+      '*.{md,mdx}',
+      '**/*.{md,mdx}',
+      '!blog/**/*',
+      '!my_md/**/*',
+    ],
+  }),
   schema: ({ image }) =>
     articleMetaSchema.extend({
       created_at: obsidianDate.optional(),

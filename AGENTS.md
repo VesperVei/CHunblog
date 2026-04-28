@@ -6,10 +6,12 @@
 - `src/config.ts`：站点级行为入口；导航、页脚、评论、主题色、分页、RSS、搜索都应优先改这里，不要散落到组件里。
 - `src/content.config.ts`：内容 schema 和 `blog`/`pages` collection 的真实约束。
 - `src/utils/pages.ts`：语言选择、slug 解析、分页、标签、静态路径的中心逻辑。
+- `src/utils/content-index.mjs`、`src/utils/wiki.mjs`、`src/utils/remark-obsidian-wikilink.mjs`：Obsidian 双链与关系图谱的核心入口。
 - `docs/agent-guide.md`：已有维护约定，尤其是多语言、主题、文档同步规则。
 
 ## 仓库事实
 - 单包 Astro 站点，不是 workspace；核心命令只有 `pnpm dev`、`pnpm build`、`pnpm preview`。
+- `pnpm dev` / `pnpm build` 前都会先执行 `scripts/generate-graph.mjs`，生成统一的 `public/graph.json`。
 - `pnpm build` 实际执行 `astro build && pagefind --site dist`。搜索索引不是 Astro 自动产物，改搜索或构建逻辑时必须记住 Pagefind 这一步。
 - 部署工作流在 `.forgejo/workflows/deploy.yml`，CI 只跑 `pnpm install` 和 `pnpm run build`，Node 版本固定为 `20`。
 - `public/icons` 是 git submodule，来自 `.gitmodules`。不要把它当普通本地目录处理；缺图标时先确认 submodule 是否已初始化。
@@ -21,6 +23,8 @@
 - 内容语言靠文件名后缀解析，规则在 `getLangFromId()` / `getSlugFromId()`：如 `_en`、`_zh-cn`。后缀写错会让内容直接从对应语言路由里消失。
 - `src/content/blog` 只收 `**/*/index*.{md,mdx}`；博客文章应放在 `src/content/blog/<slug>/index*.mdx`，不是任意文件名。
 - `src/content/` 下页面内容也走 collection；页面或文章的语言选择、slug 生成、分页、tag 路由都应复用 `src/utils/pages.ts`，不要在页面里重新实现。
+- 双链和图谱统一使用 `note_id` 作为内容主键；`created_at` / `updated_at` 取代旧的 `pubDate` / `updatedDate`。
+- 第一版双链只做 `[[target]]`、`[[target|alias]]`、`[[target#heading|alias]]`；`![[embed]]` 仍不做真实嵌入。
 
 ## 主题与渲染
 - 主题切换逻辑集中在 `src/utils/theme-script.ts`；`data-theme="light"` / `"dark"` 和“无属性表示 system mode”是既有约定，改主题时不要破坏。

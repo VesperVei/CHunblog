@@ -6,6 +6,7 @@ import { defineConfig } from 'astro/config';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkMermaid from './src/utils/remark-mermaid.js';
+import remarkObsidianWikilink from './src/utils/remark-obsidian-wikilink.mjs';
 import { getAstroI18nConfig } from './src/utils/site-config.ts';
 import { pluginLineNumbers } from '@expressive-code/plugin-line-numbers';
 
@@ -14,7 +15,7 @@ export default defineConfig({
   base: "/",
   trailingSlash: "ignore",
   markdown: {
-    remarkPlugins: [remarkMath, remarkMermaid],
+    remarkPlugins: [remarkMath, remarkMermaid, remarkObsidianWikilink],
     rehypePlugins: [rehypeKatex],
   },
   integrations: [

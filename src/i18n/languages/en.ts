@@ -4,6 +4,7 @@ import type { Translation } from "../translation";
 export const en: Translation = {
   [I18nKey.home]: "Home",
   [I18nKey.blog]: "Blog",
+  [I18nKey.graph]: "Relationship Graph",
   [I18nKey.about]: "About",
   [I18nKey.archive]: "Archive",
   [I18nKey.search]: "Search",
@@ -34,6 +35,7 @@ export const en: Translation = {
   [I18nKey.powered_by]: "Powered by {Astro} and {Goosequill}",
   [I18nKey.filter_by_tags]: "Filter by tags",
   [I18nKey.posts_with_tag]: "Posts with tag:",
+  [I18nKey.expand_graph]: "Open full graph",
   
   [I18nKey.n_tags]: {
     zero: "No tags yet",

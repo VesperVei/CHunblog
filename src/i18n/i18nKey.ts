@@ -1,6 +1,7 @@
 enum I18nKey {
   home = "home",
   blog = "blog",
+  graph = "graph",
   about = "about",
   archive = "archive",
   search = "search",
@@ -31,6 +32,7 @@ enum I18nKey {
   powered_by = "powered_by",
   filter_by_tags = "filter_by_tags",
   posts_with_tag = "posts_with_tag",
+  expand_graph = "expand_graph",
 
   n_tags = "n_tags", 
   n_posts = "n_posts", 

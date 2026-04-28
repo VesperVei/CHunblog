@@ -17,6 +17,9 @@ For route, locale, or content behavior, also read:
 
 - `src/utils/pages.ts`
 - `src/utils/i18n.ts`
+- `src/utils/content-index.mjs`
+- `src/utils/wiki.mjs`
+- `src/utils/remark-obsidian-wikilink.mjs`
 - the route file under `src/pages/`
 
 For theme, style, or UI behavior, also read:
@@ -31,6 +34,7 @@ For theme, style, or UI behavior, also read:
 - Preserve multilingual behavior unless the task explicitly changes it.
 - Prefer updating `src/config.ts` for site-level behavior instead of hardcoding values in components.
 - Keep content routing logic centralized in `src/utils/pages.ts`.
+- Keep wikilink parsing and graph target resolution centralized in `src/utils/wiki.mjs` and `src/utils/content-index.mjs`.
 - Keep browser-side theme behavior centralized in `src/utils/theme-script.ts`.
 - Use existing Sass variables and design tokens before adding new colors or constants.
 - Update docs when changing routing, content structure, configuration, theme behavior, build behavior, or agent workflow.
@@ -53,8 +57,9 @@ Check `git status --short` before editing and before committing.
 1. Create a folder under `src/content/blog/<slug>/`.
 2. Add `index_en.mdx` and/or `index_zh-cn.mdx` in multilingual mode.
 3. Include required frontmatter: `title`, `description`, and `created_at`.
-4. Add optional `tags`, `heroImage`, `toc`, `toc_inline`, and `author`.
-5. Run `pnpm build` to verify routes and content schema.
+4. For content that should participate in wikilinks or graph generation, add a stable `note_id`; optional fields include `updated_at`, `aliases`, and `note_type`.
+5. Add optional `tags`, `heroImage`, `toc`, `toc_inline`, and `author`.
+6. Run `pnpm build` to verify routes, content schema, and `graph.json` generation.
 
 ### Add A Page
 
@@ -87,8 +92,8 @@ Check `git status --short` before editing and before committing.
 
 Use the smallest useful verification command.
 
-- `pnpm build`: full static build plus Pagefind index.
-- `pnpm dev`: local development server.
+- `pnpm dev`: runs `scripts/generate-graph.mjs` first, then starts Astro.
+- `pnpm build`: runs graph generation, Astro build, then Pagefind index generation.
 - `pnpm preview`: preview built output.
 
 When `pnpm build` passes with warnings, report the warnings and whether they are related to the change.

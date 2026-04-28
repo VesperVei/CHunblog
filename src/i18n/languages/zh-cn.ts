@@ -4,6 +4,7 @@ import type { Translation } from "../translation";
 export const zh_cn: Translation = {
   [I18nKey.home]: "首页",
   [I18nKey.blog]: "博客",
+  [I18nKey.graph]: "关系图谱",
   [I18nKey.about]: "关于",
   [I18nKey.archive]: "归档",
   [I18nKey.search]: "搜索",
@@ -34,6 +35,7 @@ export const zh_cn: Translation = {
   [I18nKey.powered_by]: "由 {Astro} 和 {Goosequill} 提供支持",
   [I18nKey.filter_by_tags]: "按标签筛选",
   [I18nKey.posts_with_tag]: "带有标签的文章：",
+  [I18nKey.expand_graph]: "展开关系图谱",
   
   [I18nKey.n_tags]: {
     zero: "暂无标签",

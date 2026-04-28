@@ -3,39 +3,13 @@ import { siteConfig } from '../config';
 import { allLanguages } from '../i18n/runtime';
 import { getDefaultLocale, isMultiLangMode } from './site-config';
 import type { CollectionEntry } from 'astro:content';
+import { getLangFromId, getSlugFromId } from './content-id.mjs';
 
 
 export type Tag = {
   name: string;
   count: number;
 };
-
-export function getLangFromId(id: string): string | null {
-  const match = id.match(/index_([a-z]{2}(?:-[a-z]{2})?)$/i) || id.match(/_([a-z]{2}(?:-[a-z]{2})?)$/i);
-  return match ? match[1] : null;
-}
-
-export function getSlugFromId(id: string, ...args: any[]): string {
-  const forMultiLang = args[0] === true;
-  const withoutLangSuffix = id.replace(/_[a-z]{2}(?:-[a-z]{2})?$/i, '');
-
-  if (/^index$/i.test(withoutLangSuffix) || /^index\.mdx?$/i.test(withoutLangSuffix)) {
-    return '';
-  }
-
-  if (/\/index$/i.test(withoutLangSuffix)) {
-    return withoutLangSuffix.replace(/\/index$/i, '');
-  }
-
-  if (withoutLangSuffix !== id) {
-    return withoutLangSuffix;
-  }
-
-  if (forMultiLang) {
-    return '';
-  }
-  return id;
-}
 
 export function getTargetLang(requestedLang?: string): string {
   if (isMultiLangMode()) {
@@ -260,5 +234,6 @@ export function generateStaticPathsForLangs() {
   return [];
 }
 
+export { getLangFromId, getSlugFromId } from './content-id.mjs';
 export { siteConfig } from '../config';
 export { isMultiLangMode } from './site-config';

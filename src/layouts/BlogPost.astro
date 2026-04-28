@@ -8,6 +8,7 @@ import BlogPostNav from '../components/blog/BlogPostNav.astro';
 import BlogPostTocControls from '../components/blog/BlogPostTocControls.astro';
 import Comments from '../components/blog/Comments.astro';
 import Statements from '../components/blog/Statements.astro';
+import ArticleGraph from '../components/graph/ArticleGraph.astro';
 
 type ArticleEntry = CollectionEntry<'blog'> | CollectionEntry<'pages'>;
 
@@ -42,6 +43,8 @@ const comment = data.comment;
   </article>
 
   {comment && <Comments /> }
+
+  {data.note_id && <ArticleGraph noteId={data.note_id} />}
 
   <hr />
   <BlogPostNav prev={prev} next={next} />

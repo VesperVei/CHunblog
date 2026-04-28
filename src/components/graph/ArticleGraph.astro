@@ -1,0 +1,64 @@
+---
+import { buildLocaleUrl, detectLocale } from '../../utils/i18n';
+import Graph from './Graph.astro';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+
+interface Props {
+  noteId?: string;
+}
+
+const { noteId } = Astro.props;
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+const graphUrl = noteId ? buildLocaleUrl(currentLocale, `/graph/?focus=${encodeURIComponent(noteId)}`) : undefined;
+---
+
+{noteId && (
+  <section id="article-graph">
+    <div class="graph-header">
+      <h2>{t(I18nKey.graph)}</h2>
+      <a class="graph-link" href={graphUrl}>{t(I18nKey.expand_graph)}</a>
+    </div>
+    <Graph mode="local" focusNodeId={noteId} locale={currentLocale} height="26rem" />
+  </section>
+)}
+
+<style>
+  #article-graph {
+    margin-block-start: 3rem;
+  }
+
+  .graph-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-block-end: 1rem;
+  }
+
+  .graph-header h2 {
+    margin: 0;
+  }
+
+  .graph-link {
+    display: inline-block;
+    transition: var(--transition);
+    box-shadow: var(--edge-highlight);
+    border-radius: 999px;
+    background-color: var(--accent-color-alpha);
+    padding: 0.5rem 0.875rem;
+    line-height: 1;
+    text-decoration: none;
+  }
+
+  .graph-link:hover {
+    background-color: var(--accent-color);
+    color: var(--contrast-color);
+  }
+
+  .graph-link:active {
+    transform: var(--active);
+  }
+</style>
