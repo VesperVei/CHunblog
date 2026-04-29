@@ -214,7 +214,7 @@ export async function getTagStaticPaths(lang?: string) {
   return tags.map((tag) => ({
     params: {
       ...(lang ? { lang: targetLang } : {}),
-      tag: tag.name,
+      tag: encodeURIComponent(tag.name),
     },
   }));
 }

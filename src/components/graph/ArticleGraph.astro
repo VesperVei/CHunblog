@@ -1,26 +1,35 @@
 ---
-import { buildLocaleUrl, detectLocale } from '../../utils/i18n';
+import { detectLocale } from '../../utils/i18n';
 import Graph from './Graph.astro';
 import I18nKey from '../../i18n/i18nKey';
 import { useTranslations } from '../../i18n/translation';
 
 interface Props {
   noteId?: string;
+  previewOnly?: boolean;
 }
 
-const { noteId } = Astro.props;
+const { noteId, previewOnly = false } = Astro.props;
 const currentLocale = detectLocale(Astro.url.pathname);
 const t = useTranslations(currentLocale);
-const graphUrl = noteId ? buildLocaleUrl(currentLocale, `/graph/?focus=${encodeURIComponent(noteId)}`) : undefined;
 ---
 
 {noteId && (
   <section id="article-graph">
     <div class="graph-header">
       <h2>{t(I18nKey.graph)}</h2>
-      <a class="graph-link" href={graphUrl}>{t(I18nKey.expand_graph)}</a>
+      <button class="graph-link" type="button" data-open-local-graph>{t(I18nKey.expand_graph)}</button>
     </div>
-    <Graph mode="local" focusNodeId={noteId} locale={currentLocale} height="26rem" />
+    {!previewOnly && (
+      <Graph
+        mode="local"
+        focusNodeId={noteId}
+        locale={currentLocale}
+        layout="brain"
+        settingsEnabled={true}
+        height="26rem"
+      />
+    )}
   </section>
 )}
 
@@ -48,9 +57,13 @@ const graphUrl = noteId ? buildLocaleUrl(currentLocale, `/graph/?focus=${encodeU
     box-shadow: var(--edge-highlight);
     border-radius: 999px;
     background-color: var(--accent-color-alpha);
+    border: none;
     padding: 0.5rem 0.875rem;
     line-height: 1;
     text-decoration: none;
+    color: var(--accent-color);
+    font: inherit;
+    cursor: pointer;
   }
 
   .graph-link:hover {

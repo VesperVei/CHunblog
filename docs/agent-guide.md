@@ -20,6 +20,9 @@ For route, locale, or content behavior, also read:
 - `src/utils/content-index.mjs`
 - `src/utils/wiki.mjs`
 - `src/utils/remark-obsidian-wikilink.mjs`
+- `src/graph/runtime/create-graph-view.ts`
+- `src/graph/data/brain-graph.ts`
+- `src/graph/layout/`
 - the route file under `src/pages/`
 
 For theme, style, or UI behavior, also read:
@@ -35,6 +38,7 @@ For theme, style, or UI behavior, also read:
 - Prefer updating `src/config.ts` for site-level behavior instead of hardcoding values in components.
 - Keep content routing logic centralized in `src/utils/pages.ts`.
 - Keep wikilink parsing and graph target resolution centralized in `src/utils/wiki.mjs` and `src/utils/content-index.mjs`.
+- Keep graph relation classification and layout selection centralized under `src/graph/`; do not couple layout rules to `local/global` view mode.
 - Keep browser-side theme behavior centralized in `src/utils/theme-script.ts`.
 - Use existing Sass variables and design tokens before adding new colors or constants.
 - Update docs when changing routing, content structure, configuration, theme behavior, build behavior, or agent workflow.

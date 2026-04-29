@@ -3,10 +3,9 @@
   "type": "module",
   "version": "0.0.1",
   "scripts": {
-    "predev": "node ./scripts/generate-graph.mjs",
-    "dev": "astro dev",
+    "dev": "node ./scripts/dev.mjs",
     "import:obsidian": "node ./scripts/import-obsidian-blog.mjs",
-    "prebuild": "node ./scripts/generate-graph.mjs",
+    "prebuild": "node ./scripts/import-obsidian-blog.mjs && node ./scripts/generate-graph.mjs",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro"

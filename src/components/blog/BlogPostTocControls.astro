@@ -9,10 +9,11 @@ interface Props {
   headings: any[];
   showToc?: boolean;
   tocDepth?: number;
+  noteId?: string;
 }
 
 const t = useTranslations(Astro.currentLocale);
-const { headings, showToc, tocDepth } = Astro.props;
+const { headings, showToc, tocDepth, noteId } = Astro.props;
 ---
 
 <div id="buttons-container">
@@ -28,6 +29,11 @@ const { headings, showToc, tocDepth } = Astro.props;
         </div>
       </div>
     </details>
+  )}
+  {noteId && (
+    <button id="graph-shortcut" type="button" title={t(I18nKey.expand_graph)} data-open-local-graph>
+      <Icon name="git-branch" />
+    </button>
   )}
   <a id="go-to-top" href="#top" title={t(I18nKey.go_to_top)}><Icon name="arrow-up" /></a>
 </div>

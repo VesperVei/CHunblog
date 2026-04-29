@@ -8,17 +8,18 @@ export async function getStaticPaths() {
 }
 
 const { lang, tag } = Astro.params;
+const decodedTag = tag ? decodeURIComponent(tag) : '';
 
 if (!isMultiLangMode()) {
   return Astro.redirect('/404');
 }
 
-const posts = await getPostByTag(tag, lang);
-const title = `#${tag}`;
-const description = `${posts.length} posts tagged with ${tag}`;
+const posts = await getPostByTag(decodedTag, lang);
+const title = `#${decodedTag}`;
+const description = `${posts.length} posts tagged with ${decodedTag}`;
 ---
 
 <Base title={title} description={description}>
-  <h1>#{tag}</h1>
+  <h1>#{decodedTag}</h1>
   <BlogCard posts={posts} />
 </Base>

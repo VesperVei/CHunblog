@@ -1,0 +1,138 @@
+---
+title: Pwn
+multiFile:
+multiMedia: ["null"]
+description: "null"
+createTime: 2025-11-25 14:17
+笔记ID: " 202511251712"
+area:
+笔记类型: 项目笔记
+详述计划:
+tags:
+  - pwn
+creation_time: 2025-11-25 14:17
+modify_time: 2026-03-05 09:09
+role: 一级节点
+created_at: 2025-11-25 14:17
+updated_at: 2026-04-28 19:31
+---
+##  Pwn
+```meta-bind-embed
+[[笔记抬头模块]]
+```
+<progress value="100" max="100" style="width: 100%;"></progress>
+## PWN 总览（方向纲要）
+
+```
+      ┌────────────────────┐
+      │   CTF 总览 (Hub)   │
+      └─────────┬──────────┘
+                │
+                ▼
+        ┌──────────────┐
+        │     PWN      │  ← 你在这里
+        └──────┬───────┘
+               │
+    ┌──────────┼──────────┐
+    ▼          ▼          ▼
+知识体系     题目复盘     工具索引
+```
+
+PWN（Binary Exploitation）是 CTF 中最能锻炼底层能力的方向。本笔记作为 PWN 方向的总领节点，用于串联所有子方向、知识分类与工具体系。
+
+## PWN 的目标与本质
+
+PWN 的核心目标是：
+- 理解程序如何被控制
+- 理解内存布局及 Linux 运行机制
+- 通过漏洞构造攻击链，劫持控制流或性能行为
+- 绕过各类现代安全机制
+
+PWN 的本质是「从源代码 → 汇编 → 内存 → 控制流」的一整套推理过程。
+
+## PWN 的整体知识结构
+PWN 的知识体系大体可以分为以下几大主线：
+程序基础
+- 程序编译与链接流程  
+- ELF 文件结构
+- 调用约定（Calling Convention）  
+- 栈帧结构
+
+常见漏洞类型
+- 栈溢出  
+- 格式化字符串漏洞  
+- 整数溢出  
+- UAF（Use-After-Free）  
+- Double Free  
+- 堆溢出  
+- Off-by-one
+
+利用技术
+- ret2text  
+- ret2libc  
+- ROP 链构造  
+- Syscall 利用  
+- 堆利用基础  
+- GOT/PLT 机制  
+- libc 泄露逻辑
+
+glibc / ld.so 底层机制
+- glibc 运行机制  
+- 动态链接与符号解析  
+- 堆管理机制（ptmalloc）
+
+安全机制与绕过
+- NX  
+- PIE  
+- ASLR  
+- RELRO  
+- Stack Canary  
+- seccomp  
+
+工具链与工作流
+- pwntools  
+- gdb（含 pwndbg / peda）  
+- IDA  
+- readelf / objdump  
+- glibc-all-in-one  
+- patchelf
+
+## PWN 的学习路径（建议从这里走）
+1. 建立底层基础：  
+   学会用 gdb  
+   理解栈帧、调用约定  
+   能读懂反汇编（基础指令 + 控制流）
+
+2. 掌握基础漏洞：  
+   栈溢出 → ret2libc  
+   格式化字符串 → 泄露 + 劫持  
+
+3. 深入利用链：  
+   ROP  
+   Syscall  
+   堆利用初步  
+
+4. 堆方向强化：  
+   chunk 结构  
+   fastbin、unsortedbin 机制  
+   常见堆题考点（double free、unlink 等）
+
+5. 理解 glibc / ld.so 本质：  
+   动态链接  
+   符号解析  
+   libc 泄露逻辑  
+
+这是一条贯穿你未来所有复盘的学习路径。
+
+## PWN 与其他方向的关系
+- 与 Reverse 深度重叠：你需要理解函数逻辑与汇编  
+- 与 Crypto、Web 不同：考察的是程序逻辑 + 底层安全  
+- 与 Forensic、Misc 少耦合，但可能涉及系统理解  
+
+你可以把 PWN 看作 CTF 中"最考察对系统掌控力"的方向。
+## PWN 下的二级结构导航（进入子体系）
+在 PWN 下你将进一步分成：
+[[PWN知识体系]]（所有三级知识点的系统索引）  
+[[PWN题目索引]]（所有题目复盘汇总）  
+[[PWN工具索引]]（工具专题汇总）
+这三者组成了 PWN 所有内容的主脉络。
