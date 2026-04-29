@@ -9,6 +9,10 @@ export type GraphNode = {
   aliases: string[];
   role?: string;
   graphLevel?: number;
+  depthFromFocus?: number;
+  primaryParentId?: string;
+  siblingIndex?: number;
+  siblingCount?: number;
   metadata?: Record<string, unknown>;
 };
 
@@ -36,12 +40,22 @@ export type BrainRelationKind = 'current' | 'parent' | 'child' | 'sibling' | 'ju
 
 export type GraphForceSettings = {
   centerStrength?: number;
+  localGravityStrength?: number;
   repelStrength?: number;
   linkStrength?: number;
   linkDistance?: number;
-  collisionRadius?: number;
   collisionStrength?: number;
+  collisionPadding?: number;
+  velocityDecay?: number;
+  alphaDecay?: number;
   alphaTargetOnDrag?: number;
+  alphaOnSettingsChange?: number;
+  chargeDistanceMin?: number;
+  chargeDistanceMax?: number;
+  linkIterations?: number;
+  collideIterations?: number;
+  childClusterStrength?: number;
+  childClusterRadiusFactor?: number;
 };
 
 export type GraphAppearanceSettings = {

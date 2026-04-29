@@ -4,7 +4,7 @@ description: "PWN题目索引 的导入笔记"
 note_id: "202511254633"
 note_type: "项目笔记"
 created_at: "2025-11-25 22:46"
-updated_at: "2025-12-25 07:14"
+updated_at: "2026-04-28 18:44"
 tags: []
 aliases: []
 cssclasses: []
@@ -18,13 +18,13 @@ area: null
 笔记类型: "项目笔记"
 详述计划: null
 creation_time: "2025-11-25 22:46"
-modify_time: "2025-12-25 07:14"
+modify_time: "2026-04-23 09:41"
 ---
 ##  PWN题目索引
 <progress value="100" max="100" style="width: 100%;"></progress>
 # PWN 题目复盘索引
 
-> 本页面自动聚合所有 PWN 题目复盘笔记
+> 本页面自动聚合所有链接到当前索引的 PWN 题目笔记
 
 ## 按比赛分类
 
@@ -54,4 +54,4 @@ modify_time: "2025-12-25 07:14"
 ---
 
 *最后更新：<span class="dataview">`= dateformat(date(now), "YYYY-MM-DD HH:mm")`</span>*
-*总题目数：<span class="dataview">`= length(rows)`</span>*
+*总题目数：<span class="dataview">`= length(filter(pages("Documents/I.P.A.R.A/学习领域/资源"), (p) => contains(p.tags, "pwn") AND contains(p.file.outlinks, this.file.link)))`</span>*

@@ -1,5 +1,6 @@
 import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
 import { DEFAULT_FORCE_SETTINGS, getEffectiveCollisionRadius } from '../constants';
+import { toPhysicalForces } from './physical-forces';
 import type { BrainGraphNode, GraphEdge, GraphSettings } from '../types';
 
 const RELATION_ORDER = ['parent', 'child', 'sibling', 'jump'] as const;
@@ -76,33 +77,39 @@ export function createBrainSimulation(
 ) {
   assignBrainTargets(nodes, width, height);
 
-  const forces = { ...DEFAULT_FORCE_SETTINGS.brain, ...settings.forces };
-  const collisionRadius = getEffectiveCollisionRadius(settings);
+  const physical = toPhysicalForces({ ...DEFAULT_FORCE_SETTINGS.brain, ...settings.forces });
+  const collisionRadius = getEffectiveCollisionRadius(settings) + physical.collisionPadding;
   const anchorStrength = settings.layout.brainAnchorStrength ?? 0.35;
 
   return d3
     .forceSimulation(nodes)
-    .force('link', d3.forceLink(links).id((d) => d.id).distance(forces.linkDistance ?? 88).strength(forces.linkStrength ?? 0.4))
-    .force('charge', d3.forceManyBody().strength(-(forces.repelStrength ?? 40)))
-    .force('collision', d3.forceCollide().radius(collisionRadius).strength(forces.collisionStrength ?? 0.9))
-    .force('target-x', d3.forceX((node: BrainGraphNode) => node.targetX ?? width / 2).strength(anchorStrength))
-    .force('target-y', d3.forceY((node: BrainGraphNode) => node.targetY ?? height / 2).strength(anchorStrength))
-    .force('center-x', d3.forceX(width / 2).strength(forces.centerStrength ?? 0.04))
-    .force('center-y', d3.forceY(height / 2).strength(forces.centerStrength ?? 0.04));
+    .velocityDecay(physical.velocityDecay)
+    .alphaDecay(physical.alphaDecay)
+    .force('link', d3.forceLink(links).id((d) => d.id).distance(physical.linkDistance).strength(physical.linkStrength).iterations(physical.linkIterations))
+    .force('charge', d3.forceManyBody().strength(physical.chargeStrength).distanceMin(physical.chargeDistanceMin).distanceMax(physical.chargeDistanceMax))
+    .force('collision', d3.forceCollide().radius(collisionRadius).strength(physical.collisionStrength).iterations(physical.collideIterations))
+    .force('brain-anchor-x', d3.forceX((node: BrainGraphNode) => node.targetX ?? width / 2).strength(anchorStrength))
+    .force('brain-anchor-y', d3.forceY((node: BrainGraphNode) => node.targetY ?? height / 2).strength(anchorStrength))
+    .force('weak-center-x', d3.forceX(width / 2).strength(physical.physicalCenterStrength * 0.35))
+    .force('weak-center-y', d3.forceY(height / 2).strength(physical.physicalCenterStrength * 0.35));
 }
 
 export function updateBrainSimulation(simulation, nodes: BrainGraphNode[], width: number, height: number, settings: GraphSettings) {
   assignBrainTargets(nodes, width, height);
 
-  const forces = settings.forces;
-  const collisionRadius = getEffectiveCollisionRadius(settings);
+  const physical = toPhysicalForces(settings.forces);
+  const collisionRadius = getEffectiveCollisionRadius(settings) + physical.collisionPadding;
   const anchorStrength = settings.layout.brainAnchorStrength ?? 0.35;
 
-  simulation.force('link')?.distance(forces.linkDistance ?? 120).strength(forces.linkStrength ?? 0.7);
-  simulation.force('charge')?.strength(-(forces.repelStrength ?? 120));
-  simulation.force('collision')?.radius(collisionRadius).strength(forces.collisionStrength ?? 0.7);
-  simulation.force('target-x')?.strength(anchorStrength).x((node: BrainGraphNode) => node.targetX ?? width / 2);
-  simulation.force('target-y')?.strength(anchorStrength).y((node: BrainGraphNode) => node.targetY ?? height / 2);
-  simulation.force('center-x')?.strength(forces.centerStrength ?? 0.08).x(width / 2);
-  simulation.force('center-y')?.strength(forces.centerStrength ?? 0.08).y(height / 2);
+  simulation.velocityDecay(physical.velocityDecay);
+  simulation.alphaDecay(physical.alphaDecay);
+  simulation.force('link')?.distance(physical.linkDistance).strength(physical.linkStrength).iterations(physical.linkIterations);
+  simulation.force('charge')?.strength(physical.chargeStrength).distanceMin(physical.chargeDistanceMin).distanceMax(physical.chargeDistanceMax);
+  simulation.force('collision')?.radius(collisionRadius).strength(physical.collisionStrength).iterations(physical.collideIterations);
+  simulation.force('brain-anchor-x')?.strength(anchorStrength).x((node: BrainGraphNode) => node.targetX ?? width / 2);
+  simulation.force('brain-anchor-y')?.strength(anchorStrength).y((node: BrainGraphNode) => node.targetY ?? height / 2);
+  simulation.force('weak-center-x')?.strength(physical.physicalCenterStrength * 0.35).x(width / 2);
+  simulation.force('weak-center-y')?.strength(physical.physicalCenterStrength * 0.35).y(height / 2);
+
+  return physical;
 }

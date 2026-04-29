@@ -20,7 +20,7 @@ const { tags } = Astro.props;
         <a href={buildLocaleUrl(currentLocale, '/tags')}>{t(I18nKey.tags_colon)}</a>
       </li>
       {tags.map((tag) => (
-      <li><a href={buildLocaleUrl(currentLocale, `/tags/${tag}`)}>{tag}</a></li>
+      <li><a href={buildLocaleUrl(currentLocale, `/tags/${encodeURIComponent(tag)}`)}>{tag}</a></li>
       ))}
   </ul>
 )}

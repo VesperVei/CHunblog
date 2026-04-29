@@ -46,7 +46,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     centerStrength: physics?.centerStrength,
     repelStrength: typeof physics?.chargeStrength === 'number' ? Math.abs(physics.chargeStrength) : undefined,
     linkDistance: physics?.linkDistance,
-    collisionRadius: physics?.collisionRadius,
+    collisionPadding: physics?.collisionRadius,
   },
   layout: {
     preset: layout,
@@ -74,6 +74,28 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           <strong>{t(I18nKey.graph_settings)}</strong>
           <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
         </div>
+
+        <section class="graph-settings-group" data-graph-settings-group>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="true">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_templates)}</span>
+          </button>
+          <div class="graph-settings-group-content" data-graph-section-content>
+            <label class="graph-settings-field">
+              <span>{t(I18nKey.graph_template)}</span>
+              <select data-graph-preset-select></select>
+            </label>
+            <div class="graph-settings-actions-row">
+              <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-reset>{t(I18nKey.graph_reset_preset)}</button>
+            </div>
+            <div class="graph-settings-actions-row" data-graph-debug-only hidden>
+              <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-export>{t(I18nKey.graph_export_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-import>{t(I18nKey.graph_import_preset)}</button>
+            </div>
+          </div>
+        </section>
 
         <section class="graph-settings-group" data-graph-settings-group>
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="true">
@@ -163,6 +185,50 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
+        <section class="graph-settings-group" data-graph-settings-group data-graph-debug-only hidden>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_advanced_forces)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <label class="graph-settings-field" data-graph-setting-field="collisionStrength">
+              <span>{t(I18nKey.graph_collision_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="collisionStrength" />
+                <output data-graph-setting-value="collisionStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="localGravityStrength" title="将当前焦点节点轻微拉回图谱中心，不会永久固定节点。">
+              <span>{t(I18nKey.graph_focus_gravity_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="0.4" step="0.01" data-graph-setting-input="localGravityStrength" />
+                <output data-graph-setting-value="localGravityStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="collisionPadding">
+              <span>{t(I18nKey.graph_collision_padding)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="32" step="1" data-graph-setting-input="collisionPadding" />
+                <output data-graph-setting-value="collisionPadding"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="velocityDecay">
+              <span>{t(I18nKey.graph_velocity_decay)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0.15" max="0.75" step="0.01" data-graph-setting-input="velocityDecay" />
+                <output data-graph-setting-value="velocityDecay"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="alphaDecay">
+              <span>{t(I18nKey.graph_alpha_decay)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0.005" max="0.08" step="0.001" data-graph-setting-input="alphaDecay" />
+                <output data-graph-setting-value="alphaDecay"></output>
+              </div>
+            </label>
+          </div>
+        </section>
+
         <section class="graph-settings-group" data-graph-settings-group>
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
@@ -179,7 +245,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
             <label class="graph-settings-field" data-graph-setting-field="repelStrength">
               <span>{t(I18nKey.graph_repel_strength)}</span>
               <div class="graph-settings-range-row">
-                <input type="range" min="0" max="500" step="5" data-graph-setting-input="repelStrength" />
+                <input type="range" min="0" max="100" step="1" data-graph-setting-input="repelStrength" />
                 <output data-graph-setting-value="repelStrength"></output>
               </div>
             </label>
@@ -193,22 +259,8 @@ const initialSettings = resolveGraphSettings(mode, layout, {
             <label class="graph-settings-field" data-graph-setting-field="linkDistance">
               <span>{t(I18nKey.graph_link_distance)}</span>
               <div class="graph-settings-range-row">
-                <input type="range" min="20" max="400" step="5" data-graph-setting-input="linkDistance" />
+                <input type="range" min="30" max="320" step="5" data-graph-setting-input="linkDistance" />
                 <output data-graph-setting-value="linkDistance"></output>
-              </div>
-            </label>
-            <label class="graph-settings-field" data-graph-setting-field="collisionStrength">
-              <span>{t(I18nKey.graph_collision_strength)}</span>
-              <div class="graph-settings-range-row">
-                <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="collisionStrength" />
-                <output data-graph-setting-value="collisionStrength"></output>
-              </div>
-            </label>
-            <label class="graph-settings-field" data-graph-setting-field="alphaTargetOnDrag">
-              <span>{t(I18nKey.graph_drag_alpha)}</span>
-              <div class="graph-settings-range-row">
-                <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="alphaTargetOnDrag" />
-                <output data-graph-setting-value="alphaTargetOnDrag"></output>
               </div>
             </label>
           </div>
@@ -393,6 +445,23 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     color: var(--graph-accent);
   }
 
+  .graph-settings-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .graph-settings-action {
+    appearance: none;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 86%, transparent);
+    padding: 0.45rem 0.75rem;
+    color: var(--graph-panel-text);
+    font: inherit;
+    cursor: pointer;
+  }
+
   .graph-settings-group {
     border-top: 1px solid var(--graph-panel-border);
     padding-top: 0.5rem;
@@ -426,7 +495,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     display: grid;
     gap: 0.75rem;
     margin-top: 0.7rem;
-    max-height: 40rem;
+    max-height: 120rem;
     opacity: 1;
     overflow: hidden;
     transition: max-height 180ms ease, opacity 180ms ease, margin-top 180ms ease;

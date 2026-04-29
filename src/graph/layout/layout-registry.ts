@@ -9,12 +9,13 @@ export function createSimulationForLayout(
   width: number,
   height: number,
   settings: GraphSettings,
+  focusId?: string,
 ) {
   if (layout === 'brain') {
     return createBrainSimulation(nodes as BrainGraphNode[], links, width, height, settings);
   }
 
-  return createForceSimulation(nodes, links, layout, width, height, settings);
+  return createForceSimulation(nodes, links, layout, width, height, settings, focusId);
 }
 
 export function updateSimulationForLayout(
@@ -24,11 +25,11 @@ export function updateSimulationForLayout(
   width: number,
   height: number,
   settings: GraphSettings,
+  focusId?: string,
 ) {
   if (layout === 'brain') {
-    updateBrainSimulation(simulation, nodes as BrainGraphNode[], width, height, settings);
-    return;
+    return updateBrainSimulation(simulation, nodes as BrainGraphNode[], width, height, settings);
   }
 
-  updateForceSimulation(simulation, width, height, settings);
+  return updateForceSimulation(simulation, width, height, settings, focusId);
 }

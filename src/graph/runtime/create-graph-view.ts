@@ -35,6 +35,66 @@ function withDegrees(data: GraphData) {
   };
 }
 
+function withDepthFromFocus(data: GraphData, focusId?: string) {
+  if (!focusId) {
+    return {
+      nodes: data.nodes.map((node) => ({ ...node, depthFromFocus: 1 })),
+      links: data.links,
+    };
+  }
+
+  const adjacency = new Map<string, Set<string>>();
+  for (const link of data.links) {
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    adjacency.set(sourceId, new Set([...(adjacency.get(sourceId) ?? []), targetId]));
+    adjacency.set(targetId, new Set([...(adjacency.get(targetId) ?? []), sourceId]));
+  }
+
+  const depthMap = new Map<string, number>([[focusId, 0]]);
+  const parentMap = new Map<string, string | undefined>([[focusId, undefined]]);
+  const queue = [focusId];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const currentDepth = depthMap.get(current) ?? 0;
+    for (const neighbor of adjacency.get(current) ?? []) {
+      if (depthMap.has(neighbor)) continue;
+      depthMap.set(neighbor, currentDepth + 1);
+      parentMap.set(neighbor, current);
+      queue.push(neighbor);
+    }
+  }
+
+  const childrenByParent = new Map<string, string[]>();
+  for (const [nodeId, parentId] of parentMap.entries()) {
+    if (!parentId) continue;
+    childrenByParent.set(parentId, [...(childrenByParent.get(parentId) ?? []), nodeId]);
+  }
+
+  const siblingMeta = new Map<string, { siblingIndex: number; siblingCount: number }>();
+  for (const childIds of childrenByParent.values()) {
+    const sortedChildIds = [...childIds].sort((left, right) => left.localeCompare(right));
+    sortedChildIds.forEach((childId, index) => {
+      siblingMeta.set(childId, {
+        siblingIndex: index,
+        siblingCount: sortedChildIds.length,
+      });
+    });
+  }
+
+  return {
+    nodes: data.nodes.map((node) => ({
+      ...node,
+      depthFromFocus: depthMap.get(node.id) ?? 1,
+      primaryParentId: parentMap.get(node.id),
+      siblingIndex: siblingMeta.get(node.id)?.siblingIndex,
+      siblingCount: siblingMeta.get(node.id)?.siblingCount,
+    })),
+    links: data.links,
+  };
+}
+
 function buildGraphData(fullData: GraphData, options: GraphViewOptions) {
   const preset = getActiveLayoutPreset(options.settings);
   if (preset === 'brain') {
@@ -102,14 +162,14 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
   const rebuildScene = (nextGraphData: GraphData) => {
     stopSimulation();
 
-    currentData = withDegrees(cloneRenderableGraph(nextGraphData) as GraphData);
+    currentData = withDegrees(withDepthFromFocus(cloneRenderableGraph(nextGraphData) as GraphData, currentOptions.focusId) as GraphData);
     canvas.selectAll('*').remove();
     scene = renderGraphScene(canvas, currentData, currentOptions.locale, currentOptions.focusId, markerId);
     applyGraphAppearance(scene, currentOptions.settings.appearance);
     bindNodeNavigation(scene.node, currentOptions.locale, currentOptions.navigationSearch);
 
     const preset = getActiveLayoutPreset(currentOptions.settings);
-    simulation = createSimulationForLayout(preset, currentData.nodes, currentData.links, width, height, currentOptions.settings);
+    simulation = createSimulationForLayout(preset, currentData.nodes, currentData.links, width, height, currentOptions.settings, currentOptions.focusId);
     attachNodeDrag(scene.node, simulation, currentOptions.settings.forces.alphaTargetOnDrag ?? 0.25);
     simulation.on('tick', renderFrame);
     renderFrame();
@@ -131,6 +191,9 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
   };
 
   const updateAppearance = (nextAppearance) => {
+    const shouldRefreshCollision = Object.prototype.hasOwnProperty.call(nextAppearance, 'nodeRadius')
+      || Object.prototype.hasOwnProperty.call(nextAppearance, 'focusNodeRadius');
+
     currentOptions = {
       ...currentOptions,
       settings: {
@@ -144,9 +207,13 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     }
 
     applyGraphAppearance(scene, currentOptions.settings.appearance);
-    updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings);
+
+    if (shouldRefreshCollision) {
+      const physical = updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId);
+      simulation.alpha(Math.min(0.35, physical?.alphaOnSettingsChange ?? 0.35)).restart();
+    }
+
     renderFrame();
-    simulation.alpha(0.35).restart();
   };
 
   const updateForces = (nextForces) => {
@@ -162,9 +229,10 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       return;
     }
 
-    updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings);
+    const physical = updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId);
     attachNodeDrag(scene.node, simulation, currentOptions.settings.forces.alphaTargetOnDrag ?? 0.25);
-    simulation.alpha(0.5).restart();
+    const nextAlpha = physical?.alphaOnSettingsChange ?? currentOptions.settings.forces.alphaOnSettingsChange ?? 0.6;
+    simulation.alpha(Math.max(simulation.alpha(), nextAlpha)).restart();
   };
 
   const updateFilters = (nextFilters) => {
@@ -184,6 +252,12 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     const nextPreset = getActiveLayoutPreset(nextSettings);
     const previousFilters = JSON.stringify(currentOptions.settings.filters);
     const nextFilters = JSON.stringify(nextSettings.filters);
+    const previousAppearance = JSON.stringify(currentOptions.settings.appearance);
+    const nextAppearance = JSON.stringify(nextSettings.appearance);
+    const previousForces = JSON.stringify(currentOptions.settings.forces);
+    const nextForces = JSON.stringify(nextSettings.forces);
+    const previousLayout = JSON.stringify(currentOptions.settings.layout);
+    const nextLayout = JSON.stringify(nextSettings.layout);
 
     currentOptions = {
       ...currentOptions,
@@ -200,8 +274,17 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       return;
     }
 
-    updateAppearance(nextSettings.appearance);
-    updateForces(nextSettings.forces);
+    if (previousAppearance !== nextAppearance) {
+      updateAppearance(nextSettings.appearance);
+    }
+
+    if (previousForces !== nextForces) {
+      updateForces(nextSettings.forces);
+    }
+
+    if (previousLayout !== nextLayout && previousForces === nextForces) {
+      updateForces(currentOptions.settings.forces);
+    }
   };
 
   setData(buildGraphData(fullData, currentOptions));

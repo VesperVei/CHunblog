@@ -25,7 +25,7 @@ const description = pageDescription || t(I18nKey.n_tags, { count: tags.length })
   <ul class="tags">
     {tags.map(tag => (
       <li>
-      <a href={buildLocaleUrl(currentLocale, `/tags/${tag.name}`)}>
+      <a href={buildLocaleUrl(currentLocale, `/tags/${encodeURIComponent(tag.name)}`)}>
           <span class="tag">{tag.name}</span>
           <span class="count">{tag.count}</span>
         </a>

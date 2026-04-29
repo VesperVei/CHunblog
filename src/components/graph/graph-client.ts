@@ -1,7 +1,10 @@
 import { DEFAULT_LAYOUT, defaultGraphSettings, resolveGraphSettings } from '../../graph/constants';
 import { createGraphView } from '../../graph/runtime/create-graph-view';
+import { BUILTIN_GRAPH_PRESETS, createPresetFromSettings, getGraphPresetById, mergePresetIntoSettings, type GraphViewPreset } from '../../graph/presets';
 import type { GraphLayoutMode, GraphSettings, GraphViewMode } from '../../graph/types';
 
+const GRAPH_PRESETS_STORAGE_KEY = 'graph:view-presets';
+const GRAPH_ACTIVE_PRESET_KEY = 'graph:active-preset-id';
 const graphDataCache = new Map<string, Promise<any>>();
 
 type GraphClientState = {
@@ -11,14 +14,24 @@ type GraphClientState = {
   focusId?: string;
   settings: GraphSettings;
   navigationSearch?: string;
+  debug: boolean;
+  activePresetId?: string;
+};
+
+type GraphSidebarContext = {
+  state: GraphClientState;
+  debug: boolean;
 };
 
 type FieldScope = 'filters' | 'appearance' | 'forces' | 'layout';
 type FieldControl = 'search' | 'slider' | 'toggle' | 'select';
+type UpdateMode = 'filters' | 'appearance' | 'forces' | 'settings';
 type FieldConfig = {
   scope: FieldScope;
   control: FieldControl;
-  visible?: (state: GraphClientState) => boolean;
+  updateMode: UpdateMode;
+  visible?: (ctx: GraphSidebarContext) => boolean;
+  debugOnly?: boolean;
   read: (state: GraphClientState) => string | boolean;
   write: (state: GraphClientState, rawValue: string | boolean) => GraphClientState;
   format?: (value: string | boolean) => string;
@@ -26,158 +39,8 @@ type FieldConfig = {
 };
 
 const formatFloat = (value: string | boolean) => Number(value).toFixed(2);
+const formatFloat3 = (value: string | boolean) => Number(value).toFixed(3);
 const formatInteger = (value: string | boolean) => String(Math.round(Number(value)));
-
-const FIELD_CONFIG: Record<string, FieldConfig> = {
-  searchQuery: {
-    scope: 'filters',
-    control: 'search',
-    read: (state) => state.settings.filters.searchQuery ?? '',
-    write: (state, rawValue) => updateScope(state, 'filters', { searchQuery: String(rawValue) }),
-    debounceMs: 150,
-  },
-  depth: {
-    scope: 'filters',
-    control: 'slider',
-    visible: (state) => state.mode === 'local' && state.settings.layout.preset !== 'brain',
-    read: (state) => String(state.settings.filters.depth ?? 1),
-    write: (state, rawValue) => updateScope(state, 'filters', { depth: Number(rawValue) }),
-    format: formatInteger,
-    debounceMs: 150,
-  },
-  showBacklinks: {
-    scope: 'filters',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.filters.showBacklinks),
-    write: (state, rawValue) => updateScope(state, 'filters', { showBacklinks: Boolean(rawValue) }),
-  },
-  showForwardLinks: {
-    scope: 'filters',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.filters.showForwardLinks),
-    write: (state, rawValue) => updateScope(state, 'filters', { showForwardLinks: Boolean(rawValue) }),
-  },
-  showCrossLinks: {
-    scope: 'filters',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.filters.showCrossLinks),
-    write: (state, rawValue) => updateScope(state, 'filters', { showCrossLinks: Boolean(rawValue) }),
-  },
-  showTags: {
-    scope: 'filters',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.filters.showTags),
-    write: (state, rawValue) => updateScope(state, 'filters', { showTags: Boolean(rawValue) }),
-  },
-  showAttachments: {
-    scope: 'filters',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.filters.showAttachments),
-    write: (state, rawValue) => updateScope(state, 'filters', { showAttachments: Boolean(rawValue) }),
-  },
-  onlyExistingNotes: {
-    scope: 'filters',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.filters.onlyExistingNotes),
-    write: (state, rawValue) => updateScope(state, 'filters', { onlyExistingNotes: Boolean(rawValue) }),
-  },
-  showArrows: {
-    scope: 'appearance',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.appearance.showArrows),
-    write: (state, rawValue) => updateScope(state, 'appearance', { showArrows: Boolean(rawValue) }),
-  },
-  textOpacity: {
-    scope: 'appearance',
-    control: 'slider',
-    read: (state) => String(state.settings.appearance.textOpacity ?? 0.8),
-    write: (state, rawValue) => updateScope(state, 'appearance', { textOpacity: Number(rawValue) }),
-    format: formatFloat,
-  },
-  nodeRadius: {
-    scope: 'appearance',
-    control: 'slider',
-    read: (state) => String(state.settings.appearance.nodeRadius ?? 6),
-    write: (state, rawValue) => updateScope(state, 'appearance', { nodeRadius: Number(rawValue) }),
-    format: formatInteger,
-  },
-  linkWidth: {
-    scope: 'appearance',
-    control: 'slider',
-    read: (state) => String(state.settings.appearance.linkWidth ?? 1.5),
-    write: (state, rawValue) => updateScope(state, 'appearance', { linkWidth: Number(rawValue) }),
-    format: formatFloat,
-  },
-  labelSize: {
-    scope: 'appearance',
-    control: 'slider',
-    read: (state) => String(state.settings.appearance.labelSize ?? 12),
-    write: (state, rawValue) => updateScope(state, 'appearance', { labelSize: Number(rawValue) }),
-    format: formatInteger,
-  },
-  centerStrength: {
-    scope: 'forces',
-    control: 'slider',
-    read: (state) => String(state.settings.forces.centerStrength ?? 0.08),
-    write: (state, rawValue) => updateScope(state, 'forces', { centerStrength: Number(rawValue) }),
-    format: formatFloat,
-  },
-  repelStrength: {
-    scope: 'forces',
-    control: 'slider',
-    read: (state) => String(state.settings.forces.repelStrength ?? 120),
-    write: (state, rawValue) => updateScope(state, 'forces', { repelStrength: Number(rawValue) }),
-    format: formatInteger,
-  },
-  linkStrength: {
-    scope: 'forces',
-    control: 'slider',
-    read: (state) => String(state.settings.forces.linkStrength ?? 0.7),
-    write: (state, rawValue) => updateScope(state, 'forces', { linkStrength: Number(rawValue) }),
-    format: formatFloat,
-  },
-  linkDistance: {
-    scope: 'forces',
-    control: 'slider',
-    read: (state) => String(state.settings.forces.linkDistance ?? 120),
-    write: (state, rawValue) => updateScope(state, 'forces', { linkDistance: Number(rawValue) }),
-    format: formatInteger,
-  },
-  collisionStrength: {
-    scope: 'forces',
-    control: 'slider',
-    read: (state) => String(state.settings.forces.collisionStrength ?? 0.7),
-    write: (state, rawValue) => updateScope(state, 'forces', { collisionStrength: Number(rawValue) }),
-    format: formatFloat,
-  },
-  alphaTargetOnDrag: {
-    scope: 'forces',
-    control: 'slider',
-    read: (state) => String(state.settings.forces.alphaTargetOnDrag ?? 0.25),
-    write: (state, rawValue) => updateScope(state, 'forces', { alphaTargetOnDrag: Number(rawValue) }),
-    format: formatFloat,
-  },
-  preset: {
-    scope: 'layout',
-    control: 'select',
-    read: (state) => state.settings.layout.preset ?? DEFAULT_LAYOUT,
-    write: (state, rawValue) => updateScope(state, 'layout', { preset: rawValue as GraphLayoutMode }),
-  },
-  brainAnchorStrength: {
-    scope: 'layout',
-    control: 'slider',
-    visible: (state) => state.settings.layout.preset === 'brain',
-    read: (state) => String(state.settings.layout.brainAnchorStrength ?? 0.35),
-    write: (state, rawValue) => updateScope(state, 'layout', { brainAnchorStrength: Number(rawValue) }),
-    format: formatFloat,
-  },
-  preserveSelectedPreset: {
-    scope: 'layout',
-    control: 'toggle',
-    read: (state) => Boolean(state.settings.layout.preserveSelectedPreset),
-    write: (state, rawValue) => updateScope(state, 'layout', { preserveSelectedPreset: Boolean(rawValue) }),
-  },
-};
 
 function updateScope(state: GraphClientState, scope: FieldScope, patch: Record<string, unknown>): GraphClientState {
   return {
@@ -192,19 +55,113 @@ function updateScope(state: GraphClientState, scope: FieldScope, patch: Record<s
   };
 }
 
+const FIELD_CONFIG: Record<string, FieldConfig> = {
+  searchQuery: {
+    scope: 'filters', control: 'search', updateMode: 'filters', debounceMs: 150,
+    read: (state) => state.settings.filters.searchQuery ?? '',
+    write: (state, rawValue) => updateScope(state, 'filters', { searchQuery: String(rawValue) }),
+  },
+  depth: {
+    scope: 'filters', control: 'slider', updateMode: 'filters', debounceMs: 150,
+    visible: ({ state }) => state.mode === 'local' && state.settings.layout.preset !== 'brain',
+    read: (state) => String(state.settings.filters.depth ?? 1),
+    write: (state, rawValue) => updateScope(state, 'filters', { depth: Number(rawValue) }),
+    format: formatInteger,
+  },
+  showBacklinks: { scope: 'filters', control: 'toggle', updateMode: 'filters', read: (s) => Boolean(s.settings.filters.showBacklinks), write: (s, v) => updateScope(s, 'filters', { showBacklinks: Boolean(v) }) },
+  showForwardLinks: { scope: 'filters', control: 'toggle', updateMode: 'filters', read: (s) => Boolean(s.settings.filters.showForwardLinks), write: (s, v) => updateScope(s, 'filters', { showForwardLinks: Boolean(v) }) },
+  showCrossLinks: { scope: 'filters', control: 'toggle', updateMode: 'filters', read: (s) => Boolean(s.settings.filters.showCrossLinks), write: (s, v) => updateScope(s, 'filters', { showCrossLinks: Boolean(v) }) },
+  showTags: { scope: 'filters', control: 'toggle', updateMode: 'filters', read: (s) => Boolean(s.settings.filters.showTags), write: (s, v) => updateScope(s, 'filters', { showTags: Boolean(v) }) },
+  showAttachments: { scope: 'filters', control: 'toggle', updateMode: 'filters', read: (s) => Boolean(s.settings.filters.showAttachments), write: (s, v) => updateScope(s, 'filters', { showAttachments: Boolean(v) }) },
+  onlyExistingNotes: { scope: 'filters', control: 'toggle', updateMode: 'filters', read: (s) => Boolean(s.settings.filters.onlyExistingNotes), write: (s, v) => updateScope(s, 'filters', { onlyExistingNotes: Boolean(v) }) },
+  showArrows: { scope: 'appearance', control: 'toggle', updateMode: 'appearance', read: (s) => Boolean(s.settings.appearance.showArrows), write: (s, v) => updateScope(s, 'appearance', { showArrows: Boolean(v) }) },
+  textOpacity: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.textOpacity ?? 0.8), write: (s, v) => updateScope(s, 'appearance', { textOpacity: Number(v) }), format: formatFloat },
+  nodeRadius: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.nodeRadius ?? 6), write: (s, v) => updateScope(s, 'appearance', { nodeRadius: Number(v) }), format: formatInteger },
+  linkWidth: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.linkWidth ?? 1.5), write: (s, v) => updateScope(s, 'appearance', { linkWidth: Number(v) }), format: formatFloat },
+  labelSize: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.labelSize ?? 12), write: (s, v) => updateScope(s, 'appearance', { labelSize: Number(v) }), format: formatInteger },
+  centerStrength: { scope: 'forces', control: 'slider', updateMode: 'forces', read: (s) => String(s.settings.forces.centerStrength ?? 0.518713248970312), write: (s, v) => updateScope(s, 'forces', { centerStrength: Number(v) }), format: formatFloat },
+  repelStrength: { scope: 'forces', control: 'slider', updateMode: 'forces', read: (s) => String(s.settings.forces.repelStrength ?? 35), write: (s, v) => updateScope(s, 'forces', { repelStrength: Number(v) }), format: formatInteger },
+  linkStrength: { scope: 'forces', control: 'slider', updateMode: 'forces', read: (s) => String(s.settings.forces.linkStrength ?? 1), write: (s, v) => updateScope(s, 'forces', { linkStrength: Number(v) }), format: formatFloat },
+  linkDistance: { scope: 'forces', control: 'slider', updateMode: 'forces', read: (s) => String(s.settings.forces.linkDistance ?? 250), write: (s, v) => updateScope(s, 'forces', { linkDistance: Number(v) }), format: formatInteger },
+  collisionStrength: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.collisionStrength ?? 0.75), write: (s, v) => updateScope(s, 'forces', { collisionStrength: Number(v) }), format: formatFloat },
+  collisionPadding: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.collisionPadding ?? 8), write: (s, v) => updateScope(s, 'forces', { collisionPadding: Number(v) }), format: formatInteger },
+  velocityDecay: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.velocityDecay ?? 0.38), write: (s, v) => updateScope(s, 'forces', { velocityDecay: Number(v) }), format: formatFloat },
+  alphaDecay: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.alphaDecay ?? 0.022), write: (s, v) => updateScope(s, 'forces', { alphaDecay: Number(v) }), format: formatFloat3 },
+  localGravityStrength: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.localGravityStrength ?? 0.1), write: (s, v) => updateScope(s, 'forces', { localGravityStrength: Number(v) }), format: formatFloat },
+  preset: { scope: 'layout', control: 'select', updateMode: 'settings', read: (s) => s.settings.layout.preset ?? DEFAULT_LAYOUT, write: (s, v) => updateScope(s, 'layout', { preset: v as GraphLayoutMode }) },
+  brainAnchorStrength: { scope: 'layout', control: 'slider', updateMode: 'settings', visible: ({ state }) => state.settings.layout.preset === 'brain', read: (s) => String(s.settings.layout.brainAnchorStrength ?? 0.35), write: (s, v) => updateScope(s, 'layout', { brainAnchorStrength: Number(v) }), format: formatFloat },
+  preserveSelectedPreset: { scope: 'layout', control: 'toggle', updateMode: 'settings', debugOnly: true, read: (s) => Boolean(s.settings.layout.preserveSelectedPreset), write: (s, v) => updateScope(s, 'layout', { preserveSelectedPreset: Boolean(v) }) },
+};
+
+function isGraphDebugMode() {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('graphDebug') === '1' || window.localStorage.getItem('graphDebug') === '1';
+}
+
 function resolveFocusId(root: HTMLElement) {
   const explicit = root.dataset.focusId;
-  if (explicit) {
-    return explicit;
-  }
-
+  if (explicit) return explicit;
   const queryFocus = new URLSearchParams(window.location.search).get('focus');
   return queryFocus || undefined;
 }
 
+function loadStoredPresetState() {
+  try {
+    const rawPresets = window.localStorage.getItem(GRAPH_PRESETS_STORAGE_KEY);
+    const presets = rawPresets ? JSON.parse(rawPresets) : [];
+    const activePresetId = window.localStorage.getItem(GRAPH_ACTIVE_PRESET_KEY) || undefined;
+    return {
+      presets: Array.isArray(presets) ? presets : [],
+      activePresetId,
+    };
+  } catch {
+    return { presets: [], activePresetId: undefined };
+  }
+}
+
+function saveStoredPresetState(presets: GraphViewPreset[], activePresetId?: string) {
+  try {
+    window.localStorage.setItem(GRAPH_PRESETS_STORAGE_KEY, JSON.stringify(presets));
+    if (activePresetId) {
+      window.localStorage.setItem(GRAPH_ACTIVE_PRESET_KEY, activePresetId);
+    } else {
+      window.localStorage.removeItem(GRAPH_ACTIVE_PRESET_KEY);
+    }
+  } catch {
+    // Ignore storage failures so graph runtime stays usable.
+  }
+}
+
+function getAllPresets() {
+  const stored = loadStoredPresetState();
+  return {
+    activePresetId: stored.activePresetId,
+    presets: [...BUILTIN_GRAPH_PRESETS, ...stored.presets],
+    userPresets: stored.presets,
+  };
+}
+
+function getFallbackPresetId(presets: GraphViewPreset[]) {
+  return getGraphPresetById(presets, 'balanced')?.id ?? getGraphPresetById(presets, 'obsidian-like')?.id ?? presets[0]?.id;
+}
+
+function applyPresetKeepingFilters(settings: GraphSettings, preset?: GraphViewPreset) {
+  if (!preset) {
+    return settings;
+  }
+
+  return mergePresetIntoSettings(settings, preset);
+}
+
 function readGraphState(root: HTMLElement): GraphClientState {
   const mode = (root.dataset.mode as GraphViewMode) || 'global';
-  const settings = root.dataset.graphSettings ? JSON.parse(root.dataset.graphSettings) as GraphSettings : resolveGraphSettings(mode, DEFAULT_LAYOUT, defaultGraphSettings);
+  const debug = isGraphDebugMode();
+  const { presets, activePresetId } = getAllPresets();
+  const resolvedActivePresetId = getGraphPresetById(presets, activePresetId)?.id ?? getFallbackPresetId(presets);
+  const settings = root.dataset.graphSettings
+    ? JSON.parse(root.dataset.graphSettings) as GraphSettings
+    : applyPresetKeepingFilters(resolveGraphSettings(mode, DEFAULT_LAYOUT, defaultGraphSettings), getGraphPresetById(presets, resolvedActivePresetId));
 
   return {
     graphUrl: root.dataset.graphUrl || '/graph.json',
@@ -213,6 +170,8 @@ function readGraphState(root: HTMLElement): GraphClientState {
     focusId: resolveFocusId(root),
     settings,
     navigationSearch: root.dataset.navigationSearch,
+    debug,
+    activePresetId: resolvedActivePresetId,
   };
 }
 
@@ -236,38 +195,56 @@ async function initGraph(root: HTMLElement) {
   (root as any).__graphState = currentState;
 }
 
+function syncDebugVisibility(shell: HTMLElement, debug: boolean) {
+  shell.querySelectorAll<HTMLElement>('[data-graph-debug-only]').forEach((element) => {
+    element.hidden = !debug;
+  });
+}
+
+function syncPresetUI(shell: HTMLElement, state: GraphClientState) {
+  const select = shell.querySelector<HTMLSelectElement>('[data-graph-preset-select]');
+  if (!select) return;
+
+  const { presets } = getAllPresets();
+  select.replaceChildren(...presets.map((preset) => {
+    const option = document.createElement('option');
+    option.value = preset.id;
+    option.textContent = preset.name;
+    return option;
+  }));
+  select.value = state.activePresetId ?? getFallbackPresetId(presets) ?? '';
+}
+
 function syncSettingsUI(shell: HTMLElement, root: HTMLElement) {
   const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+  const ctx: GraphSidebarContext = { state, debug: state.debug };
+
+  syncDebugVisibility(shell, state.debug);
+  syncPresetUI(shell, state);
 
   shell.querySelectorAll<HTMLElement>('[data-graph-setting-field]').forEach((field) => {
     const key = field.dataset.graphSettingField || '';
     const config = FIELD_CONFIG[key];
-    field.hidden = config ? !(config.visible?.(state) ?? true) : false;
+    const visible = config ? (!config.debugOnly || ctx.debug) && (config.visible?.(ctx) ?? true) : true;
+    field.hidden = !visible;
   });
 
   shell.querySelectorAll<HTMLInputElement | HTMLSelectElement>('[data-graph-setting-input]').forEach((input) => {
     const key = input.dataset.graphSettingInput || '';
     const config = FIELD_CONFIG[key];
-    if (!config) {
-      return;
-    }
-
+    if (!config) return;
     const value = config.read(state);
     if (input instanceof HTMLInputElement && input.type === 'checkbox') {
       input.checked = Boolean(value);
-      return;
+    } else {
+      input.value = String(value);
     }
-
-    input.value = String(value);
   });
 
   shell.querySelectorAll<HTMLOutputElement>('[data-graph-setting-value]').forEach((output) => {
     const key = output.dataset.graphSettingValue || '';
     const config = FIELD_CONFIG[key];
-    if (!config) {
-      return;
-    }
-
+    if (!config) return;
     const value = config.read(state);
     const text = config.format ? config.format(value) : String(value);
     output.value = text;
@@ -275,45 +252,35 @@ function syncSettingsUI(shell: HTMLElement, root: HTMLElement) {
   });
 }
 
-function updateGraphSettings(root: HTMLElement, nextSettings: GraphSettings) {
+function applyNextState(root: HTMLElement, nextState: GraphClientState, updateMode: UpdateMode) {
   const controls = (root as any).__graphControls;
-  const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-  const nextState = { ...currentState, settings: nextSettings };
   writeGraphState(root, nextState);
   (root as any).__graphState = nextState;
-  controls?.updateSettings?.(nextSettings);
+
+  if (!controls) return;
+  if (updateMode === 'forces') {
+    controls.updateForces?.(nextState.settings.forces);
+    return;
+  }
+  if (updateMode === 'appearance') {
+    controls.updateAppearance?.(nextState.settings.appearance);
+    return;
+  }
+  if (updateMode === 'filters') {
+    controls.updateFilters?.(nextState.settings.filters);
+    return;
+  }
+  controls.updateSettings?.(nextState.settings);
 }
 
 function dispatchFieldUpdate(root: HTMLElement, shell: HTMLElement, key: string, nextState: GraphClientState) {
   const config = FIELD_CONFIG[key];
-  if (!config) {
-    return;
-  }
-
+  if (!config) return;
   writeGraphState(root, nextState);
   (root as any).__graphState = nextState;
   syncSettingsUI(shell, root);
 
-  const controls = (root as any).__graphControls;
-  const run = () => {
-    if (config.scope === 'forces') {
-      controls?.updateForces?.(nextState.settings.forces);
-      return;
-    }
-
-    if (config.scope === 'appearance') {
-      controls?.updateAppearance?.(nextState.settings.appearance);
-      return;
-    }
-
-    if (config.scope === 'filters') {
-      controls?.updateFilters?.(nextState.settings.filters);
-      return;
-    }
-
-    updateGraphSettings(root, nextState.settings);
-  };
-
+  const run = () => applyNextState(root, nextState, config.updateMode);
   if (config.debounceMs) {
     const timers = ((root as any).__graphDebounceTimers ??= new Map<string, number>());
     window.clearTimeout(timers.get(key));
@@ -325,18 +292,12 @@ function dispatchFieldUpdate(root: HTMLElement, shell: HTMLElement, key: string,
 }
 
 function bindSectionToggles(shell: HTMLElement) {
-  if ((shell as any).__graphSectionsBound) {
-    return;
-  }
-
+  if ((shell as any).__graphSectionsBound) return;
   (shell as any).__graphSectionsBound = true;
   shell.querySelectorAll<HTMLButtonElement>('[data-graph-section-toggle]').forEach((button) => {
     button.addEventListener('click', () => {
       const content = button.nextElementSibling as HTMLElement | null;
-      if (!content) {
-        return;
-      }
-
+      if (!content) return;
       const isOpen = button.getAttribute('aria-expanded') !== 'false';
       button.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
       content.classList.toggle('is-collapsed', isOpen);
@@ -344,20 +305,88 @@ function bindSectionToggles(shell: HTMLElement) {
   });
 }
 
+function bindPresetActions(root: HTMLElement, shell: HTMLElement) {
+  shell.querySelector('[data-graph-preset-save]')?.addEventListener('click', () => {
+    const name = window.prompt('请输入模板名称');
+    if (!name) return;
+
+    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+    const preset = createPresetFromSettings(name, currentState.settings);
+    const { userPresets } = getAllPresets();
+    const nextUserPresets = [...userPresets.filter((item) => item.id !== preset.id), preset];
+    saveStoredPresetState(nextUserPresets, preset.id);
+    const nextState = { ...currentState, activePresetId: preset.id };
+    (root as any).__graphState = nextState;
+    syncSettingsUI(shell, root);
+  });
+
+  shell.querySelector('[data-graph-preset-reset]')?.addEventListener('click', () => {
+    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+    const { presets } = getAllPresets();
+    const preset = getGraphPresetById(presets, currentState.activePresetId);
+    const nextSettings = applyPresetKeepingFilters(currentState.settings, preset);
+    const nextState = { ...currentState, settings: nextSettings };
+    applyNextState(root, nextState, 'settings');
+    syncSettingsUI(shell, root);
+  });
+
+  shell.querySelector('[data-graph-preset-overwrite]')?.addEventListener('click', () => {
+    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+    const { presets, userPresets } = getAllPresets();
+    const preset = getGraphPresetById(presets, currentState.activePresetId);
+    if (!preset || preset.builtin) {
+      window.alert('内置模板不能覆盖，请先另存为模板。');
+      return;
+    }
+
+    const nextPreset = {
+      ...createPresetFromSettings(preset.name, currentState.settings),
+      id: preset.id,
+      createdAt: preset.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+    const nextUserPresets = [...userPresets.filter((item) => item.id !== preset.id), nextPreset];
+    saveStoredPresetState(nextUserPresets, nextPreset.id);
+    syncSettingsUI(shell, root);
+  });
+
+  shell.querySelector('[data-graph-preset-export]')?.addEventListener('click', async () => {
+    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+    const payload = JSON.stringify(createPresetFromSettings('exported-preset', currentState.settings), null, 2);
+    await navigator.clipboard.writeText(payload).catch(() => undefined);
+  });
+
+  shell.querySelector('[data-graph-preset-import]')?.addEventListener('click', () => {
+    const raw = window.prompt('粘贴模板 JSON');
+    if (!raw) return;
+    try {
+      const preset = JSON.parse(raw) as GraphViewPreset;
+      if (!preset?.id || !preset?.name) return;
+      const { userPresets } = getAllPresets();
+      const normalized = { ...preset, builtin: false, updatedAt: new Date().toISOString(), createdAt: preset.createdAt ?? new Date().toISOString() };
+      const nextUserPresets = [...userPresets.filter((item) => item.id !== normalized.id), normalized];
+      saveStoredPresetState(nextUserPresets, normalized.id);
+      const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+      const nextSettings = applyPresetKeepingFilters(currentState.settings, normalized);
+      applyNextState(root, { ...currentState, settings: nextSettings, activePresetId: normalized.id }, 'settings');
+      syncSettingsUI(shell, root);
+    } catch {
+      window.alert('模板 JSON 无效。');
+    }
+  });
+}
+
 function bindGraphSettings(root: HTMLElement) {
   const shell = root.closest<HTMLElement>('[data-graph-shell]');
-  if (!shell || (shell as any).__graphSettingsBound) {
-    return;
-  }
+  if (!shell || (shell as any).__graphSettingsBound) return;
 
   (shell as any).__graphSettingsBound = true;
   bindSectionToggles(shell);
+  bindPresetActions(root, shell);
 
   const toggle = shell.querySelector<HTMLButtonElement>('[data-graph-settings-toggle]');
   const panel = shell.querySelector<HTMLElement>('[data-graph-settings-panel]');
-  if (!toggle || !panel) {
-    return;
-  }
+  if (!toggle || !panel) return;
 
   const setOpen = (isOpen: boolean) => {
     panel.hidden = !isOpen;
@@ -368,24 +397,32 @@ function bindGraphSettings(root: HTMLElement) {
   toggle.addEventListener('click', () => {
     const isOpen = panel.hidden;
     setOpen(isOpen);
-    if (isOpen) {
-      syncSettingsUI(shell, root);
-    }
+    if (isOpen) syncSettingsUI(shell, root);
   });
 
   shell.querySelector('[data-graph-settings-reset]')?.addEventListener('click', () => {
     const state = readGraphState(root);
     const resetSettings = resolveGraphSettings(state.mode, DEFAULT_LAYOUT, defaultGraphSettings);
-    updateGraphSettings(root, resetSettings);
+    applyNextState(root, { ...state, settings: resetSettings }, 'settings');
+    syncSettingsUI(shell, root);
+  });
+
+  shell.querySelector('[data-graph-preset-select]')?.addEventListener('change', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLSelectElement)) return;
+    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+    const { presets, userPresets } = getAllPresets();
+    const preset = getGraphPresetById(presets, target.value);
+    const nextSettings = applyPresetKeepingFilters(currentState.settings, preset);
+    saveStoredPresetState(userPresets, preset?.id);
+    applyNextState(root, { ...currentState, settings: nextSettings, activePresetId: preset?.id }, 'settings');
     syncSettingsUI(shell, root);
   });
 
   const handleControlUpdate = (target: HTMLInputElement | HTMLSelectElement) => {
     const key = target.dataset.graphSettingInput || '';
     const config = FIELD_CONFIG[key];
-    if (!config) {
-      return;
-    }
+    if (!config) return;
 
     const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
     const rawValue = target instanceof HTMLInputElement && target.type === 'checkbox' ? target.checked : target.value;
@@ -395,42 +432,24 @@ function bindGraphSettings(root: HTMLElement) {
 
   shell.addEventListener('input', (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
-      return;
-    }
-
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
     const key = target.dataset.graphSettingInput || '';
     const config = FIELD_CONFIG[key];
-    if (!config) {
-      return;
-    }
-
-    if (config.control === 'search' || config.control === 'slider') {
-      handleControlUpdate(target);
-    }
+    if (!config) return;
+    if (config.control === 'search' || config.control === 'slider') handleControlUpdate(target);
   });
 
   shell.addEventListener('change', (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
-      return;
-    }
-
+    if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
     const key = target.dataset.graphSettingInput || '';
     const config = FIELD_CONFIG[key];
-    if (!config) {
-      return;
-    }
-
-    if (config.control === 'toggle' || config.control === 'select') {
-      handleControlUpdate(target);
-    }
+    if (!config) return;
+    if (config.control === 'toggle' || config.control === 'select') handleControlUpdate(target);
   });
 
   document.addEventListener('click', (event) => {
-    if (!shell.contains(event.target as Node)) {
-      setOpen(false);
-    }
+    if (!shell.contains(event.target as Node)) setOpen(false);
   });
 
   syncSettingsUI(shell, root);
@@ -442,9 +461,7 @@ function initAllGraphs() {
     bindGraphSettings(root);
     void initGraph(root).then(() => {
       const shell = root.closest<HTMLElement>('[data-graph-shell]');
-      if (shell) {
-        syncSettingsUI(shell, root);
-      }
+      if (shell) syncSettingsUI(shell, root);
     });
   });
 }
