@@ -154,6 +154,8 @@ export async function buildContentIndex() {
       titles: {},
       url: entry.url,
       urls: {},
+      createdAt: entry.data.created_at,
+      updatedAt: entry.data.updated_at,
       tags,
       type: entry.data.note_type || entry.data.type || 'blog_post',
       lang: langKey,
@@ -167,6 +169,8 @@ export async function buildContentIndex() {
     existingNode.urls[langKey] = entry.url;
     existingNode.titles[langKey] = entry.data.title || existingNode.titles[langKey] || existingNode.title;
     existingNode.entriesByLocale[langKey] = entry;
+    existingNode.createdAt = existingNode.createdAt ?? entry.data.created_at;
+    existingNode.updatedAt = existingNode.updatedAt ?? entry.data.updated_at;
     existingNode.tags = [...new Set([...(existingNode.tags ?? []), ...tags])];
     existingNode.aliases = [...new Set([...(existingNode.aliases ?? []), ...aliases])];
     existingNode.role = existingNode.role || (typeof entry.data.role === 'string' ? entry.data.role : undefined);
@@ -183,6 +187,8 @@ export async function buildContentIndex() {
       node.url = preferred.url;
       node.lang = preferred.lang ?? DEFAULT_LOCALE;
       node.type = preferred.data.note_type || preferred.data.type || node.type;
+      node.createdAt = preferred.data.created_at ?? node.createdAt;
+      node.updatedAt = preferred.data.updated_at ?? node.updatedAt;
     }
 
     indexTarget(aliasIndex, node.id, node.id);

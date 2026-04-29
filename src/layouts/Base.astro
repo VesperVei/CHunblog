@@ -12,9 +12,10 @@ interface Props {
   title?: string;
   description?: string;
   ignoreSearch?: boolean;
+  mainClass?: string;
 }
 
-const { title, description, ignoreSearch = false } = Astro.props;
+const { title, description, ignoreSearch = false, mainClass } = Astro.props;
 const currentLocale = detectLocale(Astro.url.pathname);
 const htmlLang = localesConfig[currentLocale]?.lang || 'en';
 ---
@@ -30,7 +31,7 @@ const htmlLang = localesConfig[currentLocale]?.lang || 'en';
     data-modern-hr={siteConfig.modern_hr ? '' : undefined}
   >
     <Header />
-    <main id="main-content" {...(ignoreSearch ? { 'data-pagefind-ignore': true } : {})}>
+    <main id="main-content" class={mainClass} {...(ignoreSearch ? { 'data-pagefind-ignore': true } : {})}>
       <slot />
     </main>
     <Footer />

@@ -1,6 +1,9 @@
 export type GraphNode = {
   id: string;
   kind?: 'note';
+  path?: string;
+  createdAt?: string;
+  updatedAt?: string;
   titles: Record<string, string>;
   urls: Record<string, string>;
   tags: string[];
@@ -37,6 +40,37 @@ export type GraphDirection = 'outgoing' | 'incoming' | 'both';
 export type GraphLayoutMode = 'force' | 'brain' | 'radial' | 'hierarchy';
 
 export type BrainRelationKind = 'current' | 'parent' | 'child' | 'sibling' | 'jump';
+
+export type GraphColorGroupMatchKind = 'property';
+
+export type GraphColorGroupMatch = {
+  kind: GraphColorGroupMatchKind;
+  key: string;
+  value: string | number | boolean;
+};
+
+export type GraphColorGroup = {
+  id: string;
+  name: string;
+  color: string;
+  enabled: boolean;
+  priority: number;
+  builtin?: boolean;
+  match?: GraphColorGroupMatch;
+  rule?: {
+    type?: 'graphLevel' | 'path' | 'tag' | 'title' | 'property' | 'query';
+    level?: number;
+    value?: string;
+    propertyKey?: string;
+    propertyValue?: string | number | boolean;
+  };
+};
+
+export type GraphHoverState = {
+  hoveredNodeId?: string;
+  connectedNodeIds: Set<string>;
+  connectedLinkIds: Set<string>;
+};
 
 export type GraphForceSettings = {
   centerStrength?: number;
@@ -89,6 +123,7 @@ export type GraphSettings = {
   appearance: GraphAppearanceSettings;
   forces: GraphForceSettings;
   layout: GraphLayoutSettings;
+  colorGroups: GraphColorGroup[];
 };
 
 export type GraphViewOptions = {
@@ -97,6 +132,7 @@ export type GraphViewOptions = {
   focusId?: string;
   settings: GraphSettings;
   navigationSearch?: string;
+  activePresetId?: string;
 };
 
 export type BrainGraphNode = GraphNode & {

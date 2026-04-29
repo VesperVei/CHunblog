@@ -27,6 +27,9 @@ async function main() {
   const nodes = [...contentIndex.nodesById.values()].map((node) => ({
     id: node.id,
     kind: 'note',
+    path: node.url,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
     titles: node.titles,
     urls: node.urls,
     tags: node.tags,

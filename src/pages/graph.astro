@@ -1,21 +1,13 @@
 ---
-import Base from '../layouts/Base.astro';
-import Graph from '../components/graph/Graph.astro';
+import GraphPage from '../components/graph/GraphPage.astro';
 import { isMultiLangMode } from '../utils/site-config';
 import { detectLocale } from '../utils/i18n';
-import I18nKey from '../i18n/i18nKey';
-import { useTranslations } from '../i18n/translation';
 
 if (isMultiLangMode()) {
   return Astro.redirect('/en/graph');
 }
 
 const currentLocale = detectLocale(Astro.url.pathname);
-const t = useTranslations(currentLocale);
-const title = t(I18nKey.graph);
 ---
 
-<Base title={title} description={title} ignoreSearch>
-  <h1>{title}</h1>
-  <Graph mode="global" locale={currentLocale} settingsEnabled={true} />
-</Base>
+<GraphPage locale={currentLocale} />

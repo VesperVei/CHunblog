@@ -5,8 +5,9 @@ import { buildRenderableGraph } from '../data/graph-filter';
 import { attachNodeDrag } from '../interaction/node-drag';
 import { createSvgCanvas, attachZoomPan } from '../interaction/zoom-pan';
 import { createSimulationForLayout, updateSimulationForLayout } from '../layout/layout-registry';
-import { applyGraphAppearance, bindNodeNavigation, renderGraphScene } from '../render/svg-renderer';
-import type { GraphData, GraphSettings, GraphViewOptions } from '../types';
+import { createLocalGraphSharedState, writeLastNavigationLocalGraphState } from './local-graph-state';
+import { applyGraphAppearance, bindNodeNavigation, createEmptyHoverState, edgeKey, renderGraphScene, syncGraphScene } from '../render/svg-renderer';
+import type { GraphData, GraphHoverState, GraphSettings, GraphViewOptions } from '../types';
 
 function cloneRenderableGraph(data: GraphData) {
   return {
@@ -109,6 +110,137 @@ function buildGraphData(fullData: GraphData, options: GraphViewOptions) {
   });
 }
 
+function filtersEqualExceptDepth(left, right) {
+  const { depth: _leftDepth, ...leftRest } = left ?? {};
+  const { depth: _rightDepth, ...rightRest } = right ?? {};
+  return JSON.stringify(leftRest) === JSON.stringify(rightRest);
+}
+
+function seedIncrementalNodePositions(previousData: GraphData | null, nextData: GraphData, focusId: string | undefined, width: number, height: number) {
+  const previousNodes = new Map((previousData?.nodes ?? []).map((node) => [node.id, node]));
+
+  for (const node of nextData.nodes) {
+    const previousNode = previousNodes.get(node.id);
+    if (!previousNode) {
+      continue;
+    }
+
+    node.x = previousNode.x;
+    node.y = previousNode.y;
+    node.vx = previousNode.vx;
+    node.vy = previousNode.vy;
+    node.fx = previousNode.fx;
+    node.fy = previousNode.fy;
+  }
+
+  const nextNodeById = new Map(nextData.nodes.map((node) => [node.id, node]));
+  const focusNode = focusId ? nextNodeById.get(focusId) : undefined;
+  const centerX = focusNode?.x ?? width / 2;
+  const centerY = focusNode?.y ?? height / 2;
+  const adjacency = new Map<string, string[]>();
+
+  for (const link of nextData.links) {
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    adjacency.set(sourceId, [...(adjacency.get(sourceId) ?? []), targetId]);
+    adjacency.set(targetId, [...(adjacency.get(targetId) ?? []), sourceId]);
+  }
+
+  for (const node of nextData.nodes) {
+    if (typeof node.x === 'number' && typeof node.y === 'number') {
+      continue;
+    }
+
+    const positionedNeighbors = (adjacency.get(node.id) ?? [])
+      .map((neighborId) => nextNodeById.get(neighborId))
+      .filter((neighbor) => neighbor && typeof neighbor.x === 'number' && typeof neighbor.y === 'number');
+
+    if (positionedNeighbors.length > 0) {
+      const averageX = positionedNeighbors.reduce((sum, neighbor) => sum + (neighbor?.x ?? 0), 0) / positionedNeighbors.length;
+      const averageY = positionedNeighbors.reduce((sum, neighbor) => sum + (neighbor?.y ?? 0), 0) / positionedNeighbors.length;
+      node.x = averageX + (Math.random() - 0.5) * 18;
+      node.y = averageY + (Math.random() - 0.5) * 18;
+      continue;
+    }
+
+    node.x = centerX + (Math.random() - 0.5) * 24;
+    node.y = centerY + (Math.random() - 0.5) * 24;
+  }
+}
+
+function createHoverStateForNode(data: GraphData, hoveredNodeId?: string): GraphHoverState {
+  if (!hoveredNodeId) {
+    return createEmptyHoverState();
+  }
+
+  const connectedNodeIds = new Set<string>();
+  const connectedLinkIds = new Set<string>();
+
+  for (const link of data.links) {
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+
+    if (sourceId !== hoveredNodeId && targetId !== hoveredNodeId) {
+      continue;
+    }
+
+    connectedLinkIds.add(edgeKey(link));
+    if (sourceId !== hoveredNodeId) connectedNodeIds.add(sourceId);
+    if (targetId !== hoveredNodeId) connectedNodeIds.add(targetId);
+  }
+
+  return {
+    hoveredNodeId,
+    connectedNodeIds,
+    connectedLinkIds,
+  };
+}
+
+function resolveGraphBounds(nodes, padding = 24) {
+  const positioned = nodes.filter((node) => Number.isFinite(node.x) && Number.isFinite(node.y));
+  if (!positioned.length) {
+    return undefined;
+  }
+
+  const xs = positioned.map((node) => node.x ?? 0);
+  const ys = positioned.map((node) => node.y ?? 0);
+  return {
+    minX: Math.min(...xs) - padding,
+    maxX: Math.max(...xs) + padding,
+    minY: Math.min(...ys) - padding,
+    maxY: Math.max(...ys) + padding,
+  };
+}
+
+function resolveNodeNeighborhoodBounds(data: GraphData, nodeId: string, padding = 48) {
+  const included = new Set<string>([nodeId]);
+  for (const link of data.links) {
+    const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
+    const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+    if (sourceId === nodeId) included.add(targetId);
+    if (targetId === nodeId) included.add(sourceId);
+  }
+
+  return resolveGraphBounds(data.nodes.filter((node) => included.has(node.id)), padding);
+}
+
+function expandBounds(bounds, minWidth: number, minHeight: number) {
+  if (!bounds) {
+    return undefined;
+  }
+
+  const width = bounds.maxX - bounds.minX;
+  const height = bounds.maxY - bounds.minY;
+  const extraWidth = Math.max(0, minWidth - width) / 2;
+  const extraHeight = Math.max(0, minHeight - height) / 2;
+  return {
+    minX: bounds.minX - extraWidth,
+    maxX: bounds.maxX + extraWidth,
+    minY: bounds.minY - extraHeight,
+    maxY: bounds.maxY + extraHeight,
+  };
+}
+
 export async function createGraphView(root: HTMLElement, options: GraphViewOptions & { graphUrl: string }, fullData: GraphData) {
   const rect = root.getBoundingClientRect();
   const width = Math.max(rect.width, 320);
@@ -125,12 +257,16 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       appearance: { ...options.settings.appearance },
       forces: { ...options.settings.forces },
       layout: { ...options.settings.layout },
+      colorGroups: options.settings.colorGroups.map((group) => ({ ...group, rule: { ...group.rule } })),
     },
   };
   let simulation = null;
   let scene = null;
   let currentData = null;
+  let hoverState = createEmptyHoverState();
   let destroyed = false;
+  let hasAutoFitted = false;
+  let autoFitTimer = 0;
 
   const showEmptyState = (message: string) => {
     const empty = document.createElement('div');
@@ -159,29 +295,144 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     simulation = null;
   };
 
+  const scheduleAutoFit = () => {
+    if (currentOptions.mode !== 'global' || hasAutoFitted || !currentData?.nodes?.length) {
+      return;
+    }
+
+    window.clearTimeout(autoFitTimer);
+    autoFitTimer = window.setTimeout(() => {
+      const bounds = expandBounds(resolveGraphBounds(currentData?.nodes ?? [], 36), width * 0.68, height * 0.68);
+      if (bounds) {
+        zoomControls.fitView(bounds, 84, { force: true, updateOverview: true, maxScale: 1.2 });
+        hasAutoFitted = true;
+      }
+    }, 360);
+  };
+
+  const refreshSceneAppearance = () => {
+    if (!scene || !currentData) {
+      return;
+    }
+
+    applyGraphAppearance(scene, currentData, currentOptions.settings, hoverState, currentOptions.locale, currentOptions.focusId);
+  };
+
+  const setHoverNode = (nodeId?: string) => {
+    if (!currentData) {
+      return;
+    }
+
+    hoverState = createHoverStateForNode(currentData, nodeId);
+    refreshSceneAppearance();
+  };
+
+  const bindSceneInteractions = () => {
+    if (!scene || !simulation) {
+      return;
+    }
+
+    bindNodeNavigation(scene.node, currentOptions.locale, currentOptions.navigationSearch, currentOptions.mode === 'global'
+      ? {
+        beforeNavigate: () => {
+          if (currentOptions.mode !== 'local' || !currentOptions.focusId) {
+            return;
+          }
+
+          writeLastNavigationLocalGraphState(
+            createLocalGraphSharedState(currentOptions.focusId, currentOptions.settings, currentOptions.activePresetId),
+          );
+        },
+        onNodeClick: (node) => {
+          root.dispatchEvent(new CustomEvent('graph:node-select', {
+            detail: { node },
+          }));
+        },
+        navigateOnClick: false,
+        navigateOnDoubleClick: true,
+      }
+      : {
+        beforeNavigate: () => {
+          if (currentOptions.mode !== 'local' || !currentOptions.focusId) {
+            return;
+          }
+
+          writeLastNavigationLocalGraphState(
+            createLocalGraphSharedState(currentOptions.focusId, currentOptions.settings, currentOptions.activePresetId),
+          );
+        },
+        navigateOnClick: true,
+      });
+    attachNodeDrag(scene.node, simulation, currentOptions.settings.forces.alphaTargetOnDrag ?? 0.25);
+    scene.node
+      .on('pointerenter.graph-hover', (event, node) => {
+        if (event.buttons > 0) {
+          return;
+        }
+
+        setHoverNode(node.id);
+      })
+      .on('pointerleave.graph-hover', () => {
+        setHoverNode(undefined);
+      });
+  };
+
   const rebuildScene = (nextGraphData: GraphData) => {
     stopSimulation();
 
     currentData = withDegrees(withDepthFromFocus(cloneRenderableGraph(nextGraphData) as GraphData, currentOptions.focusId) as GraphData);
+    hoverState = createEmptyHoverState();
     canvas.selectAll('*').remove();
     scene = renderGraphScene(canvas, currentData, currentOptions.locale, currentOptions.focusId, markerId);
-    applyGraphAppearance(scene, currentOptions.settings.appearance);
-    bindNodeNavigation(scene.node, currentOptions.locale, currentOptions.navigationSearch);
 
     const preset = getActiveLayoutPreset(currentOptions.settings);
     simulation = createSimulationForLayout(preset, currentData.nodes, currentData.links, width, height, currentOptions.settings, currentOptions.focusId);
-    attachNodeDrag(scene.node, simulation, currentOptions.settings.forces.alphaTargetOnDrag ?? 0.25);
+    bindSceneInteractions();
+    refreshSceneAppearance();
     simulation.on('tick', renderFrame);
     renderFrame();
     simulation.alpha(1).restart();
+    scheduleAutoFit();
 
     root.replaceChildren(svg.node());
+  };
+
+  const incrementallyUpdateDepth = (nextGraphData: GraphData) => {
+    if (!scene || !simulation) {
+      rebuildScene(nextGraphData);
+      return;
+    }
+
+    const previousData = currentData;
+    currentData = withDegrees(withDepthFromFocus(cloneRenderableGraph(nextGraphData) as GraphData, currentOptions.focusId) as GraphData);
+    seedIncrementalNodePositions(previousData, currentData, currentOptions.focusId, width, height);
+    hoverState = createHoverStateForNode(currentData, hoverState.hoveredNodeId);
+    syncGraphScene(scene, currentData, currentOptions.locale, currentOptions.focusId);
+
+    simulation.nodes(currentData.nodes);
+    simulation.force('link')?.links?.(currentData.links);
+    const physical = updateSimulationForLayout(
+      simulation,
+      getActiveLayoutPreset(currentOptions.settings),
+      currentData.nodes,
+      width,
+      height,
+      currentOptions.settings,
+      currentOptions.focusId,
+    );
+
+    bindSceneInteractions();
+    refreshSceneAppearance();
+    renderFrame();
+    simulation.alpha(Math.max(simulation.alpha(), Math.min(0.45, physical?.alphaOnSettingsChange ?? 0.4))).restart();
+    scheduleAutoFit();
   };
 
   const setData = (nextGraphData: GraphData) => {
     if (!nextGraphData.nodes.length) {
       scene = null;
       currentData = null;
+      hoverState = createEmptyHoverState();
       stopSimulation();
       showEmptyState(currentOptions.mode === 'local' ? 'No related graph data yet.' : 'No graph data available.');
       return;
@@ -206,7 +457,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       return;
     }
 
-    applyGraphAppearance(scene, currentOptions.settings.appearance);
+    refreshSceneAppearance();
 
     if (shouldRefreshCollision) {
       const physical = updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId);
@@ -230,12 +481,25 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     }
 
     const physical = updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId);
-    attachNodeDrag(scene.node, simulation, currentOptions.settings.forces.alphaTargetOnDrag ?? 0.25);
+    bindSceneInteractions();
     const nextAlpha = physical?.alphaOnSettingsChange ?? currentOptions.settings.forces.alphaOnSettingsChange ?? 0.6;
     simulation.alpha(Math.max(simulation.alpha(), nextAlpha)).restart();
   };
 
+  const updateColorGroups = (nextColorGroups) => {
+    currentOptions = {
+      ...currentOptions,
+      settings: {
+        ...currentOptions.settings,
+        colorGroups: nextColorGroups.map((group) => ({ ...group, rule: { ...group.rule } })),
+      },
+    };
+
+    refreshSceneAppearance();
+  };
+
   const updateFilters = (nextFilters) => {
+    const previousFilters = currentOptions.settings.filters;
     currentOptions = {
       ...currentOptions,
       settings: {
@@ -244,7 +508,18 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       },
     };
 
-    setData(buildGraphData(fullData, currentOptions));
+    const nextGraphData = buildGraphData(fullData, currentOptions);
+    const layoutPreset = getActiveLayoutPreset(currentOptions.settings);
+    const isLocalDepthOnlyUpdate = currentOptions.mode === 'local'
+      && layoutPreset !== 'brain'
+      && filtersEqualExceptDepth(previousFilters, currentOptions.settings.filters);
+
+    if (isLocalDepthOnlyUpdate) {
+      incrementallyUpdateDepth(nextGraphData);
+      return;
+    }
+
+    setData(nextGraphData);
   };
 
   const updateSettings = (nextSettings: GraphSettings) => {
@@ -258,6 +533,8 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     const nextForces = JSON.stringify(nextSettings.forces);
     const previousLayout = JSON.stringify(currentOptions.settings.layout);
     const nextLayout = JSON.stringify(nextSettings.layout);
+    const previousColorGroups = JSON.stringify(currentOptions.settings.colorGroups);
+    const nextColorGroups = JSON.stringify(nextSettings.colorGroups);
 
     currentOptions = {
       ...currentOptions,
@@ -266,6 +543,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
         appearance: { ...nextSettings.appearance },
         forces: { ...nextSettings.forces },
         layout: { ...nextSettings.layout },
+        colorGroups: nextSettings.colorGroups.map((group) => ({ ...group, rule: { ...group.rule } })),
       },
     };
 
@@ -282,6 +560,10 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       updateForces(nextSettings.forces);
     }
 
+    if (previousColorGroups !== nextColorGroups) {
+      updateColorGroups(nextSettings.colorGroups);
+    }
+
     if (previousLayout !== nextLayout && previousForces === nextForces) {
       updateForces(currentOptions.settings.forces);
     }
@@ -291,9 +573,44 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
 
   return {
     ...zoomControls,
+    resetView() {
+      const bounds = expandBounds(resolveGraphBounds(currentData?.nodes ?? [], 36), width * 0.68, height * 0.68);
+      if (bounds) {
+        zoomControls.fitView(bounds, 84, { force: true, updateOverview: true, maxScale: 1.2 });
+        return;
+      }
+
+      zoomControls.resetView();
+    },
+    fitView(padding = 64) {
+      const bounds = expandBounds(resolveGraphBounds(currentData?.nodes ?? [], 36), width * 0.68, height * 0.68);
+      if (bounds) {
+        zoomControls.fitView(bounds, padding, { force: true, updateOverview: true, maxScale: 1.2 });
+      }
+    },
+    focusNode(nodeId: string, padding = 88) {
+      if (!currentData) {
+        return;
+      }
+
+      currentOptions = {
+        ...currentOptions,
+        focusId: nodeId,
+      };
+      hoverState = createHoverStateForNode(currentData, nodeId);
+      refreshSceneAppearance();
+      const bounds = expandBounds(resolveNodeNeighborhoodBounds(currentData, nodeId, 96), width * 0.42, height * 0.42);
+      if (bounds) {
+        zoomControls.fitView(bounds, padding, { force: true, updateOverview: false, maxScale: 0.95 });
+      }
+    },
+    getCurrentGraphData() {
+      return currentData;
+    },
     updateSettings,
     updateForces,
     updateAppearance,
+    updateColorGroups,
     updateFilters,
     setData,
     destroy() {
@@ -302,6 +619,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       }
 
       destroyed = true;
+      window.clearTimeout(autoFitTimer);
       stopSimulation();
     },
   };

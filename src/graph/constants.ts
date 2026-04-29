@@ -1,4 +1,5 @@
 import type {
+  GraphColorGroup,
   GraphAppearanceSettings,
   GraphFilterSettings,
   GraphForceSettings,
@@ -7,6 +8,7 @@ import type {
   GraphSettings,
   GraphViewMode,
 } from './types';
+import { DEFAULT_GRAPH_LEVEL_COLOR_GROUPS, ensureColorGroups } from './color-groups';
 
 export const GRAPH_COLORS: Record<string, string> = {
   project_note: '#f97316',
@@ -115,11 +117,14 @@ export const DEFAULT_LAYOUT_SETTINGS: GraphLayoutSettings = {
   preserveSelectedPreset: true,
 };
 
+export const DEFAULT_COLOR_GROUP_SETTINGS: GraphColorGroup[] = ensureColorGroups(DEFAULT_GRAPH_LEVEL_COLOR_GROUPS);
+
 export const defaultGraphSettings: GraphSettings = {
   filters: DEFAULT_FILTER_SETTINGS,
   appearance: DEFAULT_APPEARANCE_SETTINGS,
   forces: DEFAULT_FORCE_SETTINGS.force,
   layout: DEFAULT_LAYOUT_SETTINGS,
+  colorGroups: DEFAULT_COLOR_GROUP_SETTINGS,
 };
 
 export const MODE_DEFAULTS: Record<GraphViewMode, { forces: GraphForceSettings; appearance: GraphAppearanceSettings; filters: GraphFilterSettings }> = {
@@ -210,6 +215,7 @@ export function resolveGraphSettings(mode: GraphViewMode, preset: GraphLayoutMod
       preset,
       ...(overrides.layout ?? {}),
     },
+    colorGroups: ensureColorGroups(overrides.colorGroups ?? DEFAULT_COLOR_GROUP_SETTINGS),
   };
 }
 

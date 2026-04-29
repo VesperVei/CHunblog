@@ -16,6 +16,8 @@ interface Props {
   render?: Record<string, number>;
   navigationSearch?: string;
   settingsEnabled?: boolean;
+  controlsMode?: 'overlay' | 'toolbar';
+  fullscreenEnabled?: boolean;
 }
 
 const {
@@ -30,9 +32,24 @@ const {
   render,
   navigationSearch,
   settingsEnabled = false,
+  controlsMode = 'overlay',
+  fullscreenEnabled = false,
 } = Astro.props;
 
 const t = useTranslations(locale);
+const toolbarSearchPlaceholder = t(I18nKey.graph_toolbar_search_placeholder);
+const enterFullscreenLabel = t(I18nKey.graph_enter_fullscreen);
+const exitFullscreenLabel = t(I18nKey.graph_exit_fullscreen);
+const legendLabel = t(I18nKey.graph_legend);
+const legendFiltersLabel = t(I18nKey.graph_legend_filters);
+const nodeDetailsLabel = t(I18nKey.graph_node_details);
+const openArticleLabel = t(I18nKey.graph_open_article);
+const focusRelatedLabel = t(I18nKey.graph_focus_related);
+const selectNodeHint = t(I18nKey.graph_select_node_hint);
+const nodeTypeLabel = t(I18nKey.graph_type);
+const tagsLabel = t(I18nKey.tags);
+const createdLabel = t(I18nKey.created);
+const updatedLabel = t(I18nKey.updated);
 const initialSettings = resolveGraphSettings(mode, layout, {
   filters: {
     depth,
@@ -54,7 +71,54 @@ const initialSettings = resolveGraphSettings(mode, layout, {
 });
 ---
 
-<div class="graph-shell" data-graph-shell>
+<div
+  class="graph-shell"
+  data-graph-shell
+  data-graph-controls-mode={controlsMode}
+  data-graph-delete-color-group-label={t(I18nKey.graph_delete_color_group)}
+  data-graph-enter-fullscreen-label={enterFullscreenLabel}
+  data-graph-exit-fullscreen-label={exitFullscreenLabel}
+  data-graph-legend-label={legendLabel}
+  data-graph-node-details-label={nodeDetailsLabel}
+  data-graph-open-article-label={openArticleLabel}
+  data-graph-focus-related-label={focusRelatedLabel}
+  data-graph-select-node-hint={selectNodeHint}
+  data-graph-type-label={nodeTypeLabel}
+  data-graph-tags-label={tagsLabel}
+  data-graph-created-label={createdLabel}
+  data-graph-updated-label={updatedLabel}
+>
+  {controlsMode === 'toolbar' && (
+    <div class="graph-toolbar" data-graph-toolbar>
+      <label class="graph-toolbar-search" data-graph-setting-field="searchQuery">
+        <input
+          type="search"
+          data-graph-setting-input="searchQuery"
+          placeholder={toolbarSearchPlaceholder}
+          aria-label={t(I18nKey.graph_search)}
+        />
+      </label>
+
+      <button type="button" class="graph-toolbar-button" data-graph-toolbar-reset>
+        {t(I18nKey.graph_reset_view)}
+      </button>
+
+      <div class="graph-toolbar-spacer" aria-hidden="true"></div>
+
+      {fullscreenEnabled && (
+        <button
+          type="button"
+          class="graph-toolbar-icon-button"
+          data-graph-toolbar-fullscreen
+          aria-label={enterFullscreenLabel}
+          title={enterFullscreenLabel}
+        >
+          <span aria-hidden="true">⛶</span>
+        </button>
+      )}
+    </div>
+  )}
+
   {settingsEnabled && (
     <div class="graph-settings" data-graph-settings>
       <button
@@ -69,18 +133,18 @@ const initialSettings = resolveGraphSettings(mode, layout, {
         </svg>
       </button>
 
-      <aside class="graph-settings-panel" data-graph-settings-panel hidden>
+      <aside class="graph-settings-panel" data-graph-settings-panel aria-hidden="true">
         <div class="graph-settings-header">
           <strong>{t(I18nKey.graph_settings)}</strong>
           <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
         </div>
 
         <section class="graph-settings-group" data-graph-settings-group>
-          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="true">
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_templates)}</span>
           </button>
-          <div class="graph-settings-group-content" data-graph-section-content>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
             <label class="graph-settings-field">
               <span>{t(I18nKey.graph_template)}</span>
               <select data-graph-preset-select></select>
@@ -98,11 +162,11 @@ const initialSettings = resolveGraphSettings(mode, layout, {
         </section>
 
         <section class="graph-settings-group" data-graph-settings-group>
-          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="true">
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_filters)}</span>
           </button>
-          <div class="graph-settings-group-content" data-graph-section-content>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
             <label class="graph-settings-field" data-graph-setting-field="searchQuery">
               <span>{t(I18nKey.graph_search)}</span>
               <input type="search" data-graph-setting-input="searchQuery" placeholder={t(I18nKey.graph_search_placeholder)} />
@@ -182,6 +246,20 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                 <output data-graph-setting-value="labelSize"></output>
               </div>
             </label>
+          </div>
+        </section>
+
+        <section class="graph-settings-group" data-graph-settings-group>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_color_groups)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <div class="graph-color-groups" data-graph-color-groups></div>
+            <div class="graph-settings-actions-row">
+              <button type="button" class="graph-settings-action" data-graph-color-group-add>{t(I18nKey.graph_add_color_group)}</button>
+              <button type="button" class="graph-settings-action" data-graph-color-group-reset>{t(I18nKey.graph_reset_color_groups)}</button>
+            </div>
           </div>
         </section>
 
@@ -298,29 +376,86 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     </div>
   )}
 
-  <div
-    class="graph-root"
-    data-graph-root
-    data-graph-url={graphUrl}
-    data-focus-id={focusNodeId}
-    data-mode={mode}
-    data-locale={locale}
-    data-graph-settings={JSON.stringify(initialSettings)}
-    data-navigation-search={navigationSearch}
-    style={`height:${height}`}
-  >
-    <div class="graph-empty">Loading graph...</div>
+  <div class="graph-workspace">
+    {mode === 'global' && controlsMode === 'toolbar' && (
+      <>
+        <button type="button" class="graph-side-toggle graph-toolbar-button" data-graph-legend-toggle aria-expanded="false">
+          {legendFiltersLabel}
+        </button>
+
+        <aside class="graph-legend-panel" data-graph-legend-panel aria-hidden="true">
+          <div class="graph-side-panel-header">
+            <strong>{legendLabel}</strong>
+          </div>
+          <div class="graph-legend-items" data-graph-legend-items></div>
+
+          <div class="graph-side-panel-divider"></div>
+
+          <div class="graph-side-panel-header graph-side-panel-header-secondary">
+            <strong>{t(I18nKey.graph_filters)}</strong>
+          </div>
+          <div class="graph-side-filter-list">
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showTags">
+              <span>{t(I18nKey.graph_show_tags)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showTags" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showAttachments">
+              <span>{t(I18nKey.graph_show_attachments)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showAttachments" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="onlyExistingNotes">
+              <span>{t(I18nKey.graph_only_existing_notes)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="onlyExistingNotes" />
+            </label>
+          </div>
+        </aside>
+      </>
+    )}
+
+    <div
+      class="graph-root"
+      data-graph-root
+      data-graph-url={graphUrl}
+      data-focus-id={focusNodeId}
+      data-mode={mode}
+      data-locale={locale}
+      data-graph-settings={JSON.stringify(initialSettings)}
+      data-navigation-search={navigationSearch}
+      style={`height:${height}`}
+    >
+      <div class="graph-empty">Loading graph...</div>
+    </div>
+
+    {mode === 'global' && controlsMode === 'toolbar' && (
+      <aside class="graph-detail-drawer" data-graph-detail-drawer aria-hidden="true">
+        <div class="graph-side-panel-header">
+          <strong>{nodeDetailsLabel}</strong>
+          <button type="button" class="graph-side-close graph-toolbar-icon-button" data-graph-detail-close aria-label={t(I18nKey.graph_close)} title={t(I18nKey.graph_close)}>
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div class="graph-detail-content" data-graph-detail-content></div>
+      </aside>
+    )}
   </div>
 </div>
 
 <style>
   .graph-shell {
     position: relative;
+    gap: 0.85rem;
     --graph-panel-bg: color-mix(in srgb, var(--glass-bg) 94%, transparent);
     --graph-panel-border: color-mix(in srgb, var(--fg-muted-3) 32%, transparent);
     --graph-panel-text: var(--fg-color);
     --graph-accent: var(--accent-color);
     --graph-muted: color-mix(in srgb, var(--fg-muted-5) 86%, transparent);
+    --graph-node-default: color-mix(in srgb, var(--accent-color) 58%, var(--fg-muted-5));
+    --graph-node-hover: color-mix(in srgb, var(--accent-color) 92%, white 8%);
+    --graph-node-selected: var(--accent-color);
+    --graph-node-stroke: color-mix(in srgb, var(--accent-color) 52%, var(--fg-color));
+    --graph-link-default: color-mix(in srgb, var(--fg-muted-5) 86%, transparent);
+    --graph-link-highlight: color-mix(in srgb, var(--accent-color) 82%, white 12%);
+    --graph-dim-opacity: 0.18;
   }
 
   .graph-root {
@@ -331,6 +466,96 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     border-radius: var(--rounded-corner);
     background-color: var(--fg-muted-1);
     overflow: hidden;
+  }
+
+  .graph-workspace {
+    position: relative;
+  }
+
+  .graph-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+  }
+
+  .graph-toolbar-search {
+    flex: 0 1 20rem;
+    min-width: min(100%, 14rem);
+  }
+
+  .graph-toolbar-search input {
+    width: 100%;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
+    padding: 0.75rem 1rem;
+    color: var(--graph-panel-text);
+    font: inherit;
+    transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background 180ms ease-out;
+  }
+
+  .graph-toolbar-search input:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph-accent) 14%, transparent);
+  }
+
+  .graph-toolbar-button,
+  .graph-toolbar-icon-button {
+    appearance: none;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
+    color: var(--graph-panel-text);
+    font: inherit;
+    cursor: pointer;
+    transition: background 180ms ease-out, border-color 180ms ease-out, transform 160ms ease-out;
+  }
+
+  .graph-toolbar-button {
+    padding: 0.72rem 1rem;
+  }
+
+  .graph-toolbar-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.85rem;
+    height: 2.85rem;
+    padding: 0;
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .graph-toolbar-button:hover,
+  .graph-toolbar-icon-button:hover {
+    background: color-mix(in srgb, var(--graph-accent) 10%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
+  }
+
+  .graph-toolbar-button:active,
+  .graph-toolbar-icon-button:active {
+    transform: scale(0.98);
+  }
+
+  .graph-toolbar-icon-button[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--graph-accent) 15%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
+  }
+
+  .graph-side-toggle {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 4;
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    backdrop-filter: saturate(1.1) blur(0.55rem);
+  }
+
+  .graph-toolbar-spacer {
+    flex: 1 1 auto;
+    min-width: 1rem;
   }
 
   .graph-root svg {
@@ -355,7 +580,8 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     font-size: var(--font-size-small);
   }
 
-  .graph-node-label {
+  .graph-node-label,
+  .graph-label {
     fill: var(--fg-color);
     pointer-events: none;
   }
@@ -363,6 +589,17 @@ const initialSettings = resolveGraphSettings(mode, layout, {
   .graph-link-line,
   .graph-node {
     vector-effect: non-scaling-stroke;
+  }
+
+  .graph-node,
+  .graph-link,
+  .graph-label {
+    transition:
+      opacity 160ms ease-out,
+      stroke-width 160ms ease-out,
+      fill 160ms ease-out,
+      stroke 160ms ease-out,
+      r 160ms ease-out;
   }
 
   .graph-settings {
@@ -387,18 +624,19 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2.85rem;
+    height: 2.85rem;
+    border: 1px solid var(--graph-panel-border);
     border-radius: 999px;
-    background: var(--graph-panel-bg);
-    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
     color: var(--graph-panel-text);
-    transition: var(--transition);
+    transition: background 180ms ease-out, border-color 180ms ease-out, transform 160ms ease-out;
   }
 
   .graph-settings-toggle:hover,
   .graph-settings-toggle[aria-expanded='true'] {
-    background: color-mix(in srgb, var(--graph-panel-bg) 72%, var(--graph-accent));
+    background: color-mix(in srgb, var(--graph-accent) 10%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
   }
 
   .graph-settings-toggle svg {
@@ -420,10 +658,72 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     box-shadow: var(--edge-highlight), var(--shadow-glass);
     backdrop-filter: saturate(1.1) blur(0.55rem);
     color: var(--graph-panel-text);
+    opacity: 0;
+    transform: translateX(0.4rem) scale(0.985);
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 200ms ease-out;
   }
 
-  .graph-settings-panel[hidden] {
-    display: none;
+  .graph-settings-panel.is-open {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-toolbar {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-settings {
+    position: relative;
+    top: auto;
+    right: auto;
+    grid-column: 2;
+    grid-row: 1;
+    z-index: 5;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-root {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 24rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: calc(var(--rounded-corner) + 0.35rem);
+    background: color-mix(in srgb, var(--fg-muted-1) 92%, transparent);
+    box-shadow: none;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-settings-panel {
+    top: calc(100% + 0.65rem);
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-workspace {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  .graph-shell:fullscreen,
+  .graph-shell:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    padding: 1rem;
+    background: var(--bg-color);
+  }
+
+  .graph-shell:fullscreen .graph-root,
+  .graph-shell:-webkit-full-screen .graph-root {
+    height: calc(100vh - 5.75rem) !important;
+    min-height: 0;
   }
 
   .graph-settings-header {
@@ -460,6 +760,16 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     color: var(--graph-panel-text);
     font: inherit;
     cursor: pointer;
+    transition: background 180ms ease-out, border-color 180ms ease-out, transform 160ms ease-out;
+  }
+
+  .graph-settings-action:hover {
+    background: color-mix(in srgb, var(--graph-accent) 12%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
+  }
+
+  .graph-settings-action:active {
+    transform: scale(0.98);
   }
 
   .graph-settings-group {
@@ -498,13 +808,15 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     max-height: 120rem;
     opacity: 1;
     overflow: hidden;
-    transition: max-height 180ms ease, opacity 180ms ease, margin-top 180ms ease;
+    transform: translateY(0);
+    transition: max-height 200ms ease-out, opacity 180ms ease-out, margin-top 180ms ease-out, transform 180ms ease-out;
   }
 
   .graph-settings-group-content.is-collapsed {
     max-height: 0;
     opacity: 0;
     margin-top: 0;
+    transform: translateY(-0.2rem);
   }
 
   .graph-settings-field,
@@ -529,6 +841,15 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     padding: 0.55rem 0.75rem;
     color: var(--graph-panel-text);
     font: inherit;
+    transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background 180ms ease-out;
+  }
+
+  .graph-settings-field input[type='search']:focus,
+  .graph-settings-field select:focus,
+  .graph-color-group-color:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph-accent) 14%, transparent);
   }
 
   .graph-settings-range-row {
@@ -542,6 +863,15 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     width: 100%;
     margin: 0;
     accent-color: var(--graph-accent);
+    transition: filter 160ms ease-out, transform 160ms ease-out;
+  }
+
+  .graph-settings-range-row input[type='range']:hover {
+    filter: brightness(1.04);
+  }
+
+  .graph-settings-range-row input[type='range']:active {
+    transform: scaleY(1.06);
   }
 
   .graph-settings-range-row output {
@@ -564,8 +894,16 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     border: 1px solid var(--graph-panel-border);
     border-radius: 999px;
     background: color-mix(in srgb, var(--graph-muted) 24%, transparent);
-    transition: background 180ms ease, border-color 180ms ease;
+    transition: background 180ms ease-out, border-color 180ms ease-out, box-shadow 180ms ease-out, transform 160ms ease-out;
     cursor: pointer;
+  }
+
+  .graph-switch:hover {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph-accent) 10%, transparent);
+  }
+
+  .graph-switch:active {
+    transform: scale(0.98);
   }
 
   .graph-switch::after {
@@ -579,7 +917,164 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     background: #fff;
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
     transform: translateY(-50%);
-    transition: transform 180ms ease;
+    transition: transform 180ms ease-out;
+  }
+
+  .graph-color-groups {
+    display: grid;
+    gap: 0.65rem;
+  }
+
+  .graph-color-group {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.75rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 0.9rem;
+    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
+  }
+
+  .graph-color-group[aria-disabled='true'] {
+    opacity: 0.75;
+  }
+
+  .graph-color-group-header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.65rem;
+    align-items: center;
+  }
+
+  .graph-color-group-color {
+    width: 2.1rem;
+    height: 2.1rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    padding: 0;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, white 55%, transparent);
+  }
+
+  .graph-color-group-meta {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  .graph-color-group-name {
+    color: var(--graph-panel-text);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .graph-color-group-rule {
+    color: var(--graph-muted);
+    font-size: 0.78rem;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .graph-color-group-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .graph-color-group-match-row,
+  .graph-color-group-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .graph-color-group-editor-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .graph-color-group-separator {
+    color: var(--graph-muted);
+    font-weight: 700;
+  }
+
+  .graph-color-group-input {
+    width: 100%;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 0.8rem;
+    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+    padding: 0.5rem 0.65rem;
+    color: var(--graph-panel-text);
+    font: inherit;
+  }
+
+  .graph-color-group-editor {
+    display: grid;
+    gap: 0.65rem;
+    border-top: 1px dashed var(--graph-panel-border);
+    padding-top: 0.65rem;
+  }
+
+  .graph-color-group-preview {
+    height: 2.75rem;
+    border-radius: 0.85rem;
+    border: 1px solid var(--graph-panel-border);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, white 18%, transparent);
+  }
+
+  .graph-color-group-modes {
+    display: flex;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+  }
+
+  .graph-color-mode-button {
+    appearance: none;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: transparent;
+    padding: 0.32rem 0.7rem;
+    color: var(--graph-muted);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .graph-color-mode-button.is-active {
+    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
+    background: color-mix(in srgb, var(--graph-accent) 12%, transparent);
+    color: var(--graph-panel-text);
+  }
+
+  .graph-color-group-native-picker {
+    width: 100%;
+    min-height: 2.2rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 0.8rem;
+    background: transparent;
+    padding: 0.15rem;
+    cursor: pointer;
+  }
+
+  .graph-color-group-editor-row {
+    display: grid;
+  }
+
+  .graph-color-group-delete {
+    appearance: none;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: transparent;
+    padding: 0.3rem 0.65rem;
+    color: var(--graph-muted);
+    font: inherit;
+    cursor: pointer;
+    transition: color 160ms ease-out, border-color 160ms ease-out, background 160ms ease-out;
+  }
+
+  .graph-color-group-delete:hover {
+    color: var(--graph-panel-text);
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
+    background: color-mix(in srgb, var(--graph-accent) 8%, transparent);
   }
 
   .graph-switch:checked {
@@ -591,7 +1086,217 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     transform: translate(1.1rem, -50%);
   }
 
+  .graph-legend-panel,
+  .graph-detail-drawer {
+    position: absolute;
+    top: 1rem;
+    width: min(19rem, calc(100vw - 2.5rem));
+    padding: 0.9rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: calc(var(--rounded-corner) + 0.15rem);
+    background: var(--graph-panel-bg);
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    backdrop-filter: saturate(1.1) blur(0.55rem);
+    color: var(--graph-panel-text);
+    overflow: auto;
+    z-index: 4;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 200ms ease-out;
+  }
+
+  .graph-legend-panel {
+    left: 1rem;
+    max-height: min(24rem, calc(100% - 6.5rem));
+    transform: translateX(-0.65rem);
+  }
+
+  .graph-detail-drawer {
+    right: 1rem;
+    bottom: 1rem;
+    max-height: calc(100% - 2rem);
+    transform: translateX(0.65rem);
+  }
+
+  .graph-legend-panel.is-open,
+  .graph-detail-drawer.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .graph-side-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .graph-side-panel-header strong {
+    font-size: 0.95rem;
+  }
+
+  .graph-side-panel-header-secondary {
+    margin-bottom: 0.55rem;
+  }
+
+  .graph-side-panel-divider {
+    height: 1px;
+    margin: 0.85rem 0;
+    background: var(--graph-panel-border);
+  }
+
+  .graph-side-close {
+    flex: 0 0 auto;
+  }
+
+  .graph-legend-items,
+  .graph-side-filter-list,
+  .graph-detail-content {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .graph-legend-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--graph-panel-text);
+    font-size: var(--font-size-small);
+  }
+
+  .graph-legend-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, white 26%, transparent);
+  }
+
+  .graph-detail-empty {
+    color: var(--graph-muted);
+    font-size: var(--font-size-small);
+    line-height: 1.6;
+  }
+
+  .graph-detail-card {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .graph-detail-title {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .graph-detail-title strong {
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+
+  .graph-detail-subtitle {
+    color: var(--graph-muted);
+    font-size: var(--font-size-small);
+  }
+
+  .graph-detail-meta {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .graph-detail-meta-row {
+    display: grid;
+    gap: 0.2rem;
+    font-size: var(--font-size-small);
+  }
+
+  .graph-detail-meta-label {
+    color: var(--graph-muted);
+  }
+
+  .graph-detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .graph-detail-tag {
+    padding: 0.24rem 0.55rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+    font-size: 0.78rem;
+  }
+
+  .graph-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
   @media only screen and (max-width: 720px) {
+    .graph-toolbar {
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .graph-toolbar-search {
+      flex-basis: 100%;
+    }
+
+    .graph-toolbar-spacer {
+      display: none;
+    }
+
+    .graph-shell[data-graph-controls-mode='toolbar'] {
+      grid-template-columns: 1fr;
+    }
+
+    .graph-shell[data-graph-controls-mode='toolbar'] .graph-settings {
+      grid-column: 1;
+      grid-row: 2;
+      justify-self: end;
+    }
+
+    .graph-shell[data-graph-controls-mode='toolbar'] .graph-root {
+      grid-row: 3;
+      min-height: 20rem;
+    }
+
+    .graph-side-toggle {
+      top: 0.75rem;
+      left: 0.75rem;
+      padding-inline: 0.85rem;
+    }
+
+    .graph-legend-panel,
+    .graph-detail-drawer {
+      top: 0.75rem;
+      left: 0.75rem;
+      right: 0.75rem;
+      width: auto;
+    }
+
+    .graph-legend-panel,
+    .graph-detail-drawer {
+      max-height: calc(100% - 1.5rem);
+    }
+
+    .graph-detail-drawer {
+      bottom: 0.75rem;
+    }
+
+    .graph-detail-drawer {
+      transform: translateY(0.65rem);
+    }
+
+    .graph-legend-panel {
+      transform: translateY(-0.65rem);
+    }
+
     .graph-settings-panel {
       right: -0.25rem;
       width: min(24rem, calc(100vw - 1rem));
