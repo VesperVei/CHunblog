@@ -17,5 +17,21 @@ const title = t(I18nKey.graph);
 
 <Base title={title} description={title} ignoreSearch>
   <h1>{title}</h1>
-  <Graph mode="global" locale={currentLocale} />
+  <Graph
+    mode="global"
+    locale={currentLocale}
+    physics={{
+      linkDistance: 126,
+      chargeStrength: -250,
+      collisionRadius: 30,
+    }}
+    render={{
+      nodeBaseRadius: 6,
+      nodeFocusRadius: 10,
+      nodeDegreeFactor: 0.22,
+      nodeMaxRadius: 11,
+      linkBaseWidth: 1.2,
+      linkWeightFactor: 0.4,
+    }}
+  />
 </Base>

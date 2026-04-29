@@ -48,7 +48,7 @@ const blog = defineCollection({
         ]).default(siteConfig.title)
         .transform((val) => (Array.isArray(val) ? val : [val])),
 
-    }),
+    }).passthrough(),
 });
 
 const pages = defineCollection({
@@ -71,7 +71,7 @@ const pages = defineCollection({
           .optional()
           .transform((val) => (typeof val === 'string' ? [val] : val)),
       heroImage: image().optional(),
-    }),
+    }).passthrough(),
 });
 
 export const collections = { blog, pages };

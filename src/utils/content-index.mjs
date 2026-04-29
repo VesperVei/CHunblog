@@ -9,6 +9,28 @@ const BLOG_CONTENT_GLOB = 'src/content/blog/**/index*.{md,mdx}';
 const BLOG_CONTENT_BASE = path.join(process.cwd(), 'src/content/blog');
 const DEFAULT_LOCALE = 'en';
 const PREFERRED_LOCALES = ['en', 'zh-cn'];
+const NODE_METADATA_EXCLUDE_KEYS = new Set([
+  'title',
+  'description',
+  'note_id',
+  'note_type',
+  'created_at',
+  'updated_at',
+  'tags',
+  'aliases',
+  'cssclasses',
+  'author',
+  'type',
+  'draft',
+  'toc',
+  'toc_inline',
+  'toc_depth',
+  'comment',
+  'archive',
+  'trigger',
+  'disclaimer',
+  'heroImage',
+]);
 
 function toEntryId(filePath) {
   const relativePath = path.relative(BLOG_CONTENT_BASE, filePath);
@@ -61,6 +83,27 @@ function indexTarget(map, rawKey, noteId) {
   map.set(key, existing);
 }
 
+function extractNodeMetadata(data) {
+  return Object.fromEntries(
+    Object.entries(data).filter(([key]) => !NODE_METADATA_EXCLUDE_KEYS.has(key)),
+  );
+}
+
+function normalizeGraphLevel(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
 export async function buildContentIndex() {
   const files = await fg(BLOG_CONTENT_GLOB, { absolute: true });
   const entries = [];
@@ -103,6 +146,8 @@ export async function buildContentIndex() {
     const aliases = toArray(entry.data.aliases);
     const tags = toArray(entry.data.tags);
     const langKey = entry.lang ?? DEFAULT_LOCALE;
+    const metadata = extractNodeMetadata(entry.data);
+    const graphLevel = normalizeGraphLevel(entry.data.graphLevel);
     const existingNode = nodesById.get(entry.noteId) ?? {
       id: entry.noteId,
       title: entry.data.title || entry.slug || entry.noteId,
@@ -113,7 +158,9 @@ export async function buildContentIndex() {
       type: entry.data.note_type || entry.data.type || 'blog_post',
       lang: langKey,
       aliases,
-      slug: entry.slug,
+      role: typeof entry.data.role === 'string' ? entry.data.role : undefined,
+      graphLevel,
+      metadata,
       entriesByLocale: {},
     };
 
@@ -122,6 +169,9 @@ export async function buildContentIndex() {
     existingNode.entriesByLocale[langKey] = entry;
     existingNode.tags = [...new Set([...(existingNode.tags ?? []), ...tags])];
     existingNode.aliases = [...new Set([...(existingNode.aliases ?? []), ...aliases])];
+    existingNode.role = existingNode.role || (typeof entry.data.role === 'string' ? entry.data.role : undefined);
+    existingNode.graphLevel = existingNode.graphLevel ?? graphLevel;
+    existingNode.metadata = { ...(existingNode.metadata ?? {}), ...metadata };
 
     nodesById.set(entry.noteId, existingNode);
   }

@@ -38,6 +38,40 @@ function sanitizeNoteId(value) {
   return stringValue.replace(/\s+/g, '');
 }
 
+function normalizeGraphLevelValue(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return Math.max(0, Math.min(10, value));
+  }
+
+  const stringValue = cleanString(value);
+  if (!stringValue) {
+    return undefined;
+  }
+
+  const digitMatch = stringValue.match(/(\d{1,2})/);
+  if (digitMatch) {
+    return Math.max(0, Math.min(10, Number(digitMatch[1])));
+  }
+
+  const normalized = stringValue.replace(/\s+/g, '');
+  const explicitMap = new Map([
+    ['根节点', 0],
+    ['零级节点', 0],
+    ['一级节点', 1],
+    ['二级节点', 2],
+    ['三级节点', 3],
+    ['四级节点', 4],
+    ['五级节点', 5],
+    ['六级节点', 6],
+    ['七级节点', 7],
+    ['八级节点', 8],
+    ['九级节点', 9],
+    ['十级节点', 10],
+  ]);
+
+  return explicitMap.get(normalized);
+}
+
 function deriveNoteId(frontmatter) {
   const explicitId = sanitizeNoteId(frontmatter.note_id ?? frontmatter['笔记ID']);
   if (explicitId) {
@@ -118,47 +152,98 @@ function buildFrontmatter(sourcePath, frontmatter) {
   }
 
   return {
-    title,
-    description: deriveDescription(frontmatter, title),
-    note_id: noteId,
-    note_type: cleanString(frontmatter.note_type ?? frontmatter['笔记类型']),
-    created_at: createdAt,
-    updated_at: normalizeDateValue(frontmatter.updated_at ?? frontmatter.modify_time),
-    tags: normalizeArray(frontmatter.tags),
-    aliases: normalizeArray(frontmatter.aliases),
-    cssclasses: normalizeArray(frontmatter.cssclasses),
+    normalized: {
+      title,
+      description: deriveDescription(frontmatter, title),
+      note_id: noteId,
+      note_type: cleanString(frontmatter.note_type ?? frontmatter['笔记类型']),
+      created_at: createdAt,
+      updated_at: normalizeDateValue(frontmatter.updated_at ?? frontmatter.modify_time),
+      tags: normalizeArray(frontmatter.tags),
+      aliases: normalizeArray(frontmatter.aliases),
+      cssclasses: normalizeArray(frontmatter.cssclasses),
+      graphLevel: normalizeGraphLevelValue(frontmatter.graphLevel ?? frontmatter.role),
+    },
+    preserved: Object.fromEntries(Object.entries(frontmatter).filter(([key]) => key !== 'role')),
   };
 }
 
-function serializeFrontmatter(data) {
+function serializeScalar(value) {
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  if (value === null) {
+    return 'null';
+  }
+
+  return JSON.stringify(value);
+}
+
+function isPlainObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function serializeYamlEntry(key, value, indent = 0) {
+  const padding = ' '.repeat(indent);
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      return [`${padding}${key}: []`];
+    }
+
+    const lines = [`${padding}${key}:`];
+    for (const item of value) {
+      if (isPlainObject(item)) {
+        lines.push(`${padding}  -`);
+        for (const [nestedKey, nestedValue] of Object.entries(item)) {
+          lines.push(...serializeYamlEntry(nestedKey, nestedValue, indent + 4));
+        }
+      } else {
+        lines.push(`${padding}  - ${serializeScalar(item)}`);
+      }
+    }
+    return lines;
+  }
+
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value);
+    if (entries.length === 0) {
+      return [`${padding}${key}: {}`];
+    }
+
+    const lines = [`${padding}${key}:`];
+    for (const [nestedKey, nestedValue] of entries) {
+      lines.push(...serializeYamlEntry(nestedKey, nestedValue, indent + 2));
+    }
+    return lines;
+  }
+
+  return [`${padding}${key}: ${serializeScalar(value)}`];
+}
+
+function serializeFrontmatter(normalized, preserved) {
   const lines = ['---'];
 
-  const pushArray = (key, values) => {
-    if (values.length === 0) {
-      lines.push(`${key}: []`);
-      return;
+  for (const [key, value] of Object.entries(normalized)) {
+    if (value === undefined) {
+      continue;
     }
-
-    lines.push(`${key}:`);
-    for (const value of values) {
-      lines.push(`  - ${JSON.stringify(value)}`);
-    }
-  };
-
-  lines.push(`title: ${JSON.stringify(data.title)}`);
-  lines.push(`description: ${JSON.stringify(data.description)}`);
-  lines.push(`note_id: ${JSON.stringify(data.note_id)}`);
-  if (data.note_type) {
-    lines.push(`note_type: ${JSON.stringify(data.note_type)}`);
-  }
-  lines.push(`created_at: ${data.created_at}`);
-  if (data.updated_at) {
-    lines.push(`updated_at: ${data.updated_at}`);
+    lines.push(...serializeYamlEntry(key, value));
   }
 
-  pushArray('tags', data.tags);
-  pushArray('aliases', data.aliases);
-  pushArray('cssclasses', data.cssclasses);
+  const normalizedKeys = new Set(Object.keys(normalized));
+  for (const [key, value] of Object.entries(preserved)) {
+    if (normalizedKeys.has(key)) {
+      continue;
+    }
+
+    lines.push(...serializeYamlEntry(key, value));
+  }
 
   lines.push('---', '');
   return lines.join('\n');
@@ -167,7 +252,7 @@ function serializeFrontmatter(data) {
 async function importOne(filePath) {
   const rawSource = await fs.readFile(filePath, 'utf8');
   const { data, content } = matter(rawSource);
-  const normalizedFrontmatter = buildFrontmatter(filePath, data);
+  const { normalized, preserved } = buildFrontmatter(filePath, data);
 
   let transformedContent = content;
   transformedContent = transformMetaBindEmbeds(transformedContent);
@@ -176,15 +261,15 @@ async function importOne(filePath) {
   transformedContent = normalizeCodeFenceLanguages(transformedContent);
   transformedContent = injectRelationshipNotice(transformedContent.trimStart(), data.Link);
 
-  const outputDir = path.join(TARGET_DIR, normalizedFrontmatter.note_id);
+  const outputDir = path.join(TARGET_DIR, normalized.note_id);
   const outputFile = path.join(outputDir, 'index_zh-cn.mdx');
   await fs.mkdir(outputDir, { recursive: true });
-  await fs.writeFile(outputFile, `${serializeFrontmatter(normalizedFrontmatter)}${transformedContent.trim()}\n`);
+  await fs.writeFile(outputFile, `${serializeFrontmatter(normalized, preserved)}${transformedContent.trim()}\n`);
 
   return {
     source: filePath,
     output: outputFile,
-    noteId: normalizedFrontmatter.note_id,
+    noteId: normalized.note_id,
   };
 }
 

@@ -1,0 +1,216 @@
+---
+import Graph from './Graph.astro';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import { detectLocale } from '../../utils/i18n';
+
+interface Props {
+  noteId?: string;
+}
+
+const { noteId } = Astro.props;
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+---
+
+{noteId && (
+  <div id="graph-modal" data-note-id={noteId} data-locale={currentLocale} aria-hidden="true">
+    <div class="graph-modal-backdrop" data-graph-modal-close></div>
+    <div class="graph-modal-panel" role="dialog" aria-modal="true" aria-labelledby="graph-modal-title">
+      <div class="graph-modal-header">
+        <strong id="graph-modal-title">{t(I18nKey.graph)}</strong>
+        <div class="graph-modal-actions">
+          <button type="button" data-graph-modal-zoom-out title={t(I18nKey.graph_zoom_out)}>-</button>
+          <button type="button" data-graph-modal-zoom-in title={t(I18nKey.graph_zoom_in)}>+</button>
+          <button type="button" data-graph-modal-reset>{t(I18nKey.graph_reset_view)}</button>
+          <button type="button" data-graph-modal-close>{t(I18nKey.graph_close)}</button>
+        </div>
+      </div>
+
+      <Graph
+        mode="local"
+        focusNodeId={noteId}
+        locale={currentLocale}
+        layout="brain"
+        settingsEnabled={true}
+        height="min(78vh, 46rem)"
+        navigationSearch="graph=local"
+        physics={{
+          linkDistance: 92,
+          chargeStrength: -340,
+          collisionRadius: 40,
+        }}
+        render={{
+          nodeBaseRadius: 7,
+          nodeFocusRadius: 11,
+          nodeDegreeFactor: 0.3,
+          nodeMaxRadius: 12,
+          linkBaseWidth: 1.4,
+          linkWeightFactor: 0.45,
+        }}
+      />
+    </div>
+  </div>
+)}
+
+<style>
+  #graph-modal {
+    position: fixed;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity var(--transition), visibility var(--transition);
+    z-index: 1000;
+  }
+
+  #graph-modal.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .graph-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.28);
+    backdrop-filter: saturate(1.2) blur(0.35rem);
+  }
+
+  .graph-modal-panel {
+    position: relative;
+    width: min(94vw, 72rem);
+    max-height: min(86vh, 52rem);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    border-radius: calc(var(--rounded-corner) + 0.25rem);
+    background-color: color-mix(in srgb, var(--glass-bg) 88%, transparent);
+    padding: 1rem;
+  }
+
+  .graph-modal-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .graph-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .graph-modal-actions button {
+    appearance: none;
+    border: none;
+    border-radius: 999px;
+    background-color: var(--fg-muted-1);
+    box-shadow: var(--edge-highlight);
+    padding: 0.5rem 0.875rem;
+    color: var(--fg-muted-5);
+    font: inherit;
+    line-height: 1;
+    cursor: pointer;
+    transition: var(--transition);
+  }
+
+  .graph-modal-actions button:hover {
+    background-color: var(--fg-muted-2);
+    color: var(--fg-color);
+  }
+
+  body.graph-modal-open main,
+  body.graph-modal-open footer {
+    filter: saturate(0.85);
+  }
+
+  @media only screen and (max-width: 720px) {
+    .graph-modal-panel {
+      width: min(96vw, 96vw);
+      padding: 0.875rem;
+    }
+  }
+</style>
+
+<script type="module" is:inline>
+  const modal = document.getElementById('graph-modal');
+  const openers = document.querySelectorAll('[data-open-local-graph]');
+  if (modal) {
+    const MODAL_STORAGE_KEY = 'goosequill.graphModal';
+
+    const readStoredState = () => window.sessionStorage.getItem(MODAL_STORAGE_KEY);
+
+    const syncStateFromUrl = () => {
+      const params = new URLSearchParams(window.location.search);
+      const isOpen = params.get('graph') === 'local' || readStoredState() === 'graph=local';
+
+      if (isOpen && params.get('graph') !== 'local') {
+        params.set('graph', 'local');
+        const url = new URL(window.location.href);
+        url.search = params.toString();
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      }
+
+      modal.classList.toggle('is-open', isOpen);
+      modal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      document.body.classList.toggle('graph-modal-open', isOpen);
+    };
+
+    const openModal = () => {
+      window.sessionStorage.setItem(MODAL_STORAGE_KEY, 'graph=local');
+      const url = new URL(window.location.href);
+      url.searchParams.set('graph', 'local');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      syncStateFromUrl();
+    };
+
+    const closeModal = () => {
+      window.sessionStorage.removeItem(MODAL_STORAGE_KEY);
+      const url = new URL(window.location.href);
+      url.searchParams.delete('graph');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      syncStateFromUrl();
+    };
+
+    const modalGraphRoot = modal.querySelector('[data-graph-root]');
+    const graphControls = () => (modalGraphRoot ? modalGraphRoot.__graphControls : null);
+
+    openers.forEach((button) => {
+      button.addEventListener('click', (event) => {
+        event.preventDefault();
+        openModal();
+      });
+    });
+
+    modal.querySelectorAll('[data-graph-modal-close]').forEach((button) => {
+      button.addEventListener('click', closeModal);
+    });
+
+    modal.querySelector('[data-graph-modal-reset]')?.addEventListener('click', () => {
+      graphControls()?.resetView?.();
+    });
+
+    modal.querySelector('[data-graph-modal-zoom-in]')?.addEventListener('click', () => {
+      graphControls()?.zoomIn?.();
+    });
+
+    modal.querySelector('[data-graph-modal-zoom-out]')?.addEventListener('click', () => {
+      graphControls()?.zoomOut?.();
+    });
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeModal();
+      }
+    });
+
+    window.addEventListener('popstate', syncStateFromUrl);
+    syncStateFromUrl();
+  }
+</script>
