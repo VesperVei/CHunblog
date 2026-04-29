@@ -15,7 +15,10 @@ function runNodeScript(scriptPath) {
     const child = spawn(process.execPath, [scriptPath], {
       cwd: ROOT,
       stdio: 'inherit',
-      env: process.env,
+      env: {
+        ...process.env,
+        OBSIDIAN_IMPORT_CONTEXT: 'dev',
+      },
     });
 
     child.on('exit', (code) => {

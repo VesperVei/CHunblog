@@ -334,15 +334,6 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
 
     bindNodeNavigation(scene.node, currentOptions.locale, currentOptions.navigationSearch, currentOptions.mode === 'global'
       ? {
-        beforeNavigate: () => {
-          if (currentOptions.mode !== 'local' || !currentOptions.focusId) {
-            return;
-          }
-
-          writeLastNavigationLocalGraphState(
-            createLocalGraphSharedState(currentOptions.focusId, currentOptions.settings, currentOptions.activePresetId),
-          );
-        },
         onNodeClick: (node) => {
           root.dispatchEvent(new CustomEvent('graph:node-select', {
             detail: { node },
@@ -593,12 +584,15 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
         return;
       }
 
-      currentOptions = {
-        ...currentOptions,
-        focusId: nodeId,
-      };
-      hoverState = createHoverStateForNode(currentData, nodeId);
-      refreshSceneAppearance();
+      if (currentOptions.mode === 'local') {
+        currentOptions = {
+          ...currentOptions,
+          focusId: nodeId,
+        };
+        hoverState = createHoverStateForNode(currentData, nodeId);
+        refreshSceneAppearance();
+      }
+
       const bounds = expandBounds(resolveNodeNeighborhoodBounds(currentData, nodeId, 96), width * 0.42, height * 0.42);
       if (bounds) {
         zoomControls.fitView(bounds, padding, { force: true, updateOverview: false, maxScale: 0.95 });

@@ -42,6 +42,10 @@ src/content/blog/my-post/
 
 The directory name becomes the post slug. Localized variants use suffixes such as `_en` and `_zh-cn`.
 
+Obsidian imports currently come from `src/content/my_md/*.md` through `scripts/import-obsidian-blog.mjs`. The importer writes generated blog files into `src/content/blog/<note_id>/` and keeps a local cache under `.cache/obsidian-import/` so unchanged documents are not rewritten on every dev rebuild.
+
+When translation is enabled, the importer always generates the Chinese source variant first, then optionally generates `index_en.mdx` from the translated result. English generation can reuse cached translations for unchanged notes.
+
 ## Blog Frontmatter
 
 Blog posts support the following frontmatter:
@@ -115,6 +119,17 @@ If `siteConfig.defaultLocale` is set, single-language mode is enabled. Routes ar
 Tags are read from blog frontmatter. Tag lists are computed per language with `getTagList(lang)` in `src/utils/pages.ts`. Tag detail pages filter posts by exact tag name.
 
 Because tags are language-specific content, localized posts can use localized tag names.
+
+## Obsidian Translation Settings
+
+The importer supports an OpenAI-compatible translation endpoint. It is designed to work with local proxies as well as hosted providers.
+
+- `OBSIDIAN_LLM_BASE_URL` or `LLM_BASE_URL`: translation endpoint base URL. Defaults to `http://127.0.0.1:8317/v1`.
+- `OBSIDIAN_LLM_API_KEY` or `LLM_API_KEY`: API key sent as a Bearer token. Defaults to `local`.
+- `OBSIDIAN_LLM_MODEL` or `LLM_MODEL`: model name. Translation stays disabled until a model is configured.
+- `OBSIDIAN_TRANSLATE=false`: disable translation explicitly.
+- `OBSIDIAN_TRANSLATE_IN_DEV=true`: allow live translation during `pnpm dev`. By default, dev mode skips new translation requests and only reuses cached English output.
+- `OBSIDIAN_FORCE_RETRANSLATE=true`: ignore cached translations for the current run.
 
 ## Drafts
 

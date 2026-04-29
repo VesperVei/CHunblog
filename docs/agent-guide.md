@@ -96,7 +96,7 @@ Check `git status --short` before editing and before committing.
 
 Use the smallest useful verification command.
 
-- `pnpm dev`: runs `scripts/generate-graph.mjs` first, then starts Astro.
+- `pnpm dev`: runs `scripts/import-obsidian-blog.mjs`, then `scripts/generate-graph.mjs`, then starts Astro. The importer runs in `dev` context, skips fresh LLM translation by default, and should avoid rewriting unchanged generated files.
 - `pnpm build`: runs graph generation, Astro build, then Pagefind index generation.
 - `pnpm preview`: preview built output.
 
@@ -108,3 +108,4 @@ When `pnpm build` passes with warnings, report the warnings and whether they are
 - Some unprefixed routes intentionally produce empty output in multilingual mode.
 - Content language selection depends on filename suffixes. Incorrect suffixes can make content disappear from localized routes.
 - Pagefind runs after Astro build and can surface warnings about generated HTML shape.
+- Obsidian import translation uses an OpenAI-compatible endpoint configured by environment variables. If `OBSIDIAN_LLM_MODEL` is unset, English generation is skipped even though Chinese import still runs.

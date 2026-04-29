@@ -936,14 +936,6 @@ function bindGraphSettings(root: HTMLElement) {
   const shell = root.closest<HTMLElement>('[data-graph-shell]');
   if (!shell || (shell as any).__graphSettingsBound) return;
 
-  (shell as any).__graphSettingsBound = true;
-  bindSectionToggles(shell);
-  bindPresetActions(root, shell);
-
-  const toggle = shell.querySelector<HTMLButtonElement>('[data-graph-settings-toggle]');
-  const panel = shell.querySelector<HTMLElement>('[data-graph-settings-panel]');
-  if (!toggle || !panel) return;
-
   const updateFullscreenButtonState = () => {
     const fullscreenButton = shell.querySelector<HTMLButtonElement>('[data-graph-toolbar-fullscreen]');
     if (!fullscreenButton) return;
@@ -956,18 +948,41 @@ function bindGraphSettings(root: HTMLElement) {
     fullscreenButton.title = label;
   };
 
-  const setOpen = (isOpen: boolean) => {
-    toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-    panel.classList.toggle('is-open', isOpen);
-  };
-
-  toggle.setAttribute('aria-expanded', 'false');
-  toggle.addEventListener('click', () => {
-    const isOpen = !panel.classList.contains('is-open');
-    setOpen(isOpen);
-    if (isOpen) syncSettingsUI(shell, root);
+  shell.querySelector('[data-graph-toolbar-reset]')?.addEventListener('click', () => {
+    (root as any).__graphControls?.resetView?.();
   });
+
+  shell.querySelector('[data-graph-toolbar-fullscreen]')?.addEventListener('click', async () => {
+    if (document.fullscreenElement === shell) {
+      await document.exitFullscreen().catch(() => undefined);
+      return;
+    }
+
+    await shell.requestFullscreen?.().catch(() => undefined);
+  });
+
+  document.addEventListener('fullscreenchange', updateFullscreenButtonState);
+  updateFullscreenButtonState();
+
+  const toggle = shell.querySelector<HTMLButtonElement>('[data-graph-settings-toggle]');
+  const panel = shell.querySelector<HTMLElement>('[data-graph-settings-panel]');
+  if (toggle && panel) {
+    const setOpen = (isOpen: boolean) => {
+      toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      panel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      panel.classList.toggle('is-open', isOpen);
+    };
+
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.addEventListener('click', () => {
+      const isOpen = !panel.classList.contains('is-open');
+      setOpen(isOpen);
+      if (isOpen) syncSettingsUI(shell, root);
+    });
+  }
+
+  bindSectionToggles(shell);
+  bindPresetActions(root, shell);
 
   root.addEventListener('graph:node-select', ((event: Event) => {
     const customEvent = event as CustomEvent<{ node?: GraphNode }>;
@@ -991,22 +1006,6 @@ function bindGraphSettings(root: HTMLElement) {
     applyNextState(root, { ...state, settings: resetSettings }, 'settings');
     syncSettingsUI(shell, root);
   });
-
-  shell.querySelector('[data-graph-toolbar-reset]')?.addEventListener('click', () => {
-    (root as any).__graphControls?.resetView?.();
-  });
-
-  shell.querySelector('[data-graph-toolbar-fullscreen]')?.addEventListener('click', async () => {
-    if (document.fullscreenElement === shell) {
-      await document.exitFullscreen().catch(() => undefined);
-      return;
-    }
-
-    await shell.requestFullscreen?.().catch(() => undefined);
-  });
-
-  document.addEventListener('fullscreenchange', updateFullscreenButtonState);
-  updateFullscreenButtonState();
 
   shell.querySelector('[data-graph-legend-toggle]')?.addEventListener('click', () => {
     setLegendOpenState(shell, !getLegendOpenState(shell));
@@ -1213,6 +1212,7 @@ function bindGraphSettings(root: HTMLElement) {
     }
   });
 
+  (shell as any).__graphSettingsBound = true;
   syncSettingsUI(shell, root);
 }
 

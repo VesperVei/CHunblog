@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 .astro/
+.cache/
 
 # Logs
 npm-debug.log*
@@ -29,4 +30,3 @@ public/graph.json
 
 /src/content/blog/
 /src/content/my_md/
-
