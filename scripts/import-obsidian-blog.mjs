@@ -488,7 +488,7 @@ async function main() {
   const translationConfig = getTranslationConfig();
 
   if (!translationConfig.model && translationConfig.translateEnabled !== false) {
-    console.log('[import-obsidian] English translation disabled: set OBSIDIAN_LLM_MODEL or LLM_MODEL to enable it.');
+    console.log('[import-obsidian] English translation disabled: set LLM_TRANSLATION_CONFIG.model in scripts/lib/translate.mjs, or override it with OBSIDIAN_LLM_MODEL / LLM_MODEL.');
   }
 
   for (const filePath of files) {

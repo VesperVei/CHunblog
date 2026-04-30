@@ -722,7 +722,7 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
     return;
   }
 
-  const title = node.titles?.[state.locale] || Object.values(node.titles ?? {})[0] || node.id;
+  const title = node.titles?.[state.locale] || node.id;
   const subtitle = node.type || node.metadata?.note_type || 'note';
   const tags = Array.isArray(node.tags) && node.tags.length > 0
     ? node.tags.map((tag) => `<span class="graph-detail-tag">${escapeHtml(String(tag))}</span>`).join('')
@@ -1187,7 +1187,7 @@ function bindGraphSettings(root: HTMLElement) {
     if (openArticleButton) {
       const node = resolveNodeById(root, openArticleButton.dataset.graphOpenArticle);
       const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-      const targetUrl = node?.urls?.[state.locale] || node?.urls?.['zh-cn'] || node?.urls?.['en'];
+      const targetUrl = node?.urls?.[state.locale];
       if (targetUrl) {
         window.location.href = targetUrl;
       }

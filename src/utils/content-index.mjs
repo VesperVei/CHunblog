@@ -68,6 +68,14 @@ function preferredLocaleEntry(entriesByLocale, preferredLang) {
   return Object.values(entriesByLocale)[0];
 }
 
+function hasLocaleEntry(node, locale) {
+  if (!locale) {
+    return true;
+  }
+
+  return Boolean(node?.entriesByLocale?.[locale] && node?.titles?.[locale] && node?.urls?.[locale]);
+}
+
 function indexTarget(map, rawKey, noteId) {
   if (!rawKey) {
     return;
@@ -194,12 +202,17 @@ export async function buildContentIndex() {
     indexTarget(aliasIndex, node.id, node.id);
     indexTarget(titleIndex, node.title, node.id);
 
+    for (const localizedTitle of Object.values(node.titles ?? {})) {
+      indexTarget(titleIndex, localizedTitle, node.id);
+    }
+
     for (const alias of node.aliases) {
       indexTarget(aliasIndex, alias, node.id);
     }
   }
 
-  function resolveWikiTarget(target, preferredLang) {
+  function resolveWikiTarget(target, preferredLang, options = {}) {
+    const strictLocale = options.strictLocale === true;
     const normalizedTarget = normalizeWikiTarget(target);
     const candidateIds = [
       ...(aliasIndex.get(normalizedTarget) ?? []),
@@ -235,37 +248,57 @@ export async function buildContentIndex() {
       };
     }
 
+    if (strictLocale && !hasLocaleEntry(node, preferredLang)) {
+      return {
+        status: 'missing',
+        normalizedTarget,
+        reason: 'locale_unavailable',
+      };
+    }
+
     return {
       status: 'resolved',
       normalizedTarget,
       noteId,
       node,
-      url: getCanonicalUrlForNoteId(noteId, preferredLang),
-      title: getLocalizedTitleForNoteId(noteId, preferredLang),
+      url: getCanonicalUrlForNoteId(noteId, preferredLang, { strictLocale }),
+      title: getLocalizedTitleForNoteId(noteId, preferredLang, { strictLocale }),
     };
   }
 
-  function getCanonicalUrlForNoteId(noteId, preferredLang) {
+  function getCanonicalUrlForNoteId(noteId, preferredLang, options = {}) {
     const node = nodesById.get(noteId);
     if (!node) {
       return null;
     }
+
+    const strictLocale = options.strictLocale === true;
 
     if (preferredLang && node.urls[preferredLang]) {
       return node.urls[preferredLang];
     }
 
+    if (strictLocale) {
+      return null;
+    }
+
     return preferredLocaleEntry(node.entriesByLocale, DEFAULT_LOCALE)?.url ?? node.url;
   }
 
-  function getLocalizedTitleForNoteId(noteId, preferredLang) {
+  function getLocalizedTitleForNoteId(noteId, preferredLang, options = {}) {
     const node = nodesById.get(noteId);
     if (!node) {
       return null;
     }
 
+    const strictLocale = options.strictLocale === true;
+
     if (preferredLang && node.titles[preferredLang]) {
       return node.titles[preferredLang];
+    }
+
+    if (strictLocale) {
+      return null;
     }
 
     return node.titles[DEFAULT_LOCALE] ?? node.title;

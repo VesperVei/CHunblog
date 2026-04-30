@@ -1,6 +1,6 @@
 import { DEFAULT_DEPTH } from '../constants';
 import type { GraphData, GraphDirection, GraphFilterSettings, GraphViewMode } from '../types';
-import { labelForNode, createGraphIndexes } from './graph-build';
+import { filterGraphDataByLocale, labelForNode, createGraphIndexes } from './graph-build';
 
 type FilterOptions = {
   mode?: GraphViewMode;
@@ -42,17 +42,18 @@ export function buildRenderableGraph(data: GraphData, options: FilterOptions = {
   const focusId = options.focusId;
   const locale = options.locale ?? 'en';
   const filters = options.filters ?? {};
+  const localizedData = filterGraphDataByLocale(data, locale);
   const depth = filters.depth ?? DEFAULT_DEPTH;
   const direction: GraphDirection = filters.showBacklinks === false
     ? 'outgoing'
     : filters.showForwardLinks === false
       ? 'incoming'
       : 'both';
-  const indexes = createGraphIndexes(data);
+  const indexes = createGraphIndexes(localizedData);
   const searchQuery = filters.searchQuery ?? '';
 
   if (mode !== 'local' || !focusId) {
-    const nodes = data.nodes.filter((node) => matchesSearch(node, searchQuery, locale));
+    const nodes = localizedData.nodes.filter((node) => matchesSearch(node, searchQuery, locale));
     const visibleIds = new Set(nodes.map((node) => node.id));
 
     return {
@@ -85,7 +86,7 @@ export function buildRenderableGraph(data: GraphData, options: FilterOptions = {
     }
   }
 
-  const nodes = data.nodes.filter((node) => visited.has(node.id) && (node.id === focusId || matchesSearch(node, searchQuery, locale)));
+  const nodes = localizedData.nodes.filter((node) => visited.has(node.id) && (node.id === focusId || matchesSearch(node, searchQuery, locale)));
   const visibleIds = new Set(nodes.map((node) => node.id));
 
   return {

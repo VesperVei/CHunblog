@@ -216,7 +216,7 @@ export function applyGraphAppearance(scene, data: GraphData, settings: GraphSett
 }
 
 function navigateToNode(item, locale: string, navigationSearch?: string, beforeNavigate?: () => void) {
-  const targetUrl = item.urls?.[locale] || item.urls?.['zh-cn'] || item.urls?.['en'];
+  const targetUrl = item.urls?.[locale];
   if (!targetUrl) {
     return;
   }

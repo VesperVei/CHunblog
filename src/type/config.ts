@@ -53,7 +53,6 @@ export type WalineCommentsConfig = {
 
 export type CommentsConfig = GiscusCommentsConfig | WalineCommentsConfig;
 
-
 export type SiteConfig = {
   title: string;
   description: string;
@@ -95,13 +94,15 @@ export type SiteConfig = {
   modern_hr?: boolean;
 };
 
-export enum LinkPreset {
-  Home = 0,
-  Blog = 1,
-  About = 2,
-  Demo = 3,
-  Tag = 4,
-}
+export const LinkPreset = {
+  Home: 0,
+  Blog: 1,
+  About: 2,
+  Demo: 3,
+  Tag: 4,
+} as const;
+
+export type LinkPreset = typeof LinkPreset[keyof typeof LinkPreset];
 
 export type NavBarLink = {
   name: string;

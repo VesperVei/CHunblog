@@ -35,6 +35,7 @@ For theme, style, or UI behavior, also read:
 ## Working Principles
 
 - Preserve multilingual behavior unless the task explicitly changes it.
+- In multilingual mode, treat each locale as a strict content domain for wikilinks and graph navigation. Do not fall back from `/en` to Chinese nodes or routes, or from `/zh-cn` to English nodes or routes.
 - Prefer updating `src/config.ts` for site-level behavior instead of hardcoding values in components.
 - Keep content routing logic centralized in `src/utils/pages.ts`.
 - Keep wikilink parsing and graph target resolution centralized in `src/utils/wiki.mjs` and `src/utils/content-index.mjs`.
@@ -108,4 +109,4 @@ When `pnpm build` passes with warnings, report the warnings and whether they are
 - Some unprefixed routes intentionally produce empty output in multilingual mode.
 - Content language selection depends on filename suffixes. Incorrect suffixes can make content disappear from localized routes.
 - Pagefind runs after Astro build and can surface warnings about generated HTML shape.
-- Obsidian import translation uses an OpenAI-compatible endpoint configured by environment variables. If `OBSIDIAN_LLM_MODEL` is unset, English generation is skipped even though Chinese import still runs.
+- Obsidian import translation uses an OpenAI-compatible endpoint configured primarily in `scripts/lib/translate.mjs` under `LLM_TRANSLATION_CONFIG`. Environment variables still override it. If no model is configured, English generation is skipped even though Chinese import still runs.

@@ -1,5 +1,5 @@
 import type { BrainGraphNode, BrainRelationKind, GraphData, GraphFilterSettings, GraphNode } from '../types';
-import { labelForNode, createGraphIndexes } from './graph-build';
+import { filterGraphDataByLocale, labelForNode, createGraphIndexes } from './graph-build';
 
 function hasDirectLink(indexes: ReturnType<typeof createGraphIndexes>, sourceId: string, targetId: string) {
   return indexes.directLinkSet.has(`${sourceId}::${targetId}`);
@@ -63,7 +63,7 @@ function shareParent(indexes: ReturnType<typeof createGraphIndexes>, focusNode: 
   return false;
 }
 
-function compareBrainNodes(left: GraphNode, right: GraphNode) {
+function compareBrainNodes(left: GraphNode, right: GraphNode, locale: string) {
   const leftLevel = typeof left.graphLevel === 'number' ? left.graphLevel : Number.POSITIVE_INFINITY;
   const rightLevel = typeof right.graphLevel === 'number' ? right.graphLevel : Number.POSITIVE_INFINITY;
 
@@ -71,7 +71,7 @@ function compareBrainNodes(left: GraphNode, right: GraphNode) {
     return leftLevel - rightLevel;
   }
 
-  return labelForNode(left, 'zh-cn').localeCompare(labelForNode(right, 'zh-cn'), 'zh-Hans-CN-u-co-pinyin');
+  return labelForNode(left, locale).localeCompare(labelForNode(right, locale), locale);
 }
 
 function classifyRelation(indexes: ReturnType<typeof createGraphIndexes>, focusNode: GraphNode, candidate: GraphNode): BrainRelationKind | null {
@@ -105,6 +105,7 @@ function classifyRelation(indexes: ReturnType<typeof createGraphIndexes>, focusN
 }
 
 export function buildBrainRenderableGraph(data: GraphData, focusId?: string, filters: GraphFilterSettings = {}, locale = 'en') {
+  const localizedData = filterGraphDataByLocale(data, locale);
   if (!focusId) {
     return {
       nodes: [],
@@ -112,7 +113,7 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
     };
   }
 
-  const indexes = createGraphIndexes(data);
+  const indexes = createGraphIndexes(localizedData);
   const focusNode = indexes.nodeById.get(focusId);
   if (!focusNode) {
     return {
@@ -163,7 +164,7 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
   }
 
   if (focusParents.size > 0) {
-    for (const node of data.nodes) {
+    for (const node of localizedData.nodes) {
       if (includedIds.has(node.id) || node.id === focusId) {
         continue;
       }
@@ -177,10 +178,10 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
     }
   }
 
-  const nodes = data.nodes
+  const nodes = localizedData.nodes
     .filter((node) => includedIds.has(node.id))
     .filter(matchesSearch)
-    .sort(compareBrainNodes)
+    .sort((left, right) => compareBrainNodes(left, right, locale))
     .map((node) => ({
       ...node,
       brainRelation: nodeRelations.get(node.id) ?? 'jump',
