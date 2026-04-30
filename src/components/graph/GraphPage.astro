@@ -1,0 +1,52 @@
+---
+import Graph from './Graph.astro';
+import Base from '../../layouts/Base.astro';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+
+interface Props {
+  locale: string;
+}
+
+const { locale } = Astro.props;
+const t = useTranslations(locale);
+const title = t(I18nKey.graph);
+const subtitle = t(I18nKey.graph_subtitle);
+---
+
+<Base title={title} description={subtitle} ignoreSearch mainClass="graph-page-main">
+  <section class="graph-page">
+    <Graph
+      mode="global"
+      locale={locale}
+      settingsEnabled={true}
+      controlsMode="toolbar"
+      fullscreenEnabled={true}
+      height="calc(100vh - 110px)"
+    />
+  </section>
+</Base>
+
+<style>
+  :global(main.graph-page-main) {
+    width: 100%;
+    max-width: none;
+    margin: 4.25rem 0 4rem;
+    padding: 0 1.5rem;
+  }
+
+  .graph-page {
+    width: min(1400px, calc(100vw - 48px));
+    margin: 0 auto;
+  }
+
+  @media only screen and (max-width: 720px) {
+    :global(main.graph-page-main) {
+      padding: 0 0.75rem;
+    }
+
+    .graph-page {
+      width: min(1400px, calc(100vw - 24px));
+    }
+  }
+</style>

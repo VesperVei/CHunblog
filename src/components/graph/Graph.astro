@@ -1,10 +1,23 @@
 ---
+import { DEFAULT_DEPTH, DEFAULT_LAYOUT, getAvailableLayoutsForMode, resolveGraphSettings } from '../../graph/constants';
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import graphClientUrl from './graph-client.ts?url';
+
 interface Props {
   graphUrl?: string;
   focusNodeId?: string;
   mode?: 'local' | 'global';
   height?: string;
   locale?: string;
+  depth?: number;
+  layout?: 'force' | 'brain' | 'radial' | 'tree';
+  physics?: Record<string, number>;
+  render?: Record<string, number>;
+  navigationSearch?: string;
+  settingsEnabled?: boolean;
+  controlsMode?: 'overlay' | 'toolbar';
+  fullscreenEnabled?: boolean;
 }
 
 const {
@@ -13,22 +26,681 @@ const {
   mode = 'global',
   height = '70vh',
   locale = 'en',
+  depth = DEFAULT_DEPTH,
+  layout = DEFAULT_LAYOUT,
+  physics,
+  render,
+  navigationSearch,
+  settingsEnabled = false,
+  controlsMode = 'overlay',
+  fullscreenEnabled = false,
 } = Astro.props;
+
+const t = useTranslations(locale);
+const availableLayouts = getAvailableLayoutsForMode(mode);
+const toolbarSearchPlaceholder = t(I18nKey.graph_toolbar_search_placeholder);
+const enterFullscreenLabel = t(I18nKey.graph_enter_fullscreen);
+const exitFullscreenLabel = t(I18nKey.graph_exit_fullscreen);
+const legendLabel = t(I18nKey.graph_legend);
+const legendFiltersLabel = t(I18nKey.graph_legend_filters);
+const nodeDetailsLabel = t(I18nKey.graph_node_details);
+const openArticleLabel = t(I18nKey.graph_open_article);
+const focusRelatedLabel = t(I18nKey.graph_focus_related);
+const selectNodeHint = t(I18nKey.graph_select_node_hint);
+const nodeTypeLabel = t(I18nKey.graph_type);
+const tagsLabel = t(I18nKey.tags);
+const createdLabel = t(I18nKey.created);
+const updatedLabel = t(I18nKey.updated);
+const initialSettings = resolveGraphSettings(mode, layout, {
+  filters: {
+    depth,
+  },
+  appearance: {
+    nodeRadius: render?.nodeBaseRadius,
+    focusNodeRadius: render?.nodeFocusRadius,
+    linkWidth: render?.linkBaseWidth,
+  },
+  forces: {
+    centerStrength: physics?.centerStrength,
+    repelStrength: typeof physics?.chargeStrength === 'number' ? Math.abs(physics.chargeStrength) : undefined,
+    linkDistance: physics?.linkDistance,
+    collisionPadding: physics?.collisionRadius,
+  },
+  layout: {
+    preset: layout,
+  },
+});
 ---
 
 <div
-  class="graph-root"
-  data-graph-root
-  data-graph-url={graphUrl}
-  data-focus-id={focusNodeId}
-  data-mode={mode}
-  data-locale={locale}
-  style={`height:${height}`}
+  class="graph-shell"
+  data-graph-shell
+  data-graph-controls-mode={controlsMode}
+  data-graph-enter-fullscreen-label={enterFullscreenLabel}
+  data-graph-exit-fullscreen-label={exitFullscreenLabel}
+  data-graph-legend-label={legendLabel}
+  data-graph-node-details-label={nodeDetailsLabel}
+  data-graph-open-article-label={openArticleLabel}
+  data-graph-focus-related-label={focusRelatedLabel}
+  data-graph-select-node-hint={selectNodeHint}
+  data-graph-type-label={nodeTypeLabel}
+  data-graph-tags-label={tagsLabel}
+  data-graph-created-label={createdLabel}
+  data-graph-updated-label={updatedLabel}
 >
-  <div class="graph-empty">Loading graph...</div>
+  {controlsMode === 'toolbar' && (
+    <div class="graph-toolbar" data-graph-toolbar>
+      <label class="graph-toolbar-search" data-graph-setting-field="searchQuery">
+        <input
+          type="search"
+          data-graph-setting-input="searchQuery"
+          placeholder={toolbarSearchPlaceholder}
+          aria-label={t(I18nKey.graph_search)}
+        />
+      </label>
+
+      <button type="button" class="graph-toolbar-button" data-graph-toolbar-reset>
+        {t(I18nKey.graph_reset_view)}
+      </button>
+
+      <div class="graph-toolbar-spacer" aria-hidden="true"></div>
+
+      {fullscreenEnabled && (
+        <button
+          type="button"
+          class="graph-toolbar-icon-button"
+          data-graph-toolbar-fullscreen
+          aria-label={enterFullscreenLabel}
+          title={enterFullscreenLabel}
+        >
+          <span aria-hidden="true">⛶</span>
+        </button>
+      )}
+
+      {settingsEnabled && controlsMode === 'toolbar' && (
+        <div class="graph-settings" data-graph-settings>
+          <button
+            class="graph-settings-toggle"
+            type="button"
+            data-graph-settings-toggle
+            aria-label={t(I18nKey.graph_settings)}
+            title={t(I18nKey.graph_settings)}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54a7.2 7.2 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.24 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4z" fill="currentColor"></path>
+            </svg>
+          </button>
+
+          <aside class="graph-settings-panel" data-graph-settings-panel aria-hidden="true">
+            <div class="graph-settings-header">
+              <strong>{t(I18nKey.graph_settings)}</strong>
+              <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
+            </div>
+
+            <section class="graph-settings-group" data-graph-settings-group>
+              <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+                <span class="graph-settings-chevron" aria-hidden="true"></span>
+                <span>{t(I18nKey.graph_templates)}</span>
+              </button>
+              <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+                <label class="graph-settings-field">
+                  <span>{t(I18nKey.graph_template)}</span>
+                  <select data-graph-preset-select></select>
+                </label>
+                <div class="graph-settings-actions-row">
+                  <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
+                  <button type="button" class="graph-settings-action" data-graph-preset-reset>{t(I18nKey.graph_reset_preset)}</button>
+                </div>
+                <div class="graph-settings-actions-row" data-graph-debug-only hidden>
+                  <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
+                  <button type="button" class="graph-settings-action" data-graph-preset-export>{t(I18nKey.graph_export_preset)}</button>
+                  <button type="button" class="graph-settings-action" data-graph-preset-import>{t(I18nKey.graph_import_preset)}</button>
+                </div>
+              </div>
+            </section>
+
+            <section class="graph-settings-group" data-graph-settings-group>
+              <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+                <span class="graph-settings-chevron" aria-hidden="true"></span>
+                <span>{t(I18nKey.graph_filters)}</span>
+              </button>
+              <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+                <label class="graph-settings-field" data-graph-setting-field="searchQuery">
+                  <span>{t(I18nKey.graph_search)}</span>
+                  <input type="search" data-graph-setting-input="searchQuery" placeholder={t(I18nKey.graph_search_placeholder)} />
+                </label>
+
+                <label class="graph-settings-field" data-graph-setting-field="depth">
+                  <span>{t(I18nKey.graph_depth)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="1" max="5" step="1" data-graph-setting-input="depth" />
+                    <output data-graph-setting-value="depth"></output>
+                  </div>
+                </label>
+
+                <label class="graph-settings-toggle-row" data-graph-setting-field="showBacklinks">
+                  <span>{t(I18nKey.graph_show_backlinks)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="showBacklinks" />
+                </label>
+                <label class="graph-settings-toggle-row" data-graph-setting-field="showForwardLinks">
+                  <span>{t(I18nKey.graph_show_forward_links)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="showForwardLinks" />
+                </label>
+                <label class="graph-settings-toggle-row" data-graph-setting-field="showCrossLinks">
+                  <span>{t(I18nKey.graph_show_cross_links)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="showCrossLinks" />
+                </label>
+                <label class="graph-settings-toggle-row" data-graph-setting-field="showTags">
+                  <span>{t(I18nKey.graph_show_tags)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="showTags" />
+                </label>
+                <label class="graph-settings-toggle-row" data-graph-setting-field="showAttachments">
+                  <span>{t(I18nKey.graph_show_attachments)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="showAttachments" />
+                </label>
+                <label class="graph-settings-toggle-row" data-graph-setting-field="onlyExistingNotes">
+                  <span>{t(I18nKey.graph_only_existing_notes)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="onlyExistingNotes" />
+                </label>
+              </div>
+            </section>
+
+            <section class="graph-settings-group" data-graph-settings-group>
+              <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+                <span class="graph-settings-chevron" aria-hidden="true"></span>
+                <span>{t(I18nKey.graph_appearance)}</span>
+              </button>
+              <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+                <label class="graph-settings-toggle-row" data-graph-setting-field="showArrows">
+                  <span>{t(I18nKey.graph_show_arrows)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="showArrows" />
+                </label>
+
+                <label class="graph-settings-field" data-graph-setting-field="textOpacity">
+                  <span>{t(I18nKey.graph_text_opacity)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="1" step="0.05" data-graph-setting-input="textOpacity" />
+                    <output data-graph-setting-value="textOpacity"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="linkOpacity">
+                  <span>{t(I18nKey.graph_link_opacity)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="1" step="0.05" data-graph-setting-input="linkOpacity" />
+                    <output data-graph-setting-value="linkOpacity"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="nodeRadius">
+                  <span>{t(I18nKey.graph_node_radius)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="2" max="20" step="1" data-graph-setting-input="nodeRadius" />
+                    <output data-graph-setting-value="nodeRadius"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="linkWidth">
+                  <span>{t(I18nKey.graph_link_width)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0.5" max="6" step="0.25" data-graph-setting-input="linkWidth" />
+                    <output data-graph-setting-value="linkWidth"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="labelSize">
+                  <span>{t(I18nKey.graph_label_size)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="8" max="20" step="1" data-graph-setting-input="labelSize" />
+                    <output data-graph-setting-value="labelSize"></output>
+                  </div>
+                </label>
+              </div>
+            </section>
+
+            <section class="graph-settings-group" data-graph-settings-group data-graph-debug-only hidden>
+              <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+                <span class="graph-settings-chevron" aria-hidden="true"></span>
+                <span>{t(I18nKey.graph_advanced_forces)}</span>
+              </button>
+              <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+                <label class="graph-settings-field" data-graph-setting-field="collisionStrength">
+                  <span>{t(I18nKey.graph_collision_strength)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="collisionStrength" />
+                    <output data-graph-setting-value="collisionStrength"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="localGravityStrength" title="将当前焦点节点轻微拉回图谱中心，不会永久固定节点。">
+                  <span>{t(I18nKey.graph_focus_gravity_strength)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="0.4" step="0.01" data-graph-setting-input="localGravityStrength" />
+                    <output data-graph-setting-value="localGravityStrength"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="collisionPadding">
+                  <span>{t(I18nKey.graph_collision_padding)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="32" step="1" data-graph-setting-input="collisionPadding" />
+                    <output data-graph-setting-value="collisionPadding"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="velocityDecay">
+                  <span>{t(I18nKey.graph_velocity_decay)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0.15" max="0.75" step="0.01" data-graph-setting-input="velocityDecay" />
+                    <output data-graph-setting-value="velocityDecay"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="alphaDecay">
+                  <span>{t(I18nKey.graph_alpha_decay)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0.005" max="0.08" step="0.001" data-graph-setting-input="alphaDecay" />
+                    <output data-graph-setting-value="alphaDecay"></output>
+                  </div>
+                </label>
+              </div>
+            </section>
+
+            <section class="graph-settings-group" data-graph-settings-group>
+              <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+                <span class="graph-settings-chevron" aria-hidden="true"></span>
+                <span>{t(I18nKey.graph_forces)}</span>
+              </button>
+              <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+                <label class="graph-settings-field" data-graph-setting-field="centerStrength">
+                  <span>{t(I18nKey.graph_center_strength)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="centerStrength" />
+                    <output data-graph-setting-value="centerStrength"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="repelStrength">
+                  <span>{t(I18nKey.graph_repel_strength)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="100" step="1" data-graph-setting-input="repelStrength" />
+                    <output data-graph-setting-value="repelStrength"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="linkStrength">
+                  <span>{t(I18nKey.graph_link_strength)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="linkStrength" />
+                    <output data-graph-setting-value="linkStrength"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="linkDistance">
+                  <span>{t(I18nKey.graph_link_distance)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="30" max="320" step="5" data-graph-setting-input="linkDistance" />
+                    <output data-graph-setting-value="linkDistance"></output>
+                  </div>
+                </label>
+              </div>
+            </section>
+
+            <section class="graph-settings-group" data-graph-settings-group>
+              <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+                <span class="graph-settings-chevron" aria-hidden="true"></span>
+                <span>{t(I18nKey.graph_layout_section)}</span>
+              </button>
+              <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+                <label class="graph-settings-field" data-graph-setting-field="preset">
+                  <span>{t(I18nKey.graph_layout)}</span>
+                  <select data-graph-setting-input="preset">
+                    {availableLayouts.includes('force') && <option value="force">{t(I18nKey.graph_layout_default)}</option>}
+                    {availableLayouts.includes('brain') && <option value="brain">{t(I18nKey.graph_layout_brain)}</option>}
+                    {availableLayouts.includes('radial') && <option value="radial">{t(I18nKey.graph_layout_radial)}</option>}
+                    {availableLayouts.includes('tree') && <option value="tree">{t(I18nKey.graph_layout_tree)}</option>}
+                  </select>
+                </label>
+                <label class="graph-settings-field" data-graph-setting-field="brainAnchorStrength">
+                  <span>{t(I18nKey.graph_brain_anchor_strength)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="brainAnchorStrength" />
+                    <output data-graph-setting-value="brainAnchorStrength"></output>
+                  </div>
+                </label>
+                <label class="graph-settings-toggle-row" data-graph-setting-field="preserveSelectedPreset">
+                  <span>{t(I18nKey.graph_preserve_selected_preset)}</span>
+                  <input type="checkbox" class="graph-switch" data-graph-setting-input="preserveSelectedPreset" />
+                </label>
+              </div>
+            </section>
+          </aside>
+        </div>
+      )}
+    </div>
+  )}
+
+  {settingsEnabled && controlsMode !== 'toolbar' && (
+    <div class="graph-settings" data-graph-settings>
+      <button
+        class="graph-settings-toggle"
+        type="button"
+        data-graph-settings-toggle
+        aria-label={t(I18nKey.graph_settings)}
+        title={t(I18nKey.graph_settings)}
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M19.14 12.94a7.43 7.43 0 0 0 .05-.94 7.43 7.43 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.2 7.2 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54a7.2 7.2 0 0 0-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58a7.43 7.43 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.39 1.05.7 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.24 1.13-.55 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64zM12 15.2A3.2 3.2 0 1 1 12 8.8a3.2 3.2 0 0 1 0 6.4z" fill="currentColor"></path>
+        </svg>
+      </button>
+
+      <aside class="graph-settings-panel" data-graph-settings-panel aria-hidden="true">
+        <div class="graph-settings-header">
+          <strong>{t(I18nKey.graph_settings)}</strong>
+          <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
+        </div>
+
+        <section class="graph-settings-group" data-graph-settings-group>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_templates)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <label class="graph-settings-field">
+              <span>{t(I18nKey.graph_template)}</span>
+              <select data-graph-preset-select></select>
+            </label>
+            <div class="graph-settings-actions-row">
+              <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-reset>{t(I18nKey.graph_reset_preset)}</button>
+            </div>
+            <div class="graph-settings-actions-row" data-graph-debug-only hidden>
+              <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-export>{t(I18nKey.graph_export_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-import>{t(I18nKey.graph_import_preset)}</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="graph-settings-group" data-graph-settings-group>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_filters)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <label class="graph-settings-field" data-graph-setting-field="searchQuery">
+              <span>{t(I18nKey.graph_search)}</span>
+              <input type="search" data-graph-setting-input="searchQuery" placeholder={t(I18nKey.graph_search_placeholder)} />
+            </label>
+
+            <label class="graph-settings-field" data-graph-setting-field="depth">
+              <span>{t(I18nKey.graph_depth)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="1" max="5" step="1" data-graph-setting-input="depth" />
+                <output data-graph-setting-value="depth"></output>
+              </div>
+            </label>
+
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showBacklinks">
+              <span>{t(I18nKey.graph_show_backlinks)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showBacklinks" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showForwardLinks">
+              <span>{t(I18nKey.graph_show_forward_links)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showForwardLinks" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showCrossLinks">
+              <span>{t(I18nKey.graph_show_cross_links)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showCrossLinks" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showTags">
+              <span>{t(I18nKey.graph_show_tags)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showTags" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showAttachments">
+              <span>{t(I18nKey.graph_show_attachments)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showAttachments" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="onlyExistingNotes">
+              <span>{t(I18nKey.graph_only_existing_notes)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="onlyExistingNotes" />
+            </label>
+          </div>
+        </section>
+
+        <section class="graph-settings-group" data-graph-settings-group>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_appearance)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showArrows">
+              <span>{t(I18nKey.graph_show_arrows)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showArrows" />
+            </label>
+
+            <label class="graph-settings-field" data-graph-setting-field="textOpacity">
+              <span>{t(I18nKey.graph_text_opacity)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.05" data-graph-setting-input="textOpacity" />
+                <output data-graph-setting-value="textOpacity"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="linkOpacity">
+              <span>{t(I18nKey.graph_link_opacity)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.05" data-graph-setting-input="linkOpacity" />
+                <output data-graph-setting-value="linkOpacity"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="nodeRadius">
+              <span>{t(I18nKey.graph_node_radius)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="2" max="20" step="1" data-graph-setting-input="nodeRadius" />
+                <output data-graph-setting-value="nodeRadius"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="linkWidth">
+              <span>{t(I18nKey.graph_link_width)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0.5" max="6" step="0.25" data-graph-setting-input="linkWidth" />
+                <output data-graph-setting-value="linkWidth"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="labelSize">
+              <span>{t(I18nKey.graph_label_size)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="8" max="20" step="1" data-graph-setting-input="labelSize" />
+                <output data-graph-setting-value="labelSize"></output>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <section class="graph-settings-group" data-graph-settings-group data-graph-debug-only hidden>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_advanced_forces)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <label class="graph-settings-field" data-graph-setting-field="collisionStrength">
+              <span>{t(I18nKey.graph_collision_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="collisionStrength" />
+                <output data-graph-setting-value="collisionStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="localGravityStrength" title="将当前焦点节点轻微拉回图谱中心，不会永久固定节点。">
+              <span>{t(I18nKey.graph_focus_gravity_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="0.4" step="0.01" data-graph-setting-input="localGravityStrength" />
+                <output data-graph-setting-value="localGravityStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="collisionPadding">
+              <span>{t(I18nKey.graph_collision_padding)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="32" step="1" data-graph-setting-input="collisionPadding" />
+                <output data-graph-setting-value="collisionPadding"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="velocityDecay">
+              <span>{t(I18nKey.graph_velocity_decay)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0.15" max="0.75" step="0.01" data-graph-setting-input="velocityDecay" />
+                <output data-graph-setting-value="velocityDecay"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="alphaDecay">
+              <span>{t(I18nKey.graph_alpha_decay)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0.005" max="0.08" step="0.001" data-graph-setting-input="alphaDecay" />
+                <output data-graph-setting-value="alphaDecay"></output>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <section class="graph-settings-group" data-graph-settings-group>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_forces)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <label class="graph-settings-field" data-graph-setting-field="centerStrength">
+              <span>{t(I18nKey.graph_center_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="centerStrength" />
+                <output data-graph-setting-value="centerStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="repelStrength">
+              <span>{t(I18nKey.graph_repel_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="100" step="1" data-graph-setting-input="repelStrength" />
+                <output data-graph-setting-value="repelStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="linkStrength">
+              <span>{t(I18nKey.graph_link_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="linkStrength" />
+                <output data-graph-setting-value="linkStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="linkDistance">
+              <span>{t(I18nKey.graph_link_distance)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="30" max="320" step="5" data-graph-setting-input="linkDistance" />
+                <output data-graph-setting-value="linkDistance"></output>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <section class="graph-settings-group" data-graph-settings-group>
+          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
+            <span class="graph-settings-chevron" aria-hidden="true"></span>
+            <span>{t(I18nKey.graph_layout_section)}</span>
+          </button>
+          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
+            <label class="graph-settings-field" data-graph-setting-field="preset">
+              <span>{t(I18nKey.graph_layout)}</span>
+              <select data-graph-setting-input="preset">
+                {availableLayouts.includes('force') && <option value="force">{t(I18nKey.graph_layout_default)}</option>}
+                {availableLayouts.includes('brain') && <option value="brain">{t(I18nKey.graph_layout_brain)}</option>}
+                {availableLayouts.includes('radial') && <option value="radial">{t(I18nKey.graph_layout_radial)}</option>}
+                {availableLayouts.includes('tree') && <option value="tree">{t(I18nKey.graph_layout_tree)}</option>}
+              </select>
+            </label>
+            <label class="graph-settings-field" data-graph-setting-field="brainAnchorStrength">
+              <span>{t(I18nKey.graph_brain_anchor_strength)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.01" data-graph-setting-input="brainAnchorStrength" />
+                <output data-graph-setting-value="brainAnchorStrength"></output>
+              </div>
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="preserveSelectedPreset">
+              <span>{t(I18nKey.graph_preserve_selected_preset)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="preserveSelectedPreset" />
+            </label>
+          </div>
+        </section>
+      </aside>
+    </div>
+  )}
+
+  <div class="graph-workspace">
+    {mode === 'global' && controlsMode === 'toolbar' && (
+      <>
+        <button type="button" class="graph-side-toggle graph-toolbar-button" data-graph-legend-toggle aria-expanded="false">
+          {legendFiltersLabel}
+        </button>
+
+        <aside class="graph-legend-panel" data-graph-legend-panel aria-hidden="true">
+          <div class="graph-side-panel-header">
+            <strong>{legendLabel}</strong>
+          </div>
+          <div class="graph-legend-items" data-graph-legend-items></div>
+
+          <div class="graph-side-panel-divider"></div>
+
+          <div class="graph-side-panel-header graph-side-panel-header-secondary">
+            <strong>{t(I18nKey.graph_filters)}</strong>
+          </div>
+          <div class="graph-side-filter-list">
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showTags">
+              <span>{t(I18nKey.graph_show_tags)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showTags" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="showAttachments">
+              <span>{t(I18nKey.graph_show_attachments)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="showAttachments" />
+            </label>
+            <label class="graph-settings-toggle-row" data-graph-setting-field="onlyExistingNotes">
+              <span>{t(I18nKey.graph_only_existing_notes)}</span>
+              <input type="checkbox" class="graph-switch" data-graph-setting-input="onlyExistingNotes" />
+            </label>
+          </div>
+        </aside>
+      </>
+    )}
+
+    <div
+      class="graph-root"
+      data-graph-root
+      data-graph-url={graphUrl}
+      data-focus-id={focusNodeId}
+      data-mode={mode}
+      data-locale={locale}
+      data-graph-settings={JSON.stringify(initialSettings)}
+      data-navigation-search={navigationSearch}
+      style={`height:${height}`}
+    >
+      <div class="graph-empty">Loading graph...</div>
+    </div>
+
+    {mode === 'global' && controlsMode === 'toolbar' && (
+      <aside class="graph-detail-drawer" data-graph-detail-drawer aria-hidden="true">
+        <div class="graph-side-panel-header">
+          <strong>{nodeDetailsLabel}</strong>
+          <button type="button" class="graph-side-close graph-toolbar-icon-button" data-graph-detail-close aria-label={t(I18nKey.graph_close)} title={t(I18nKey.graph_close)}>
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div class="graph-detail-content" data-graph-detail-content></div>
+      </aside>
+    )}
+  </div>
 </div>
 
 <style>
+  .graph-shell {
+    position: relative;
+    gap: 0.85rem;
+    --graph-panel-bg: color-mix(in srgb, var(--glass-bg) 94%, transparent);
+    --graph-panel-border: color-mix(in srgb, var(--fg-muted-3) 32%, transparent);
+    --graph-panel-text: var(--fg-color);
+    --graph-accent: var(--accent-color);
+    --graph-muted: color-mix(in srgb, var(--fg-muted-5) 86%, transparent);
+    --graph-node-default: color-mix(in srgb, var(--accent-color) 58%, var(--fg-muted-5));
+    --graph-node-hover: color-mix(in srgb, var(--accent-color) 92%, white 8%);
+    --graph-node-selected: var(--accent-color);
+    --graph-node-stroke: color-mix(in srgb, var(--accent-color) 52%, var(--fg-color));
+    --graph-link-default: color-mix(in srgb, var(--fg-muted-5) 86%, transparent);
+    --graph-link-highlight: color-mix(in srgb, var(--accent-color) 82%, white 12%);
+    --graph-dim-opacity: 0.18;
+  }
+
   .graph-root {
     position: relative;
     width: 100%;
@@ -39,10 +711,107 @@ const {
     overflow: hidden;
   }
 
+  .graph-workspace {
+    position: relative;
+  }
+
+  .graph-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+    position: relative;
+  }
+
+  .graph-toolbar-search {
+    flex: 0 1 20rem;
+    min-width: min(100%, 14rem);
+  }
+
+  .graph-toolbar-search input {
+    width: 100%;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
+    padding: 0.75rem 1rem;
+    color: var(--graph-panel-text);
+    font: inherit;
+    transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background 180ms ease-out;
+  }
+
+  .graph-toolbar-search input:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph-accent) 14%, transparent);
+  }
+
+  .graph-toolbar-button,
+  .graph-toolbar-icon-button {
+    appearance: none;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
+    color: var(--graph-panel-text);
+    font: inherit;
+    cursor: pointer;
+    transition: background 180ms ease-out, border-color 180ms ease-out, transform 160ms ease-out;
+  }
+
+  .graph-toolbar-button {
+    padding: 0.72rem 1rem;
+  }
+
+  .graph-toolbar-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.85rem;
+    height: 2.85rem;
+    padding: 0;
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .graph-toolbar-button:hover,
+  .graph-toolbar-icon-button:hover {
+    background: color-mix(in srgb, var(--graph-accent) 10%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
+  }
+
+  .graph-toolbar-button:active,
+  .graph-toolbar-icon-button:active {
+    transform: scale(0.98);
+  }
+
+  .graph-toolbar-icon-button[aria-pressed='true'] {
+    background: color-mix(in srgb, var(--graph-accent) 15%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
+  }
+
+  .graph-side-toggle {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 4;
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    backdrop-filter: saturate(1.1) blur(0.55rem);
+  }
+
+  .graph-toolbar-spacer {
+    flex: 1 1 auto;
+    min-width: 1rem;
+  }
+
   .graph-root svg {
     display: block;
     width: 100%;
     height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .graph-root svg.is-dragging {
+    cursor: grabbing;
   }
 
   .graph-empty {
@@ -55,172 +824,582 @@ const {
     font-size: var(--font-size-small);
   }
 
-  .graph-node-label {
+  .graph-node-label,
+  .graph-label {
     fill: var(--fg-color);
-    font-size: 0.75rem;
+    pointer-events: none;
   }
-  
+
+  .graph-label-group,
+  .graph-label-bg {
+    pointer-events: none;
+  }
+
+  .graph-label-bg {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .graph-link-line,
+  .graph-node {
+    vector-effect: non-scaling-stroke;
+  }
+
+  .graph-node,
+  .graph-link,
+  .graph-label,
+  .graph-label-bg {
+    transition:
+      opacity 160ms ease-out,
+      stroke-width 160ms ease-out,
+      fill 160ms ease-out,
+      stroke 160ms ease-out,
+      r 160ms ease-out;
+  }
+
+  .graph-settings {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 4;
+  }
+
+  .graph-settings-toggle,
+  .graph-settings-reset,
+  .graph-settings-group-toggle {
+    appearance: none;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .graph-settings-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.85rem;
+    height: 2.85rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
+    color: var(--graph-panel-text);
+    transition: background 180ms ease-out, border-color 180ms ease-out, transform 160ms ease-out;
+  }
+
+  .graph-settings-toggle:hover,
+  .graph-settings-toggle[aria-expanded='true'] {
+    background: color-mix(in srgb, var(--graph-accent) 10%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
+  }
+
+  .graph-settings-toggle svg {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .graph-settings-toggle-label {
+    display: none;
+  }
+
+  .graph-settings-panel {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    width: min(22rem, calc(100vw - 2rem));
+    max-height: min(80vh, 42rem);
+    overflow: auto;
+    padding: 0.875rem 0.875rem 1rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: calc(var(--rounded-corner) + 0.15rem);
+    background: var(--graph-panel-bg);
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    backdrop-filter: saturate(1.1) blur(0.55rem);
+    color: var(--graph-panel-text);
+    opacity: 0;
+    transform: translateX(0.4rem) scale(0.985);
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 200ms ease-out;
+  }
+
+  .graph-settings-panel.is-open {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    visibility: visible;
+    pointer-events: auto;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-settings {
+    position: relative;
+    top: auto;
+    right: auto;
+    z-index: 5;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-settings-toggle {
+    width: 2.85rem;
+    padding: 0;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-root {
+    min-height: 24rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: calc(var(--rounded-corner) + 0.35rem);
+    background: color-mix(in srgb, var(--fg-muted-1) 92%, transparent);
+    box-shadow: none;
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-settings-panel {
+    top: calc(100% + 0.65rem);
+  }
+
+  .graph-shell[data-graph-controls-mode='toolbar'] .graph-workspace {
+    position: relative;
+  }
+
+  .graph-shell:fullscreen,
+  .graph-shell:-webkit-full-screen {
+    width: 100vw;
+    height: 100vh;
+    max-width: none;
+    padding: 1rem;
+    background: var(--bg-color);
+  }
+
+  .graph-shell:fullscreen .graph-root,
+  .graph-shell:-webkit-full-screen .graph-root {
+    height: calc(100vh - 5.75rem) !important;
+    min-height: 0;
+  }
+
+  .graph-settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .graph-settings-header strong {
+    font-size: 0.95rem;
+  }
+
+  .graph-settings-reset {
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--graph-accent) 14%, transparent);
+    padding: 0.35rem 0.7rem;
+    color: var(--graph-accent);
+  }
+
+  .graph-settings-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .graph-settings-action {
+    appearance: none;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 86%, transparent);
+    padding: 0.45rem 0.75rem;
+    color: var(--graph-panel-text);
+    font: inherit;
+    cursor: pointer;
+    transition: background 180ms ease-out, border-color 180ms ease-out, transform 160ms ease-out;
+  }
+
+  .graph-settings-action:hover {
+    background: color-mix(in srgb, var(--graph-accent) 12%, var(--bg-color));
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
+  }
+
+  .graph-settings-action:active {
+    transform: scale(0.98);
+  }
+
+  .graph-settings-group {
+    border-top: 1px solid var(--graph-panel-border);
+    padding-top: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .graph-settings-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.15rem 0;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .graph-settings-chevron {
+    width: 0.6rem;
+    height: 0.6rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    transition: transform 180ms ease;
+  }
+
+  .graph-settings-group-toggle[aria-expanded='false'] .graph-settings-chevron {
+    transform: rotate(-45deg);
+  }
+
+  .graph-settings-group-content {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.7rem;
+    max-height: 120rem;
+    opacity: 1;
+    overflow: hidden;
+    transform: translateY(0);
+    transition: max-height 200ms ease-out, opacity 180ms ease-out, margin-top 180ms ease-out, transform 180ms ease-out;
+  }
+
+  .graph-settings-group-content.is-collapsed {
+    max-height: 0;
+    opacity: 0;
+    margin-top: 0;
+    transform: translateY(-0.2rem);
+  }
+
+  .graph-settings-field,
+  .graph-settings-toggle-row {
+    display: grid;
+    gap: 0.4rem;
+    font-size: var(--font-size-small);
+    color: var(--graph-muted);
+  }
+
+  .graph-settings-field[hidden],
+  .graph-settings-toggle-row[hidden] {
+    display: none;
+  }
+
+  .graph-settings-field input[type='search'],
+  .graph-settings-field select {
+    width: 100%;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 0.8rem;
+    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+    padding: 0.55rem 0.75rem;
+    color: var(--graph-panel-text);
+    font: inherit;
+    transition: border-color 180ms ease-out, box-shadow 180ms ease-out, background 180ms ease-out;
+  }
+
+  .graph-settings-field input[type='search']:focus,
+  .graph-settings-field select:focus,
+  .graph-color-group-color:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph-accent) 14%, transparent);
+  }
+
+  .graph-settings-range-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .graph-settings-range-row input[type='range'] {
+    width: 100%;
+    margin: 0;
+    accent-color: var(--graph-accent);
+    transition: filter 160ms ease-out, transform 160ms ease-out;
+  }
+
+  .graph-settings-range-row input[type='range']:hover {
+    filter: brightness(1.04);
+  }
+
+  .graph-settings-range-row input[type='range']:active {
+    transform: scaleY(1.06);
+  }
+
+  .graph-settings-range-row output {
+    min-width: 2.8rem;
+    text-align: right;
+    color: var(--graph-panel-text);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .graph-settings-toggle-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .graph-switch {
+    position: relative;
+    width: 2.6rem;
+    height: 1.5rem;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--graph-muted) 24%, transparent);
+    background-image: none;
+    transition: background 180ms ease-out, border-color 180ms ease-out, box-shadow 180ms ease-out, transform 160ms ease-out;
+    cursor: pointer;
+  }
+
+  .graph-switch:hover {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--graph-accent) 10%, transparent);
+  }
+
+  .graph-switch:active {
+    transform: scale(0.98);
+  }
+
+  .graph-switch::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0.2rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
+    transform: translateY(-50%);
+    transition: transform 180ms ease-out;
+  }
+
+  .graph-switch:checked {
+    border-color: color-mix(in srgb, var(--graph-accent) 75%, transparent);
+    background: color-mix(in srgb, var(--graph-accent) 68%, transparent);
+  }
+
+  .graph-switch:checked::after {
+    transform: translate(1.1rem, -50%);
+  }
+
+  .graph-legend-panel,
+  .graph-detail-drawer {
+    position: absolute;
+    top: 1rem;
+    width: min(19rem, calc(100vw - 2.5rem));
+    padding: 0.9rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: calc(var(--rounded-corner) + 0.15rem);
+    background: var(--graph-panel-bg);
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    backdrop-filter: saturate(1.1) blur(0.55rem);
+    color: var(--graph-panel-text);
+    overflow: auto;
+    z-index: 4;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 200ms ease-out, transform 200ms ease-out, visibility 200ms ease-out;
+  }
+
+  .graph-legend-panel {
+    left: 1rem;
+    max-height: min(24rem, calc(100% - 6.5rem));
+    transform: translateX(-0.65rem);
+  }
+
+  .graph-detail-drawer {
+    right: 1rem;
+    bottom: 1rem;
+    max-height: calc(100% - 2rem);
+    transform: translateX(0.65rem);
+  }
+
+  .graph-legend-panel.is-open,
+  .graph-detail-drawer.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .graph-side-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .graph-side-panel-header strong {
+    font-size: 0.95rem;
+  }
+
+  .graph-side-panel-header-secondary {
+    margin-bottom: 0.55rem;
+  }
+
+  .graph-side-panel-divider {
+    height: 1px;
+    margin: 0.85rem 0;
+    background: var(--graph-panel-border);
+  }
+
+  .graph-side-close {
+    flex: 0 0 auto;
+  }
+
+  .graph-legend-items,
+  .graph-side-filter-list,
+  .graph-detail-content {
+    display: grid;
+    gap: 0.7rem;
+  }
+
+  .graph-legend-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.65rem;
+    color: var(--graph-panel-text);
+    font-size: var(--font-size-small);
+  }
+
+  .graph-legend-dot {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, white 26%, transparent);
+  }
+
+  .graph-detail-empty {
+    color: var(--graph-muted);
+    font-size: var(--font-size-small);
+    line-height: 1.6;
+  }
+
+  .graph-detail-card {
+    display: grid;
+    gap: 0.9rem;
+  }
+
+  .graph-detail-title {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .graph-detail-title strong {
+    font-size: 1rem;
+    line-height: 1.35;
+  }
+
+  .graph-detail-subtitle {
+    color: var(--graph-muted);
+    font-size: var(--font-size-small);
+  }
+
+  .graph-detail-meta {
+    display: grid;
+    gap: 0.55rem;
+  }
+
+  .graph-detail-meta-row {
+    display: grid;
+    gap: 0.2rem;
+    font-size: var(--font-size-small);
+  }
+
+  .graph-detail-meta-label {
+    color: var(--graph-muted);
+  }
+
+  .graph-detail-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .graph-detail-tag {
+    padding: 0.24rem 0.55rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+    font-size: 0.78rem;
+  }
+
+  .graph-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  @media only screen and (max-width: 720px) {
+    .graph-toolbar {
+      flex-wrap: wrap;
+      gap: 0.6rem;
+    }
+
+    .graph-toolbar-search {
+      flex-basis: 100%;
+    }
+
+    .graph-toolbar-spacer {
+      display: none;
+    }
+
+    .graph-shell[data-graph-controls-mode='toolbar'] {
+      grid-template-columns: 1fr;
+    }
+
+    .graph-shell[data-graph-controls-mode='toolbar'] .graph-settings {
+      grid-column: 1;
+      grid-row: 2;
+      justify-self: end;
+    }
+
+    .graph-shell[data-graph-controls-mode='toolbar'] .graph-root {
+      grid-row: 3;
+      min-height: 20rem;
+    }
+
+    .graph-side-toggle {
+      top: 0.75rem;
+      left: 0.75rem;
+      padding-inline: 0.85rem;
+    }
+
+    .graph-legend-panel,
+    .graph-detail-drawer {
+      top: 0.75rem;
+      left: 0.75rem;
+      right: 0.75rem;
+      width: auto;
+    }
+
+    .graph-legend-panel,
+    .graph-detail-drawer {
+      max-height: calc(100% - 1.5rem);
+    }
+
+    .graph-detail-drawer {
+      bottom: 0.75rem;
+    }
+
+    .graph-detail-drawer {
+      transform: translateY(0.65rem);
+    }
+
+    .graph-legend-panel {
+      transform: translateY(-0.65rem);
+    }
+
+    .graph-settings-panel {
+      right: -0.25rem;
+      width: min(24rem, calc(100vw - 1rem));
+    }
+  }
 </style>
 
-<script type="module">
-  import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
-
-  const COLORS = {
-    project_note: '#f97316',
-    concept_note: '#8b5cf6',
-    blog_post: '#14b8a6',
-    default: '#94a3b8',
-  };
-
-  function filterLocalGraph(data, focusId) {
-    if (!focusId) {
-      return { nodes: [], links: [] };
-    }
-
-    const validLinks = data.links.filter((item) => item.exists);
-    const neighbors = new Set([focusId]);
-
-    for (const link of validLinks) {
-      if (link.source === focusId) {
-        neighbors.add(link.target);
-      }
-      if (link.target === focusId) {
-        neighbors.add(link.source);
-      }
-    }
-
-    return {
-      nodes: data.nodes.filter((node) => neighbors.has(node.id)),
-      links: validLinks.filter((link) => neighbors.has(link.source) && neighbors.has(link.target)),
-    };
-  }
-
-  function resolveFocusId(root) {
-    const explicit = root.dataset.focusId;
-    if (explicit) {
-      return explicit;
-    }
-
-    const queryFocus = new URLSearchParams(window.location.search).get('focus');
-    return queryFocus || undefined;
-  }
-
-  async function initGraph(root) {
-    const graphUrl = root.dataset.graphUrl || '/graph.json';
-    const mode = root.dataset.mode || 'global';
-    const locale = root.dataset.locale || 'en';
-    const focusId = resolveFocusId(root);
-    const empty = root.querySelector('.graph-empty');
-
-    try {
-      const response = await fetch(graphUrl);
-      const fullData = await response.json();
-      const data = mode === 'local' ? filterLocalGraph(fullData, focusId) : {
-        nodes: fullData.nodes,
-        links: fullData.links.filter((item) => item.exists),
-      };
-
-      if (!data.nodes.length) {
-        if (empty) {
-          empty.textContent = mode === 'local' ? 'No related graph data yet.' : 'No graph data available.';
-        }
-        return;
-      }
-
-      const rect = root.getBoundingClientRect();
-      const width = Math.max(rect.width, 320);
-      const height = Math.max(rect.height, 288);
-
-      function labelForNode(node) {
-        return node.titles?.[locale] || node.titles?.['zh-cn'] || node.titles?.['en'] || node.id;
-      }
-
-      const svg = d3.create('svg').attr('viewBox', `0 0 ${width} ${height}`);
-
-      const simulation = d3
-        .forceSimulation(data.nodes)
-        .force('link', d3.forceLink(data.links).id((d) => d.id).distance(mode === 'local' ? 90 : 110))
-        .force('charge', d3.forceManyBody().strength(mode === 'local' ? -260 : -220))
-        .force('center', d3.forceCenter(width / 2, height / 2));
-
-      const link = svg
-        .append('g')
-        .attr('stroke', '#64748b')
-        .attr('stroke-opacity', 0.35)
-        .selectAll('line')
-        .data(data.links)
-        .join('line');
-
-      const node = svg
-        .append('g')
-        .selectAll('circle')
-        .data(data.nodes)
-        .join('circle')
-        .attr('r', (d) => (d.id === focusId ? 9 : 6))
-        .attr('fill', (d) => COLORS[d.type] ?? COLORS.default)
-        .attr('stroke', (d) => (d.id === focusId ? 'var(--accent-color)' : 'transparent'))
-        .attr('stroke-width', (d) => (d.id === focusId ? 2 : 0))
-        .style('cursor', 'pointer')
-        .on('click', (_, d) => {
-          const targetUrl = d.urls?.[locale] || d.urls?.['zh-cn'] || d.urls?.['en'];
-          if (targetUrl) {
-            window.location.href = targetUrl;
-          }
-        })
-        .call(
-          d3.drag()
-            .on('start', (event, d) => {
-              if (!event.active) {
-                simulation.alphaTarget(0.3).restart();
-              }
-              d.fx = d.x;
-              d.fy = d.y;
-            })
-            .on('drag', (event, d) => {
-              d.fx = event.x;
-              d.fy = event.y;
-            })
-            .on('end', (event, d) => {
-              if (!event.active) {
-                simulation.alphaTarget(0);
-              }
-              d.fx = null;
-              d.fy = null;
-            }),
-        );
-
-      const label = svg
-        .append('g')
-        .selectAll('text')
-        .data(data.nodes)
-        .join('text')
-        .text((d) => labelForNode(d))
-        .attr('class', 'graph-node-label')
-        .attr('dx', 10)
-        .attr('dy', 4);
-
-      simulation.on('tick', () => {
-        link
-          .attr('x1', (d) => d.source.x ?? 0)
-          .attr('y1', (d) => d.source.y ?? 0)
-          .attr('x2', (d) => d.target.x ?? 0)
-          .attr('y2', (d) => d.target.y ?? 0);
-
-        node.attr('cx', (d) => d.x ?? 0).attr('cy', (d) => d.y ?? 0);
-        label.attr('x', (d) => d.x ?? 0).attr('y', (d) => d.y ?? 0);
-      });
-
-      root.replaceChildren(svg.node());
-    } catch (error) {
-      console.error('Graph render failed', error);
-      if (empty) {
-        empty.textContent = 'Failed to load graph data.';
-      }
-    }
-  }
-
-  const roots = document.querySelectorAll('[data-graph-root]');
-  roots.forEach((root) => {
-    initGraph(root);
-  });
-</script>
+<script type="module" src={graphClientUrl}></script>

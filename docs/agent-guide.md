@@ -20,6 +20,9 @@ For route, locale, or content behavior, also read:
 - `src/utils/content-index.mjs`
 - `src/utils/wiki.mjs`
 - `src/utils/remark-obsidian-wikilink.mjs`
+- `src/graph/runtime/create-graph-view.ts`
+- `src/graph/data/brain-graph.ts`
+- `src/graph/layout/`
 - the route file under `src/pages/`
 
 For theme, style, or UI behavior, also read:
@@ -32,9 +35,11 @@ For theme, style, or UI behavior, also read:
 ## Working Principles
 
 - Preserve multilingual behavior unless the task explicitly changes it.
+- In multilingual mode, treat each locale as a strict content domain for wikilinks and graph navigation. Do not fall back from `/en` to Chinese nodes or routes, or from `/zh-cn` to English nodes or routes.
 - Prefer updating `src/config.ts` for site-level behavior instead of hardcoding values in components.
 - Keep content routing logic centralized in `src/utils/pages.ts`.
 - Keep wikilink parsing and graph target resolution centralized in `src/utils/wiki.mjs` and `src/utils/content-index.mjs`.
+- Keep graph relation classification and layout selection centralized under `src/graph/`; do not couple layout rules to `local/global` view mode.
 - Keep browser-side theme behavior centralized in `src/utils/theme-script.ts`.
 - Use existing Sass variables and design tokens before adding new colors or constants.
 - Update docs when changing routing, content structure, configuration, theme behavior, build behavior, or agent workflow.
@@ -92,7 +97,7 @@ Check `git status --short` before editing and before committing.
 
 Use the smallest useful verification command.
 
-- `pnpm dev`: runs `scripts/generate-graph.mjs` first, then starts Astro.
+- `pnpm dev`: runs `scripts/import-obsidian-blog.mjs`, then `scripts/generate-graph.mjs`, then starts Astro. The importer runs in `dev` context, skips fresh LLM translation by default, and should avoid rewriting unchanged generated files.
 - `pnpm build`: runs graph generation, Astro build, then Pagefind index generation.
 - `pnpm preview`: preview built output.
 
@@ -104,3 +109,4 @@ When `pnpm build` passes with warnings, report the warnings and whether they are
 - Some unprefixed routes intentionally produce empty output in multilingual mode.
 - Content language selection depends on filename suffixes. Incorrect suffixes can make content disappear from localized routes.
 - Pagefind runs after Astro build and can surface warnings about generated HTML shape.
+- Obsidian import translation uses an OpenAI-compatible endpoint configured primarily in `scripts/lib/translate.mjs` under `LLM_TRANSLATION_CONFIG`. Environment variables still override it. If no model is configured, English generation is skipped even though Chinese import still runs.

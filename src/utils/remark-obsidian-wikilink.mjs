@@ -63,7 +63,7 @@ export default function remarkObsidianWikilink() {
           continue;
         }
 
-        const resolved = contentIndex.resolveWikiTarget(parsed.target, preferredLang);
+        const resolved = contentIndex.resolveWikiTarget(parsed.target, preferredLang, { strictLocale: true });
         if (resolved.status !== 'resolved' || !resolved.url) {
           missingTargets.push(parsed.target);
           children.push({

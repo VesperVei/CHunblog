@@ -3,3 +3,16 @@ strong.title {
   font-size: var(--font-size-x-large);
   line-height: 1;
 }
+
+.blogoo-link {
+  color: inherit;
+  font-weight: inherit;
+  text-decoration: none;
+
+  &:hover,
+  &:focus,
+  &:visited {
+    color: inherit;
+    text-decoration: none;
+  }
+}

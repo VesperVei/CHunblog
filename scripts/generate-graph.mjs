@@ -26,12 +26,19 @@ async function main() {
   const contentIndex = await buildContentIndex();
   const nodes = [...contentIndex.nodesById.values()].map((node) => ({
     id: node.id,
+    kind: 'note',
+    path: node.url,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
     titles: node.titles,
     urls: node.urls,
     tags: node.tags,
     type: node.type,
     lang: node.lang,
     aliases: node.aliases,
+    role: node.role,
+    graphLevel: node.graphLevel,
+    metadata: node.metadata,
   }));
 
   const links = [];

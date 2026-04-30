@@ -9,6 +9,28 @@ const BLOG_CONTENT_GLOB = 'src/content/blog/**/index*.{md,mdx}';
 const BLOG_CONTENT_BASE = path.join(process.cwd(), 'src/content/blog');
 const DEFAULT_LOCALE = 'en';
 const PREFERRED_LOCALES = ['en', 'zh-cn'];
+const NODE_METADATA_EXCLUDE_KEYS = new Set([
+  'title',
+  'description',
+  'note_id',
+  'note_type',
+  'created_at',
+  'updated_at',
+  'tags',
+  'aliases',
+  'cssclasses',
+  'author',
+  'type',
+  'draft',
+  'toc',
+  'toc_inline',
+  'toc_depth',
+  'comment',
+  'archive',
+  'trigger',
+  'disclaimer',
+  'heroImage',
+]);
 
 function toEntryId(filePath) {
   const relativePath = path.relative(BLOG_CONTENT_BASE, filePath);
@@ -46,6 +68,14 @@ function preferredLocaleEntry(entriesByLocale, preferredLang) {
   return Object.values(entriesByLocale)[0];
 }
 
+function hasLocaleEntry(node, locale) {
+  if (!locale) {
+    return true;
+  }
+
+  return Boolean(node?.entriesByLocale?.[locale] && node?.titles?.[locale] && node?.urls?.[locale]);
+}
+
 function indexTarget(map, rawKey, noteId) {
   if (!rawKey) {
     return;
@@ -59,6 +89,27 @@ function indexTarget(map, rawKey, noteId) {
   const existing = map.get(key) ?? new Set();
   existing.add(noteId);
   map.set(key, existing);
+}
+
+function extractNodeMetadata(data) {
+  return Object.fromEntries(
+    Object.entries(data).filter(([key]) => !NODE_METADATA_EXCLUDE_KEYS.has(key)),
+  );
+}
+
+function normalizeGraphLevel(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return undefined;
 }
 
 export async function buildContentIndex() {
@@ -103,25 +154,36 @@ export async function buildContentIndex() {
     const aliases = toArray(entry.data.aliases);
     const tags = toArray(entry.data.tags);
     const langKey = entry.lang ?? DEFAULT_LOCALE;
+    const metadata = extractNodeMetadata(entry.data);
+    const graphLevel = normalizeGraphLevel(entry.data.graphLevel);
     const existingNode = nodesById.get(entry.noteId) ?? {
       id: entry.noteId,
       title: entry.data.title || entry.slug || entry.noteId,
       titles: {},
       url: entry.url,
       urls: {},
+      createdAt: entry.data.created_at,
+      updatedAt: entry.data.updated_at,
       tags,
       type: entry.data.note_type || entry.data.type || 'blog_post',
       lang: langKey,
       aliases,
-      slug: entry.slug,
+      role: typeof entry.data.role === 'string' ? entry.data.role : undefined,
+      graphLevel,
+      metadata,
       entriesByLocale: {},
     };
 
     existingNode.urls[langKey] = entry.url;
     existingNode.titles[langKey] = entry.data.title || existingNode.titles[langKey] || existingNode.title;
     existingNode.entriesByLocale[langKey] = entry;
+    existingNode.createdAt = existingNode.createdAt ?? entry.data.created_at;
+    existingNode.updatedAt = existingNode.updatedAt ?? entry.data.updated_at;
     existingNode.tags = [...new Set([...(existingNode.tags ?? []), ...tags])];
     existingNode.aliases = [...new Set([...(existingNode.aliases ?? []), ...aliases])];
+    existingNode.role = existingNode.role || (typeof entry.data.role === 'string' ? entry.data.role : undefined);
+    existingNode.graphLevel = existingNode.graphLevel ?? graphLevel;
+    existingNode.metadata = { ...(existingNode.metadata ?? {}), ...metadata };
 
     nodesById.set(entry.noteId, existingNode);
   }
@@ -133,17 +195,24 @@ export async function buildContentIndex() {
       node.url = preferred.url;
       node.lang = preferred.lang ?? DEFAULT_LOCALE;
       node.type = preferred.data.note_type || preferred.data.type || node.type;
+      node.createdAt = preferred.data.created_at ?? node.createdAt;
+      node.updatedAt = preferred.data.updated_at ?? node.updatedAt;
     }
 
     indexTarget(aliasIndex, node.id, node.id);
     indexTarget(titleIndex, node.title, node.id);
+
+    for (const localizedTitle of Object.values(node.titles ?? {})) {
+      indexTarget(titleIndex, localizedTitle, node.id);
+    }
 
     for (const alias of node.aliases) {
       indexTarget(aliasIndex, alias, node.id);
     }
   }
 
-  function resolveWikiTarget(target, preferredLang) {
+  function resolveWikiTarget(target, preferredLang, options = {}) {
+    const strictLocale = options.strictLocale === true;
     const normalizedTarget = normalizeWikiTarget(target);
     const candidateIds = [
       ...(aliasIndex.get(normalizedTarget) ?? []),
@@ -179,37 +248,57 @@ export async function buildContentIndex() {
       };
     }
 
+    if (strictLocale && !hasLocaleEntry(node, preferredLang)) {
+      return {
+        status: 'missing',
+        normalizedTarget,
+        reason: 'locale_unavailable',
+      };
+    }
+
     return {
       status: 'resolved',
       normalizedTarget,
       noteId,
       node,
-      url: getCanonicalUrlForNoteId(noteId, preferredLang),
-      title: getLocalizedTitleForNoteId(noteId, preferredLang),
+      url: getCanonicalUrlForNoteId(noteId, preferredLang, { strictLocale }),
+      title: getLocalizedTitleForNoteId(noteId, preferredLang, { strictLocale }),
     };
   }
 
-  function getCanonicalUrlForNoteId(noteId, preferredLang) {
+  function getCanonicalUrlForNoteId(noteId, preferredLang, options = {}) {
     const node = nodesById.get(noteId);
     if (!node) {
       return null;
     }
+
+    const strictLocale = options.strictLocale === true;
 
     if (preferredLang && node.urls[preferredLang]) {
       return node.urls[preferredLang];
     }
 
+    if (strictLocale) {
+      return null;
+    }
+
     return preferredLocaleEntry(node.entriesByLocale, DEFAULT_LOCALE)?.url ?? node.url;
   }
 
-  function getLocalizedTitleForNoteId(noteId, preferredLang) {
+  function getLocalizedTitleForNoteId(noteId, preferredLang, options = {}) {
     const node = nodesById.get(noteId);
     if (!node) {
       return null;
     }
 
+    const strictLocale = options.strictLocale === true;
+
     if (preferredLang && node.titles[preferredLang]) {
       return node.titles[preferredLang];
+    }
+
+    if (strictLocale) {
+      return null;
     }
 
     return node.titles[DEFAULT_LOCALE] ?? node.title;

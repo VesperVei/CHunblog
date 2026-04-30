@@ -36,7 +36,7 @@ Routes are defined in `src/pages/`.
 - `src/pages/blog/[...page].astro` and `src/pages/[lang]/blog/[...page].astro`: paginated blog lists.
 - `src/pages/blog/[slug].astro` and `src/pages/[lang]/blog/[slug].astro`: blog post detail pages.
 - `src/pages/tags/index.astro` and `src/pages/[lang]/tags/index.astro`: tag index pages.
-- `src/pages/tags/[tag].astro` and `src/pages/[lang]/tags/[tag].astro`: tag detail pages.
+- `src/pages/tags/[...tag].astro` and `src/pages/[lang]/tags/[...tag].astro`: tag detail pages. These use catch-all params so tags containing `/` continue to resolve correctly.
 - `src/pages/rss.xml.js` and `src/pages/[lang]/rss.xml.js`: RSS feeds.
 - `src/pages/demo/index.astro` and `src/pages/[lang]/demo/index.astro`: demo page.
 - `src/pages/404.astro`: not found page.

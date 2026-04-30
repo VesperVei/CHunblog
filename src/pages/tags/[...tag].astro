@@ -1,7 +1,7 @@
 ---
 import Base from '../../layouts/Base.astro';
 import BlogCard from '../../components/blog/BlogCard.astro';
-import { getTagStaticPaths, getPostByTag, isMultiLangMode } from '../../utils/pages';
+import { getTagStaticPaths, getPostByTag, getTagFromPathParam, isMultiLangMode } from '../../utils/pages';
 
 if (isMultiLangMode()) {
   return Astro.redirect('/404');
@@ -12,12 +12,13 @@ export async function getStaticPaths() {
 }
 
 const { tag } = Astro.params;
-const posts = await getPostByTag(tag);
-const title = `#${tag}`;
-const description = `${posts.length} posts tagged with ${tag}`;
+const decodedTag = getTagFromPathParam(tag);
+const posts = await getPostByTag(decodedTag);
+const title = `#${decodedTag}`;
+const description = `${posts.length} posts tagged with ${decodedTag}`;
 ---
 
 <Base title={title} description={description}>
-  <h1>#{tag}</h1>
+  <h1>#{decodedTag}</h1>
   <BlogCard posts={posts} />
 </Base>

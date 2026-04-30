@@ -11,6 +11,27 @@ export type Tag = {
   count: number;
 };
 
+export function getTagPathParam(tag: string): string {
+  return tag;
+}
+
+export function getTagFromPathParam(tagParam?: string): string {
+  if (!tagParam) {
+    return '';
+  }
+
+  return tagParam
+    .split('/')
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch {
+        return segment;
+      }
+    })
+    .join('/');
+}
+
 export function getTargetLang(requestedLang?: string): string {
   if (isMultiLangMode()) {
     return requestedLang || 'en';
@@ -214,7 +235,7 @@ export async function getTagStaticPaths(lang?: string) {
   return tags.map((tag) => ({
     params: {
       ...(lang ? { lang: targetLang } : {}),
-      tag: tag.name,
+      tag: getTagPathParam(tag.name),
     },
   }));
 }

@@ -9,6 +9,7 @@ import BlogPostTocControls from '../components/blog/BlogPostTocControls.astro';
 import Comments from '../components/blog/Comments.astro';
 import Statements from '../components/blog/Statements.astro';
 import ArticleGraph from '../components/graph/ArticleGraph.astro';
+import GraphModal from '../components/graph/GraphModal.astro';
 
 type ArticleEntry = CollectionEntry<'blog'> | CollectionEntry<'pages'>;
 
@@ -35,7 +36,7 @@ const comment = data.comment;
     <Statements data={data} />
     {headings && (
       <>
-        <BlogPostTocControls headings={headings} showToc={data.toc} tocDepth={data.toc_depth} />
+        <BlogPostTocControls headings={headings} showToc={data.toc} tocDepth={data.toc_depth} noteId={data.note_id} />
         <BlogPostInlineToc headings={headings} showToc={data.toc_inline} tocDepth={data.toc_depth} />
       </>
     )}
@@ -45,6 +46,7 @@ const comment = data.comment;
   {comment && <Comments /> }
 
   {data.note_id && <ArticleGraph noteId={data.note_id} />}
+  {data.note_id && <GraphModal noteId={data.note_id} />}
 
   <hr />
   <BlogPostNav prev={prev} next={next} />

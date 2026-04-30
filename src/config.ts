@@ -3,8 +3,7 @@ import {
   type NavBarConfig,
   type FooterConfig,
   LinkPreset,
-} from './type/config'
-
+} from "./type/config.ts";
 
 export const siteConfig: SiteConfig = {
   title: "Goosequill",
@@ -43,7 +42,6 @@ export const siteConfig: SiteConfig = {
     reaction: false,
   },
 
-
   fonts: {
     body: '"Inter Variable", var(--font-system-ui), var(--font-emoji)',
     heading: '"Inter Variable", var(--font-system-ui), var(--font-emoji)',
@@ -60,7 +58,7 @@ export const siteConfig: SiteConfig = {
   },
   // classic_article_list: true,
   modern_hr: true,
-}
+};
 
 export const navBarConfig: NavBarConfig = {
   style: "default",
@@ -73,18 +71,15 @@ export const navBarConfig: NavBarConfig = {
   links: [
     {
       name: "_links",
-      items: [
-        LinkPreset.Blog,
-        LinkPreset.About,
-      ],
+      items: [LinkPreset.Blog, LinkPreset.About],
     },
     {
       preset: LinkPreset.Demo,
-      icon: { name: "book-bookmark", },
+      icon: { name: "book-bookmark" },
     },
     {
-    	name: "Duckquill",
-    	url: "https://duckquill.daudix.one/",
+      name: "Duckquill",
+      url: "https://duckquill.daudix.one/",
     },
   ],
 };
@@ -97,6 +92,6 @@ export const footerConfig: FooterConfig = {
     {
       name: "Duckquill",
       url: "https://duckquill.daudix.one/",
-    }
-  ]
-}
+    },
+  ],
+};

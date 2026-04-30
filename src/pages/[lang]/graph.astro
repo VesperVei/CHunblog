@@ -1,9 +1,6 @@
 ---
-import Base from '../../layouts/Base.astro';
-import Graph from '../../components/graph/Graph.astro';
+import GraphPage from '../../components/graph/GraphPage.astro';
 import { getLocalizedStaticPaths, isMultiLangMode } from '../../utils/pages';
-import I18nKey from '../../i18n/i18nKey';
-import { useTranslations } from '../../i18n/translation';
 
 export function getStaticPaths() {
   return getLocalizedStaticPaths();
@@ -16,11 +13,6 @@ if (!isMultiLangMode()) {
 }
 
 const currentLocale = lang || 'en';
-const t = useTranslations(currentLocale);
-const title = t(I18nKey.graph);
 ---
 
-<Base title={title} description={title} ignoreSearch>
-  <h1>{title}</h1>
-  <Graph mode="global" locale={currentLocale} />
-</Base>
+<GraphPage locale={currentLocale} />
