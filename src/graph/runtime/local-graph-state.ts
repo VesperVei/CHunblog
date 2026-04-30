@@ -25,11 +25,6 @@ function cloneLocalGraphState(state: LocalGraphSharedState): LocalGraphSharedSta
       appearance: { ...state.settings.appearance },
       forces: { ...state.settings.forces },
       layout: { ...state.settings.layout },
-      colorGroups: state.settings.colorGroups.map((group) => ({
-        ...group,
-        match: group.match ? { ...group.match } : undefined,
-        rule: group.rule ? { ...group.rule } : undefined,
-      })),
     },
   };
 }

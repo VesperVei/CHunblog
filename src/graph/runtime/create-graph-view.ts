@@ -1,4 +1,4 @@
-import { getActiveLayoutPreset } from '../constants';
+import { getEffectiveLayoutPreset } from '../constants';
 import { buildBrainRenderableGraph } from '../data/brain-graph';
 import { createGraphIndexes } from '../data/graph-build';
 import { buildRenderableGraph } from '../data/graph-filter';
@@ -6,7 +6,7 @@ import { attachNodeDrag } from '../interaction/node-drag';
 import { createSvgCanvas, attachZoomPan } from '../interaction/zoom-pan';
 import { createSimulationForLayout, updateSimulationForLayout } from '../layout/layout-registry';
 import { createLocalGraphSharedState, writeLastNavigationLocalGraphState } from './local-graph-state';
-import { applyGraphAppearance, bindNodeNavigation, createEmptyHoverState, edgeKey, renderGraphScene, syncGraphScene } from '../render/svg-renderer';
+import { applyGraphAppearance, bindNodeNavigation, createEmptyHoverState, edgeKey, renderGraphScene, resolveLinkEndpoints, syncGraphScene } from '../render/svg-renderer';
 import type { GraphData, GraphHoverState, GraphSettings, GraphViewOptions } from '../types';
 
 function cloneRenderableGraph(data: GraphData) {
@@ -97,7 +97,7 @@ function withDepthFromFocus(data: GraphData, focusId?: string) {
 }
 
 function buildGraphData(fullData: GraphData, options: GraphViewOptions) {
-  const preset = getActiveLayoutPreset(options.settings);
+  const preset = getEffectiveLayoutPreset(options.mode, options.settings);
   if (preset === 'brain') {
     return buildBrainRenderableGraph(fullData, options.focusId, options.settings.filters, options.locale);
   }
@@ -257,7 +257,6 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       appearance: { ...options.settings.appearance },
       forces: { ...options.settings.forces },
       layout: { ...options.settings.layout },
-      colorGroups: options.settings.colorGroups.map((group) => ({ ...group, rule: { ...group.rule } })),
     },
   };
   let simulation = null;
@@ -280,14 +279,40 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       return;
     }
 
+    const appearance = { ...currentOptions.settings.appearance };
+    const context = {
+      layout: scene.layout ?? 'force',
+      mode: scene.mode ?? 'global',
+      isDarkTheme: typeof document !== 'undefined'
+        ? document.documentElement.getAttribute('data-theme') === 'dark'
+          || (!document.documentElement.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        : false,
+    };
+    const edgeNodePairs = new Set((currentData?.links ?? []).map((edge) => `${typeof edge.source === 'string' ? edge.source : edge.source.id}::${typeof edge.target === 'string' ? edge.target : edge.target.id}`));
+    const hasStartArrow = (edge) => Boolean(
+      currentOptions.settings.appearance.showArrows
+      && edgeNodePairs.has(`${typeof edge.target === 'string' ? edge.target : edge.target.id}::${typeof edge.source === 'string' ? edge.source : edge.source.id}`),
+    );
+    const getEndpoints = (edge) => resolveLinkEndpoints(
+      edge,
+      appearance,
+      currentOptions.focusId,
+      hoverState,
+      context,
+      {
+        hasStartArrow: hasStartArrow(edge),
+        hasEndArrow: Boolean(currentOptions.settings.appearance.showArrows),
+      },
+    );
+
     scene.link
-      .attr('x1', (edge) => edge.source.x ?? 0)
-      .attr('y1', (edge) => edge.source.y ?? 0)
-      .attr('x2', (edge) => edge.target.x ?? 0)
-      .attr('y2', (edge) => edge.target.y ?? 0);
+      .attr('x1', (edge) => getEndpoints(edge).x1)
+      .attr('y1', (edge) => getEndpoints(edge).y1)
+      .attr('x2', (edge) => getEndpoints(edge).x2)
+      .attr('y2', (edge) => getEndpoints(edge).y2);
 
     scene.node.attr('cx', (node) => node.x ?? 0).attr('cy', (node) => node.y ?? 0);
-    scene.label.attr('x', (node) => node.x ?? 0).attr('y', (node) => node.y ?? 0);
+    scene.labelGroup?.attr('transform', (node) => `translate(${node.x ?? 0}, ${node.y ?? 0})`);
   };
 
   const stopSimulation = () => {
@@ -315,6 +340,8 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       return;
     }
 
+    scene.layout = getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings);
+    scene.mode = currentOptions.mode;
     applyGraphAppearance(scene, currentData, currentOptions.settings, hoverState, currentOptions.locale, currentOptions.focusId);
   };
 
@@ -376,8 +403,10 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     canvas.selectAll('*').remove();
     scene = renderGraphScene(canvas, currentData, currentOptions.locale, currentOptions.focusId, markerId);
 
-    const preset = getActiveLayoutPreset(currentOptions.settings);
-    simulation = createSimulationForLayout(preset, currentData.nodes, currentData.links, width, height, currentOptions.settings, currentOptions.focusId);
+    const preset = getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings);
+    scene.layout = preset;
+    scene.mode = currentOptions.mode;
+    simulation = createSimulationForLayout(preset, currentData.nodes, currentData.links, width, height, currentOptions.settings, currentOptions.focusId, currentOptions.locale);
     bindSceneInteractions();
     refreshSceneAppearance();
     simulation.on('tick', renderFrame);
@@ -404,12 +433,13 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     simulation.force('link')?.links?.(currentData.links);
     const physical = updateSimulationForLayout(
       simulation,
-      getActiveLayoutPreset(currentOptions.settings),
+      getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings),
       currentData.nodes,
       width,
       height,
       currentOptions.settings,
       currentOptions.focusId,
+      currentOptions.locale,
     );
 
     bindSceneInteractions();
@@ -451,7 +481,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     refreshSceneAppearance();
 
     if (shouldRefreshCollision) {
-      const physical = updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId);
+      const physical = updateSimulationForLayout(simulation, getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId, currentOptions.locale);
       simulation.alpha(Math.min(0.35, physical?.alphaOnSettingsChange ?? 0.35)).restart();
     }
 
@@ -471,22 +501,10 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       return;
     }
 
-    const physical = updateSimulationForLayout(simulation, getActiveLayoutPreset(currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId);
+    const physical = updateSimulationForLayout(simulation, getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings), currentData.nodes, width, height, currentOptions.settings, currentOptions.focusId, currentOptions.locale);
     bindSceneInteractions();
     const nextAlpha = physical?.alphaOnSettingsChange ?? currentOptions.settings.forces.alphaOnSettingsChange ?? 0.6;
     simulation.alpha(Math.max(simulation.alpha(), nextAlpha)).restart();
-  };
-
-  const updateColorGroups = (nextColorGroups) => {
-    currentOptions = {
-      ...currentOptions,
-      settings: {
-        ...currentOptions.settings,
-        colorGroups: nextColorGroups.map((group) => ({ ...group, rule: { ...group.rule } })),
-      },
-    };
-
-    refreshSceneAppearance();
   };
 
   const updateFilters = (nextFilters) => {
@@ -500,7 +518,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     };
 
     const nextGraphData = buildGraphData(fullData, currentOptions);
-    const layoutPreset = getActiveLayoutPreset(currentOptions.settings);
+    const layoutPreset = getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings);
     const isLocalDepthOnlyUpdate = currentOptions.mode === 'local'
       && layoutPreset !== 'brain'
       && filtersEqualExceptDepth(previousFilters, currentOptions.settings.filters);
@@ -514,8 +532,8 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
   };
 
   const updateSettings = (nextSettings: GraphSettings) => {
-    const previousPreset = getActiveLayoutPreset(currentOptions.settings);
-    const nextPreset = getActiveLayoutPreset(nextSettings);
+    const previousPreset = getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings);
+    const nextPreset = getEffectiveLayoutPreset(currentOptions.mode, nextSettings);
     const previousFilters = JSON.stringify(currentOptions.settings.filters);
     const nextFilters = JSON.stringify(nextSettings.filters);
     const previousAppearance = JSON.stringify(currentOptions.settings.appearance);
@@ -524,8 +542,6 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     const nextForces = JSON.stringify(nextSettings.forces);
     const previousLayout = JSON.stringify(currentOptions.settings.layout);
     const nextLayout = JSON.stringify(nextSettings.layout);
-    const previousColorGroups = JSON.stringify(currentOptions.settings.colorGroups);
-    const nextColorGroups = JSON.stringify(nextSettings.colorGroups);
 
     currentOptions = {
       ...currentOptions,
@@ -534,7 +550,6 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
         appearance: { ...nextSettings.appearance },
         forces: { ...nextSettings.forces },
         layout: { ...nextSettings.layout },
-        colorGroups: nextSettings.colorGroups.map((group) => ({ ...group, rule: { ...group.rule } })),
       },
     };
 
@@ -549,10 +564,6 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
 
     if (previousForces !== nextForces) {
       updateForces(nextSettings.forces);
-    }
-
-    if (previousColorGroups !== nextColorGroups) {
-      updateColorGroups(nextSettings.colorGroups);
     }
 
     if (previousLayout !== nextLayout && previousForces === nextForces) {
@@ -601,10 +612,13 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     getCurrentGraphData() {
       return currentData;
     },
+    refreshAppearance() {
+      refreshSceneAppearance();
+      renderFrame();
+    },
     updateSettings,
     updateForces,
     updateAppearance,
-    updateColorGroups,
     updateFilters,
     setData,
     destroy() {

@@ -11,12 +11,22 @@ export type GraphNode = {
   lang?: string;
   aliases: string[];
   role?: string;
+  relationDepth?: number;
   graphLevel?: number;
   depthFromFocus?: number;
   primaryParentId?: string;
   siblingIndex?: number;
   siblingCount?: number;
   metadata?: Record<string, unknown>;
+  degree?: number;
+  targetX?: number;
+  targetY?: number;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number | null;
+  fy?: number | null;
 };
 
 export type GraphEdge = {
@@ -37,34 +47,9 @@ export type GraphData = {
 
 export type GraphViewMode = 'local' | 'global';
 export type GraphDirection = 'outgoing' | 'incoming' | 'both';
-export type GraphLayoutMode = 'force' | 'brain' | 'radial' | 'hierarchy';
+export type GraphLayoutMode = 'force' | 'brain' | 'radial' | 'tree';
 
 export type BrainRelationKind = 'current' | 'parent' | 'child' | 'sibling' | 'jump';
-
-export type GraphColorGroupMatchKind = 'property';
-
-export type GraphColorGroupMatch = {
-  kind: GraphColorGroupMatchKind;
-  key: string;
-  value: string | number | boolean;
-};
-
-export type GraphColorGroup = {
-  id: string;
-  name: string;
-  color: string;
-  enabled: boolean;
-  priority: number;
-  builtin?: boolean;
-  match?: GraphColorGroupMatch;
-  rule?: {
-    type?: 'graphLevel' | 'path' | 'tag' | 'title' | 'property' | 'query';
-    level?: number;
-    value?: string;
-    propertyKey?: string;
-    propertyValue?: string | number | boolean;
-  };
-};
 
 export type GraphHoverState = {
   hoveredNodeId?: string;
@@ -95,6 +80,7 @@ export type GraphForceSettings = {
 export type GraphAppearanceSettings = {
   showArrows?: boolean;
   textOpacity?: number;
+  linkOpacity?: number;
   nodeRadius?: number;
   focusNodeRadius?: number;
   linkWidth?: number;
@@ -123,7 +109,6 @@ export type GraphSettings = {
   appearance: GraphAppearanceSettings;
   forces: GraphForceSettings;
   layout: GraphLayoutSettings;
-  colorGroups: GraphColorGroup[];
 };
 
 export type GraphViewOptions = {
@@ -137,13 +122,5 @@ export type GraphViewOptions = {
 
 export type BrainGraphNode = GraphNode & {
   brainRelation: BrainRelationKind;
-  degree?: number;
-  targetX?: number;
-  targetY?: number;
-  x?: number;
-  y?: number;
-  vx?: number;
-  vy?: number;
-  fx?: number | null;
-  fy?: number | null;
+  brainAnchorParentId?: string;
 };

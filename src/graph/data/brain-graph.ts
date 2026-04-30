@@ -39,6 +39,44 @@ function getParentIdsForNode(indexes: ReturnType<typeof createGraphIndexes>, nod
   return parents;
 }
 
+function getSortedParentIds(parentIds: Set<string>, indexes: ReturnType<typeof createGraphIndexes>, locale: string) {
+  return [...parentIds].sort((leftId, rightId) => {
+    const leftNode = indexes.nodeById.get(leftId);
+    const rightNode = indexes.nodeById.get(rightId);
+
+    if (!leftNode || !rightNode) {
+      return leftId.localeCompare(rightId);
+    }
+
+    return compareBrainNodes(leftNode, rightNode, locale);
+  });
+}
+
+function getSiblingAnchorParentId(
+  indexes: ReturnType<typeof createGraphIndexes>,
+  focusNode: GraphNode,
+  candidate: GraphNode,
+  locale: string,
+) {
+  const focusParents = getParentIdsForNode(indexes, focusNode);
+  if (focusParents.size === 0) {
+    return undefined;
+  }
+
+  const candidateParents = getParentIdsForNode(indexes, candidate);
+  const sharedParents = getSortedParentIds(
+    new Set([...candidateParents].filter((parentId) => focusParents.has(parentId))),
+    indexes,
+    locale,
+  );
+
+  if (sharedParents.length > 0) {
+    return sharedParents[0];
+  }
+
+  return getSortedParentIds(focusParents, indexes, locale)[0];
+}
+
 function shareParent(indexes: ReturnType<typeof createGraphIndexes>, focusNode: GraphNode, candidate: GraphNode) {
   if (typeof focusNode.graphLevel !== 'number' || typeof candidate.graphLevel !== 'number') {
     return false;
@@ -124,6 +162,7 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
 
   const includedIds = new Set<string>([focusId]);
   const nodeRelations = new Map<string, BrainRelationKind>([[focusId, 'current']]);
+  const siblingAnchorParentIds = new Map<string, string>();
 
   const directNeighbors = getDirectNeighbors(indexes, focusId);
   const focusParents = getParentIdsForNode(indexes, focusNode);
@@ -161,6 +200,12 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
 
     includedIds.add(candidate.id);
     nodeRelations.set(candidate.id, relation);
+    if (relation === 'sibling') {
+      const anchorParentId = getSiblingAnchorParentId(indexes, focusNode, candidate, locale);
+      if (anchorParentId) {
+        siblingAnchorParentIds.set(candidate.id, anchorParentId);
+      }
+    }
   }
 
   if (focusParents.size > 0) {
@@ -175,6 +220,10 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
 
       includedIds.add(node.id);
       nodeRelations.set(node.id, 'sibling');
+      const anchorParentId = getSiblingAnchorParentId(indexes, focusNode, node, locale);
+      if (anchorParentId) {
+        siblingAnchorParentIds.set(node.id, anchorParentId);
+      }
     }
   }
 
@@ -185,6 +234,7 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
     .map((node) => ({
       ...node,
       brainRelation: nodeRelations.get(node.id) ?? 'jump',
+      brainAnchorParentId: siblingAnchorParentIds.get(node.id),
     }) satisfies BrainGraphNode);
 
   return {

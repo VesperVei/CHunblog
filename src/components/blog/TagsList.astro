@@ -2,6 +2,7 @@
 import I18nKey from "../../i18n/i18nKey";
 import { useTranslations } from "../../i18n/translation";
 import { detectLocale, buildLocaleUrl } from "../../utils/i18n";
+import { getTagPathParam } from "../../utils/pages";
 
 const t = useTranslations(Astro.currentLocale);
 const currentLocale = detectLocale(Astro.url.pathname);
@@ -20,7 +21,7 @@ const { tags } = Astro.props;
         <a href={buildLocaleUrl(currentLocale, '/tags')}>{t(I18nKey.tags_colon)}</a>
       </li>
       {tags.map((tag) => (
-      <li><a href={buildLocaleUrl(currentLocale, `/tags/${encodeURIComponent(tag)}`)}>{tag}</a></li>
+      <li><a href={buildLocaleUrl(currentLocale, `/tags/${getTagPathParam(tag)}`)}>{tag}</a></li>
       ))}
   </ul>
 )}

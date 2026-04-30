@@ -1,14 +1,14 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import BlogCard from '../../../components/blog/BlogCard.astro';
-import { getLocalizedTagStaticPaths, getPostByTag, isMultiLangMode } from '../../../utils/pages';
+import { getLocalizedTagStaticPaths, getPostByTag, getTagFromPathParam, isMultiLangMode } from '../../../utils/pages';
 
 export async function getStaticPaths() {
   return isMultiLangMode() ? getLocalizedTagStaticPaths() : [];
 }
 
 const { lang, tag } = Astro.params;
-const decodedTag = tag ? decodeURIComponent(tag) : '';
+const decodedTag = getTagFromPathParam(tag);
 
 if (!isMultiLangMode()) {
   return Astro.redirect('/404');

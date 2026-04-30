@@ -1,5 +1,6 @@
-import { DEFAULT_LAYOUT, defaultGraphSettings, resolveGraphSettings } from '../../graph/constants';
-import { DEFAULT_GRAPH_LEVEL_COLOR_GROUPS, cloneColorGroups, ensureColorGroups } from '../../graph/color-groups';
+import { DEFAULT_LAYOUT, defaultGraphSettings, getEffectiveLayoutPreset, getLayoutCapabilities, normalizeGraphSettingsForMode, resolveGraphSettings } from '../../graph/constants';
+import { getForceRelationColor } from '../../graph/color';
+import { forceLegendOrder, getForceLegendLabel } from '../../graph/color/force';
 import { createGraphView } from '../../graph/runtime/create-graph-view';
 import {
   consumeLastNavigationLocalGraphState,
@@ -10,7 +11,7 @@ import {
   writeRuntimeLocalGraphState,
 } from '../../graph/runtime/local-graph-state';
 import { BUILTIN_GRAPH_PRESETS, createPresetFromSettings, getGraphPresetById, mergePresetIntoSettings, type GraphViewPreset } from '../../graph/presets';
-import type { GraphColorGroup, GraphLayoutMode, GraphNode, GraphSettings, GraphViewMode } from '../../graph/types';
+import type { GraphLayoutMode, GraphNode, GraphSettings, GraphViewMode } from '../../graph/types';
 
 const GRAPH_PRESETS_STORAGE_KEY = 'graph:view-presets';
 const GRAPH_ACTIVE_PRESET_KEY = 'graph:active-preset-id';
@@ -38,7 +39,7 @@ type ApplyStateOptions = {
 
 type FieldScope = 'filters' | 'appearance' | 'forces' | 'layout';
 type FieldControl = 'search' | 'slider' | 'toggle' | 'select';
-type UpdateMode = 'filters' | 'appearance' | 'forces' | 'settings' | 'colorGroups';
+type UpdateMode = 'filters' | 'appearance' | 'forces' | 'settings';
 type FieldConfig = {
   scope: FieldScope;
   control: FieldControl;
@@ -68,13 +69,16 @@ function updateScope(state: GraphClientState, scope: FieldScope, patch: Record<s
   };
 }
 
-function replaceColorGroups(state: GraphClientState, colorGroups: GraphColorGroup[]): GraphClientState {
+function normalizeStateForMode(state: GraphClientState): GraphClientState {
   return {
     ...state,
-    settings: {
+    settings: normalizeGraphSettingsForMode(state.mode, {
       ...state.settings,
-      colorGroups: ensureColorGroups(colorGroups),
-    },
+      filters: { ...state.settings.filters },
+      appearance: { ...state.settings.appearance },
+      forces: { ...state.settings.forces },
+      layout: { ...state.settings.layout },
+    }),
   };
 }
 
@@ -86,7 +90,7 @@ const FIELD_CONFIG: Record<string, FieldConfig> = {
   },
   depth: {
     scope: 'filters', control: 'slider', updateMode: 'filters', debounceMs: 150,
-    visible: ({ state }) => state.mode === 'local' && state.settings.layout.preset !== 'brain',
+    visible: ({ state }) => getLayoutCapabilities(state.mode, state.settings).showDepthControl,
     read: (state) => String(state.settings.filters.depth ?? 1),
     write: (state, rawValue) => updateScope(state, 'filters', { depth: Number(rawValue) }),
     format: formatInteger,
@@ -99,6 +103,7 @@ const FIELD_CONFIG: Record<string, FieldConfig> = {
   onlyExistingNotes: { scope: 'filters', control: 'toggle', updateMode: 'filters', read: (s) => Boolean(s.settings.filters.onlyExistingNotes), write: (s, v) => updateScope(s, 'filters', { onlyExistingNotes: Boolean(v) }) },
   showArrows: { scope: 'appearance', control: 'toggle', updateMode: 'appearance', read: (s) => Boolean(s.settings.appearance.showArrows), write: (s, v) => updateScope(s, 'appearance', { showArrows: Boolean(v) }) },
   textOpacity: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.textOpacity ?? 0.8), write: (s, v) => updateScope(s, 'appearance', { textOpacity: Number(v) }), format: formatFloat },
+  linkOpacity: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.linkOpacity ?? 1), write: (s, v) => updateScope(s, 'appearance', { linkOpacity: Number(v) }), format: formatFloat },
   nodeRadius: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.nodeRadius ?? 6), write: (s, v) => updateScope(s, 'appearance', { nodeRadius: Number(v) }), format: formatInteger },
   linkWidth: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.linkWidth ?? 1.5), write: (s, v) => updateScope(s, 'appearance', { linkWidth: Number(v) }), format: formatFloat },
   labelSize: { scope: 'appearance', control: 'slider', updateMode: 'appearance', read: (s) => String(s.settings.appearance.labelSize ?? 12), write: (s, v) => updateScope(s, 'appearance', { labelSize: Number(v) }), format: formatInteger },
@@ -111,8 +116,14 @@ const FIELD_CONFIG: Record<string, FieldConfig> = {
   velocityDecay: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.velocityDecay ?? 0.38), write: (s, v) => updateScope(s, 'forces', { velocityDecay: Number(v) }), format: formatFloat },
   alphaDecay: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.alphaDecay ?? 0.022), write: (s, v) => updateScope(s, 'forces', { alphaDecay: Number(v) }), format: formatFloat3 },
   localGravityStrength: { scope: 'forces', control: 'slider', updateMode: 'forces', debugOnly: true, read: (s) => String(s.settings.forces.localGravityStrength ?? 0.1), write: (s, v) => updateScope(s, 'forces', { localGravityStrength: Number(v) }), format: formatFloat },
-  preset: { scope: 'layout', control: 'select', updateMode: 'settings', read: (s) => s.settings.layout.preset ?? DEFAULT_LAYOUT, write: (s, v) => updateScope(s, 'layout', { preset: v as GraphLayoutMode }) },
-  brainAnchorStrength: { scope: 'layout', control: 'slider', updateMode: 'settings', visible: ({ state }) => state.settings.layout.preset === 'brain', read: (s) => String(s.settings.layout.brainAnchorStrength ?? 0.35), write: (s, v) => updateScope(s, 'layout', { brainAnchorStrength: Number(v) }), format: formatFloat },
+  preset: {
+    scope: 'layout',
+    control: 'select',
+    updateMode: 'settings',
+    read: (s) => getLayoutCapabilities(s.mode, s.settings).effectivePreset ?? DEFAULT_LAYOUT,
+    write: (s, v) => updateScope(s, 'layout', { preset: v as GraphLayoutMode }),
+  },
+  brainAnchorStrength: { scope: 'layout', control: 'slider', updateMode: 'settings', visible: ({ state }) => getLayoutCapabilities(state.mode, state.settings).showBrainAnchorStrength, read: (s) => String(s.settings.layout.brainAnchorStrength ?? 0.35), write: (s, v) => updateScope(s, 'layout', { brainAnchorStrength: Number(v) }), format: formatFloat },
   preserveSelectedPreset: { scope: 'layout', control: 'toggle', updateMode: 'settings', debugOnly: true, read: (s) => Boolean(s.settings.layout.preserveSelectedPreset), write: (s, v) => updateScope(s, 'layout', { preserveSelectedPreset: Boolean(v) }) },
 };
 
@@ -208,10 +219,6 @@ function resolvePresetBackedSettings(baseSettings: GraphSettings, activePresetId
   return applyPresetKeepingFilters(baseSettings, getGraphPresetById(presets, activePresetId));
 }
 
-function createColorGroupId() {
-  return `color-group-${Math.random().toString(36).slice(2, 10)}`;
-}
-
 function getGraphControls(root: HTMLElement) {
   return (root as any).__graphControls;
 }
@@ -269,124 +276,6 @@ function escapeHtml(value: string) {
     .replaceAll("'", '&#39;');
 }
 
-function formatLegendLabel(group: GraphColorGroup, locale: string) {
-  const key = group.match?.key;
-  const value = group.match?.value;
-  if (key === 'graphLevel') {
-    if (Number(value) === 0) {
-      return locale === 'zh-cn' ? '根节点' : 'Root';
-    }
-
-    return `L${String(value)}`;
-  }
-
-  return group.name;
-}
-
-function createPromptedColorGroup() {
-  const name = window.prompt('颜色组名称', 'Custom Group');
-  if (!name) return undefined;
-
-  const propertyKey = window.prompt('Frontmatter 字段名', 'role');
-  if (!propertyKey) return undefined;
-
-  const propertyValue = window.prompt('字段值', '根节点');
-  if (propertyValue === null || propertyValue === '') return undefined;
-
-  const color = window.prompt('颜色（HEX）', '#F97316') || '#F97316';
-  const priorityInput = window.prompt('优先级（数字越大优先级越高）', '40') || '40';
-  const priority = Number(priorityInput);
-
-  return {
-    id: createColorGroupId(),
-    name,
-    color,
-    enabled: true,
-    priority: Number.isFinite(priority) ? priority : 40,
-    builtin: false,
-    match: {
-      kind: 'property',
-      key: propertyKey,
-      value: Number.isNaN(Number(propertyValue)) || propertyValue.trim() === '' ? propertyValue : Number(propertyValue),
-    },
-  } satisfies GraphColorGroup;
-}
-
-function normalizeHexColor(color: string) {
-  const value = color.trim();
-  if (/^#[0-9a-f]{6}$/i.test(value)) return value.toUpperCase();
-  if (/^#[0-9a-f]{3}$/i.test(value)) {
-    const [, r, g, b] = value;
-    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
-  }
-
-  return '#8B5CF6';
-}
-
-function clampChannel(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function hexToRgb(hex: string) {
-  const normalized = normalizeHexColor(hex).slice(1);
-  return {
-    r: Number.parseInt(normalized.slice(0, 2), 16),
-    g: Number.parseInt(normalized.slice(2, 4), 16),
-    b: Number.parseInt(normalized.slice(4, 6), 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number) {
-  return `#${[r, g, b].map((channel) => clampChannel(Math.round(channel), 0, 255).toString(16).padStart(2, '0')).join('')}`.toUpperCase();
-}
-
-function rgbToHsl(r: number, g: number, b: number) {
-  const rn = clampChannel(r, 0, 255) / 255;
-  const gn = clampChannel(g, 0, 255) / 255;
-  const bn = clampChannel(b, 0, 255) / 255;
-  const max = Math.max(rn, gn, bn);
-  const min = Math.min(rn, gn, bn);
-  const delta = max - min;
-  const lightness = (max + min) / 2;
-  if (delta === 0) {
-    return { h: 0, s: 0, l: Math.round(lightness * 100) };
-  }
-
-  const saturation = delta / (1 - Math.abs((2 * lightness) - 1));
-  let hue = 0;
-  if (max === rn) hue = ((gn - bn) / delta) % 6;
-  else if (max === gn) hue = ((bn - rn) / delta) + 2;
-  else hue = ((rn - gn) / delta) + 4;
-
-  return {
-    h: Math.round((((hue * 60) + 360) % 360)),
-    s: Math.round(saturation * 100),
-    l: Math.round(lightness * 100),
-  };
-}
-
-function hslToRgb(h: number, s: number, l: number) {
-  const hue = ((h % 360) + 360) % 360;
-  const saturation = clampChannel(s, 0, 100) / 100;
-  const lightness = clampChannel(l, 0, 100) / 100;
-  const chroma = (1 - Math.abs((2 * lightness) - 1)) * saturation;
-  const x = chroma * (1 - Math.abs(((hue / 60) % 2) - 1));
-  const m = lightness - (chroma / 2);
-  let r = 0; let g = 0; let b = 0;
-  if (hue < 60) [r, g, b] = [chroma, x, 0];
-  else if (hue < 120) [r, g, b] = [x, chroma, 0];
-  else if (hue < 180) [r, g, b] = [0, chroma, x];
-  else if (hue < 240) [r, g, b] = [0, x, chroma];
-  else if (hue < 300) [r, g, b] = [x, 0, chroma];
-  else [r, g, b] = [chroma, 0, x];
-
-  return {
-    r: Math.round((r + m) * 255),
-    g: Math.round((g + m) * 255),
-    b: Math.round((b + m) * 255),
-  };
-}
-
 function readGraphState(root: HTMLElement): GraphClientState {
   const mode = (root.dataset.mode as GraphViewMode) || 'global';
   const debug = isGraphDebugMode();
@@ -395,7 +284,7 @@ function readGraphState(root: HTMLElement): GraphClientState {
   const baseSettings = root.dataset.graphSettings
     ? JSON.parse(root.dataset.graphSettings) as GraphSettings
     : resolveGraphSettings(mode, DEFAULT_LAYOUT, defaultGraphSettings);
-  let settings = resolvePresetBackedSettings({ ...baseSettings, colorGroups: ensureColorGroups(baseSettings.colorGroups) }, resolvedActivePresetId);
+  let settings = resolvePresetBackedSettings(baseSettings, resolvedActivePresetId);
   let nextActivePresetId = resolvedActivePresetId;
   const focusId = resolveFocusId(root);
 
@@ -413,7 +302,7 @@ function readGraphState(root: HTMLElement): GraphClientState {
     }
   }
 
-  return {
+  return normalizeStateForMode({
     graphUrl: root.dataset.graphUrl || '/graph.json',
     mode,
     locale: root.dataset.locale || 'en',
@@ -422,11 +311,11 @@ function readGraphState(root: HTMLElement): GraphClientState {
     navigationSearch: root.dataset.navigationSearch,
     debug,
     activePresetId: nextActivePresetId,
-  };
+  });
 }
 
 function writeGraphState(root: HTMLElement, state: GraphClientState) {
-  root.dataset.graphSettings = JSON.stringify(state.settings);
+  root.dataset.graphSettings = JSON.stringify(normalizeStateForMode(state).settings);
 }
 
 async function loadGraphData(graphUrl: string) {
@@ -443,6 +332,7 @@ async function initGraph(root: HTMLElement) {
   const controls = await createGraphView(root, { ...currentState, graphUrl: currentState.graphUrl }, fullData);
   (root as any).__graphControls = controls;
   (root as any).__graphState = currentState;
+  bindGraphThemeSync(root);
 
   if (isLocalGraphState(currentState)) {
     if (!(root as any).__graphLocalGraphUnsubscribe) {
@@ -469,6 +359,43 @@ async function initGraph(root: HTMLElement) {
   }
 }
 
+function bindGraphThemeSync(root: HTMLElement) {
+  if ((root as any).__graphThemeSyncBound) {
+    return;
+  }
+
+  const shell = root.closest<HTMLElement>('[data-graph-shell]');
+  const controls = getGraphControls(root);
+  if (!shell || !controls) {
+    return;
+  }
+
+  const refreshTheme = () => {
+    controls.refreshAppearance?.();
+    syncSettingsUI(shell, root);
+  };
+
+  const observer = new MutationObserver((mutations) => {
+    if (mutations.some((mutation) => mutation.attributeName === 'data-theme')) {
+      refreshTheme();
+    }
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  const handleMediaChange = () => {
+    if (!document.documentElement.getAttribute('data-theme')) {
+      refreshTheme();
+    }
+  };
+  media.addEventListener('change', handleMediaChange);
+
+  (root as any).__graphThemeObserver = observer;
+  (root as any).__graphThemeMedia = media;
+  (root as any).__graphThemeHandler = handleMediaChange;
+  (root as any).__graphThemeSyncBound = true;
+}
+
 function syncDebugVisibility(shell: HTMLElement, debug: boolean) {
   shell.querySelectorAll<HTMLElement>('[data-graph-debug-only]').forEach((element) => {
     element.hidden = !debug;
@@ -489,188 +416,24 @@ function syncPresetUI(shell: HTMLElement, state: GraphClientState) {
   select.value = state.activePresetId ?? getFallbackPresetId(presets) ?? '';
 }
 
-function getColorGroupEditorState(shell: HTMLElement) {
-  return ((shell as any).__graphColorEditors ??= new Set<number>()) as Set<number>;
-}
-
-function getColorGroupModeState(shell: HTMLElement) {
-  return ((shell as any).__graphColorModes ??= new Map<number, 'hex' | 'rgb' | 'hsl'>()) as Map<number, 'hex' | 'rgb' | 'hsl'>;
-}
-
-function syncColorGroupUI(shell: HTMLElement, state: GraphClientState) {
-  const container = shell.querySelector<HTMLElement>('[data-graph-color-groups]');
-  if (!container) return;
-
-  const deleteLabel = shell.dataset.graphDeleteColorGroupLabel || 'Delete';
-  const colorGroups = ensureColorGroups(state.settings.colorGroups);
-  const openEditors = getColorGroupEditorState(shell);
-  const modeState = getColorGroupModeState(shell);
-
-  container.replaceChildren(...colorGroups.map((group, index) => {
-    const match = group.match;
-    const colorValue = normalizeHexColor(group.color);
-    const rgb = hexToRgb(colorValue);
-    const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-    const colorMode = modeState.get(index) ?? 'hex';
-
-    const card = document.createElement('article');
-    card.className = 'graph-color-group';
-    card.dataset.graphColorGroupIndex = String(index);
-    card.setAttribute('aria-disabled', group.enabled ? 'false' : 'true');
-    card.classList.toggle('is-editor-open', openEditors.has(index));
-
-    const header = document.createElement('div');
-    header.className = 'graph-color-group-header';
-
-    const colorButton = document.createElement('button');
-    colorButton.type = 'button';
-    colorButton.className = 'graph-color-group-color';
-    colorButton.dataset.graphColorGroupEditorToggle = String(index);
-    colorButton.style.background = colorValue;
-    colorButton.setAttribute('aria-expanded', openEditors.has(index) ? 'true' : 'false');
-
-    const meta = document.createElement('div');
-    meta.className = 'graph-color-group-meta';
-
-    const name = document.createElement('strong');
-    name.className = 'graph-color-group-name';
-    name.textContent = group.name;
-
-    const rule = document.createElement('div');
-    rule.className = 'graph-color-group-rule';
-    rule.textContent = `["${match?.key ?? 'graphLevel'}": ${JSON.stringify(match?.value ?? '')}]`;
-
-    meta.append(name, rule);
-
-    const toggle = document.createElement('input');
-    toggle.type = 'checkbox';
-    toggle.className = 'graph-switch';
-    toggle.checked = group.enabled;
-    toggle.dataset.graphColorGroupToggle = String(index);
-
-    header.append(colorButton, meta, toggle);
-    card.append(header);
-
-    const matchRow = document.createElement('div');
-    matchRow.className = 'graph-color-group-match-row';
-
-    const keyInput = document.createElement('input');
-    keyInput.type = 'text';
-    keyInput.className = 'graph-color-group-input';
-    keyInput.value = String(match?.key ?? 'graphLevel');
-    keyInput.placeholder = 'yaml_name';
-    keyInput.dataset.graphColorGroupMatchKey = String(index);
-
-    const separator = document.createElement('span');
-    separator.className = 'graph-color-group-separator';
-    separator.textContent = ':';
-
-    const valueInput = document.createElement('input');
-    valueInput.type = 'text';
-    valueInput.className = 'graph-color-group-input';
-    valueInput.value = String(match?.value ?? '');
-    valueInput.placeholder = 'value';
-    valueInput.dataset.graphColorGroupMatchValue = String(index);
-
-    matchRow.append(keyInput, separator, valueInput);
-    card.append(matchRow);
-
-    const editor = document.createElement('div');
-    editor.className = 'graph-color-group-editor';
-    editor.hidden = !openEditors.has(index);
-
-    const preview = document.createElement('div');
-    preview.className = 'graph-color-group-preview';
-    preview.style.background = colorValue;
-    editor.append(preview);
-
-    const modeTabs = document.createElement('div');
-    modeTabs.className = 'graph-color-group-modes';
-    for (const mode of ['hex', 'rgb', 'hsl'] as const) {
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'graph-color-mode-button';
-      button.dataset.graphColorGroupMode = String(index);
-      button.dataset.graphColorMode = mode;
-      button.textContent = mode.toUpperCase();
-      if (mode === colorMode) button.classList.add('is-active');
-      modeTabs.append(button);
-    }
-    editor.append(modeTabs);
-
-    const nativePicker = document.createElement('input');
-    nativePicker.type = 'color';
-    nativePicker.className = 'graph-color-group-native-picker';
-    nativePicker.value = colorValue;
-    nativePicker.dataset.graphColorGroupColor = String(index);
-    editor.append(nativePicker);
-
-    const hexRow = document.createElement('div');
-    hexRow.className = 'graph-color-group-editor-row';
-    hexRow.hidden = colorMode !== 'hex';
-    const hexInput = document.createElement('input');
-    hexInput.type = 'text';
-    hexInput.className = 'graph-color-group-input';
-    hexInput.value = colorValue;
-    hexInput.dataset.graphColorGroupHex = String(index);
-    hexRow.append(hexInput);
-    editor.append(hexRow);
-
-    const rgbRow = document.createElement('div');
-    rgbRow.className = 'graph-color-group-editor-grid';
-    rgbRow.hidden = colorMode !== 'rgb';
-    for (const [channel, value] of [['r', rgb.r], ['g', rgb.g], ['b', rgb.b]] as const) {
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.className = 'graph-color-group-input';
-      input.min = '0';
-      input.max = '255';
-      input.value = String(value);
-      input.dataset.graphColorGroupRgb = String(index);
-      input.dataset.graphColorChannel = channel;
-      rgbRow.append(input);
-    }
-    editor.append(rgbRow);
-
-    const hslRow = document.createElement('div');
-    hslRow.className = 'graph-color-group-editor-grid';
-    hslRow.hidden = colorMode !== 'hsl';
-    for (const [channel, value, max] of [['h', hsl.h, 360], ['s', hsl.s, 100], ['l', hsl.l, 100]] as const) {
-      const input = document.createElement('input');
-      input.type = 'number';
-      input.className = 'graph-color-group-input';
-      input.min = '0';
-      input.max = String(max);
-      input.value = String(value);
-      input.dataset.graphColorGroupHsl = String(index);
-      input.dataset.graphColorChannel = channel;
-      hslRow.append(input);
-    }
-    editor.append(hslRow);
-
-    card.append(editor);
-
-    if (!group.builtin) {
-      const actions = document.createElement('div');
-      actions.className = 'graph-color-group-actions';
-      const remove = document.createElement('button');
-      remove.type = 'button';
-      remove.className = 'graph-color-group-delete';
-      remove.textContent = deleteLabel;
-      remove.dataset.graphColorGroupDelete = String(index);
-      actions.append(remove);
-      card.append(actions);
-    }
-
-    return card;
-  }));
-}
-
 function syncLegendUI(shell: HTMLElement, state: GraphClientState) {
+  const capabilities = getLayoutCapabilities(state.mode, state.settings);
+  const effectiveLayout = getEffectiveLayoutPreset(state.mode, state.settings);
   const legendPanel = shell.querySelector<HTMLElement>('[data-graph-legend-panel]');
   const legendToggle = shell.querySelector<HTMLButtonElement>('[data-graph-legend-toggle]');
   const legendItems = shell.querySelector<HTMLElement>('[data-graph-legend-items]');
   if (!legendPanel || !legendItems) {
+    return;
+  }
+
+  if (legendToggle) {
+    legendToggle.hidden = !capabilities.showGlobalLegend;
+  }
+  legendPanel.hidden = !capabilities.showGlobalLegend;
+  if (!capabilities.showGlobalLegend) {
+    legendPanel.classList.remove('is-open');
+    legendPanel.setAttribute('aria-hidden', 'true');
+    legendToggle?.setAttribute('aria-expanded', 'false');
     return;
   }
 
@@ -679,17 +442,25 @@ function syncLegendUI(shell: HTMLElement, state: GraphClientState) {
   legendPanel.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
   legendToggle?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 
-  const groups = ensureColorGroups(state.settings.colorGroups).filter((group) => group.enabled);
-  legendItems.replaceChildren(...groups.map((group) => {
+  if (effectiveLayout !== 'force') {
+    legendItems.replaceChildren();
+    return;
+  }
+
+  const explicitTheme = document.documentElement.getAttribute('data-theme');
+  const isDarkTheme = explicitTheme === 'dark'
+    || (!explicitTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+  legendItems.replaceChildren(...forceLegendOrder.map((key) => {
     const item = document.createElement('div');
     item.className = 'graph-legend-item';
 
     const dot = document.createElement('span');
     dot.className = 'graph-legend-dot';
-    dot.style.background = group.color;
+    dot.style.background = getForceRelationColor(key, isDarkTheme);
 
     const label = document.createElement('span');
-    label.textContent = formatLegendLabel(group, state.locale);
+    label.textContent = getForceLegendLabel(key, state.locale);
 
     item.append(dot, label);
     return item;
@@ -763,10 +534,10 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
 function syncSettingsUI(shell: HTMLElement, root: HTMLElement) {
   const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
   const ctx: GraphSidebarContext = { state, debug: state.debug };
+  const capabilities = getLayoutCapabilities(state.mode, state.settings);
 
   syncDebugVisibility(shell, state.debug);
   syncPresetUI(shell, state);
-  syncColorGroupUI(shell, state);
   syncLegendUI(shell, state);
   syncDetailDrawer(shell, root);
 
@@ -801,6 +572,7 @@ function syncSettingsUI(shell: HTMLElement, root: HTMLElement) {
 }
 
 function applyNextState(root: HTMLElement, nextState: GraphClientState, updateMode: UpdateMode, options: ApplyStateOptions = {}) {
+  nextState = normalizeStateForMode(nextState);
   const controls = (root as any).__graphControls;
   writeGraphState(root, nextState);
   (root as any).__graphState = nextState;
@@ -822,16 +594,13 @@ function applyNextState(root: HTMLElement, nextState: GraphClientState, updateMo
     controls.updateFilters?.(nextState.settings.filters);
     return;
   }
-  if (updateMode === 'colorGroups') {
-    controls.updateColorGroups?.(nextState.settings.colorGroups);
-    return;
-  }
   controls.updateSettings?.(nextState.settings);
 }
 
 function dispatchFieldUpdate(root: HTMLElement, shell: HTMLElement, key: string, nextState: GraphClientState) {
   const config = FIELD_CONFIG[key];
   if (!config) return;
+  nextState = normalizeStateForMode(nextState);
   writeGraphState(root, nextState);
   (root as any).__graphState = nextState;
   syncSettingsUI(shell, root);
@@ -1040,33 +809,9 @@ function bindGraphSettings(root: HTMLElement) {
     dispatchFieldUpdate(root, shell, key, nextState);
   };
 
-  const applyColorGroupState = (nextState: GraphClientState) => {
-    writeGraphState(root, nextState);
-    (root as any).__graphState = nextState;
-    syncSettingsUI(shell, root);
-    applyNextState(root, nextState, 'colorGroups');
-  };
-
-  const patchColorGroup = (index: number, updater: (group: GraphColorGroup) => GraphColorGroup) => {
-    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-    const nextGroups = cloneColorGroups(currentState.settings.colorGroups);
-    if (!nextGroups[index]) return;
-    nextGroups[index] = updater(nextGroups[index]);
-    applyColorGroupState(replaceColorGroups(currentState, nextGroups));
-  };
-
-  const updateColorGroupHex = (index: number, color: string) => {
-    patchColorGroup(index, (group) => ({ ...group, color: normalizeHexColor(color) }));
-  };
-
   shell.addEventListener('input', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
-
-    if (target.dataset.graphColorGroupColor) {
-      updateColorGroupHex(Number(target.dataset.graphColorGroupColor), target.value);
-      return;
-    }
 
     const key = target.dataset.graphSettingInput || '';
     const config = FIELD_CONFIG[key];
@@ -1078,66 +823,6 @@ function bindGraphSettings(root: HTMLElement) {
     const target = event.target;
     if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) return;
 
-    if (target.dataset.graphColorGroupToggle) {
-      const index = Number(target.dataset.graphColorGroupToggle);
-      patchColorGroup(index, (group) => ({ ...group, enabled: target.checked }));
-      return;
-    }
-
-    if (target.dataset.graphColorGroupHex) {
-      updateColorGroupHex(Number(target.dataset.graphColorGroupHex), target.value);
-      return;
-    }
-
-    if (target.dataset.graphColorGroupMatchKey) {
-      const index = Number(target.dataset.graphColorGroupMatchKey);
-      patchColorGroup(index, (group) => ({
-        ...group,
-        match: {
-          kind: 'property',
-          key: target.value.trim() || 'graphLevel',
-          value: group.match?.value ?? '',
-        },
-      }));
-      return;
-    }
-
-    if (target.dataset.graphColorGroupMatchValue) {
-      const index = Number(target.dataset.graphColorGroupMatchValue);
-      patchColorGroup(index, (group) => ({
-        ...group,
-        match: {
-          kind: 'property',
-          key: group.match?.key || 'graphLevel',
-          value: target.value,
-        },
-      }));
-      return;
-    }
-
-    if (target.dataset.graphColorGroupRgb) {
-      const index = Number(target.dataset.graphColorGroupRgb);
-      const editor = target.closest<HTMLElement>('.graph-color-group-editor');
-      if (!editor) return;
-      const r = Number((editor.querySelector('[data-graph-color-channel="r"]') as HTMLInputElement | null)?.value ?? 0);
-      const g = Number((editor.querySelector('[data-graph-color-channel="g"]') as HTMLInputElement | null)?.value ?? 0);
-      const b = Number((editor.querySelector('[data-graph-color-channel="b"]') as HTMLInputElement | null)?.value ?? 0);
-      updateColorGroupHex(index, rgbToHex(r, g, b));
-      return;
-    }
-
-    if (target.dataset.graphColorGroupHsl) {
-      const index = Number(target.dataset.graphColorGroupHsl);
-      const editor = target.closest<HTMLElement>('.graph-color-group-editor');
-      if (!editor) return;
-      const h = Number((editor.querySelector('[data-graph-color-channel="h"]') as HTMLInputElement | null)?.value ?? 0);
-      const s = Number((editor.querySelector('[data-graph-color-channel="s"]') as HTMLInputElement | null)?.value ?? 0);
-      const l = Number((editor.querySelector('[data-graph-color-channel="l"]') as HTMLInputElement | null)?.value ?? 0);
-      const rgb = hslToRgb(h, s, l);
-      updateColorGroupHex(index, rgbToHex(rgb.r, rgb.g, rgb.b));
-      return;
-    }
-
     const key = target.dataset.graphSettingInput || '';
     const config = FIELD_CONFIG[key];
     if (!config) return;
@@ -1147,41 +832,6 @@ function bindGraphSettings(root: HTMLElement) {
   shell.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
-
-    const editorToggle = target.closest<HTMLElement>('[data-graph-color-group-editor-toggle]');
-    if (editorToggle) {
-      const index = Number(editorToggle.dataset.graphColorGroupEditorToggle);
-      const openEditors = getColorGroupEditorState(shell);
-      if (openEditors.has(index)) openEditors.delete(index);
-      else openEditors.add(index);
-      syncSettingsUI(shell, root);
-      return;
-    }
-
-    const modeButton = target.closest<HTMLElement>('[data-graph-color-group-mode]');
-    if (modeButton) {
-      const index = Number(modeButton.dataset.graphColorGroupMode);
-      const mode = modeButton.dataset.graphColorMode as 'hex' | 'rgb' | 'hsl';
-      getColorGroupModeState(shell).set(index, mode);
-      getColorGroupEditorState(shell).add(index);
-      syncSettingsUI(shell, root);
-      return;
-    }
-
-    if (target.closest('[data-graph-color-group-add]')) {
-      const group = createPromptedColorGroup();
-      if (!group) return;
-      const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-      const nextGroups = [...cloneColorGroups(currentState.settings.colorGroups), group];
-      applyColorGroupState(replaceColorGroups(currentState, nextGroups));
-      return;
-    }
-
-    if (target.closest('[data-graph-color-group-reset]')) {
-      const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-      applyColorGroupState(replaceColorGroups(currentState, cloneColorGroups(DEFAULT_GRAPH_LEVEL_COLOR_GROUPS)));
-      return;
-    }
 
     const openArticleButton = target.closest<HTMLElement>('[data-graph-open-article]');
     if (openArticleButton) {
@@ -1203,13 +853,6 @@ function bindGraphSettings(root: HTMLElement) {
       return;
     }
 
-    const deleteButton = target.closest<HTMLElement>('[data-graph-color-group-delete]');
-    if (deleteButton) {
-      const index = Number(deleteButton.dataset.graphColorGroupDelete);
-      const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-      const nextGroups = cloneColorGroups(currentState.settings.colorGroups).filter((_, itemIndex) => itemIndex !== index);
-      applyColorGroupState(replaceColorGroups(currentState, nextGroups));
-    }
   });
 
   (shell as any).__graphSettingsBound = true;

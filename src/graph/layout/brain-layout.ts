@@ -42,16 +42,59 @@ export function assignBrainTargets(nodes: BrainGraphNode[], width: number, heigh
     node.targetY = height * 0.22;
   });
 
+  const parentTargetById = new Map(
+    groups.parent.map((node) => [node.id, { x: node.targetX ?? centerX, y: node.targetY ?? centerY }]),
+  );
+
   const childXs = distribute(groups.child.length, centerX, Math.max(width * 0.12, 72));
   groups.child.forEach((node, index) => {
     node.targetX = childXs[index];
     node.targetY = height * 0.78;
   });
 
-  const siblingYs = distribute(groups.sibling.length, centerY, Math.max(height * 0.1, 54));
-  groups.sibling.forEach((node, index) => {
+  const siblingSpacing = Math.max(height * 0.1, 54);
+  const siblingOffsetX = Math.max(width * 0.16, 120);
+  const anchoredSiblingGroups = new Map<string, BrainGraphNode[]>();
+  const unanchoredSiblings: BrainGraphNode[] = [];
+
+  groups.sibling.forEach((node) => {
+    const anchorParentId = node.brainAnchorParentId;
+    if (anchorParentId && parentTargetById.has(anchorParentId)) {
+      anchoredSiblingGroups.set(anchorParentId, [...(anchoredSiblingGroups.get(anchorParentId) ?? []), node]);
+      return;
+    }
+
+    unanchoredSiblings.push(node);
+  });
+
+  const sortedAnchoredSiblingGroups = [...anchoredSiblingGroups.entries()].sort(([leftId], [rightId]) => {
+    const leftTarget = parentTargetById.get(leftId);
+    const rightTarget = parentTargetById.get(rightId);
+
+    if (!leftTarget || !rightTarget) {
+      return leftId.localeCompare(rightId);
+    }
+
+    return leftTarget.x - rightTarget.x;
+  });
+
+  sortedAnchoredSiblingGroups.forEach(([parentId, siblingNodes]) => {
+    const parentTarget = parentTargetById.get(parentId);
+    if (!parentTarget) {
+      return;
+    }
+
+    const siblingYs = distribute(siblingNodes.length, parentTarget.y, siblingSpacing);
+    siblingNodes.forEach((node, index) => {
+      node.targetX = Math.min(width - 72, parentTarget.x + siblingOffsetX);
+      node.targetY = siblingYs[index];
+    });
+  });
+
+  const fallbackSiblingYs = distribute(unanchoredSiblings.length, centerY, siblingSpacing);
+  unanchoredSiblings.forEach((node, index) => {
     node.targetX = width * 0.78;
-    node.targetY = siblingYs[index];
+    node.targetY = fallbackSiblingYs[index];
   });
 
   const jumpYs = distribute(groups.jump.length, centerY, Math.max(height * 0.1, 54));

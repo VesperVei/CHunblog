@@ -1,5 +1,4 @@
 import type {
-  GraphColorGroup,
   GraphAppearanceSettings,
   GraphFilterSettings,
   GraphForceSettings,
@@ -8,7 +7,6 @@ import type {
   GraphSettings,
   GraphViewMode,
 } from './types';
-import { DEFAULT_GRAPH_LEVEL_COLOR_GROUPS, ensureColorGroups } from './color-groups';
 
 export const GRAPH_COLORS: Record<string, string> = {
   project_note: '#f97316',
@@ -19,6 +17,9 @@ export const GRAPH_COLORS: Record<string, string> = {
 
 export const DEFAULT_LAYOUT: GraphLayoutMode = 'force';
 export const DEFAULT_DEPTH = 1;
+
+export const LOCAL_GRAPH_LAYOUTS: GraphLayoutMode[] = ['force', 'brain', 'radial', 'tree'];
+export const GLOBAL_GRAPH_LAYOUTS: GraphLayoutMode[] = ['force'];
 
 export const DEFAULT_FORCE_SETTINGS: Record<GraphLayoutMode, GraphForceSettings> = {
   force: {
@@ -72,7 +73,7 @@ export const DEFAULT_FORCE_SETTINGS: Record<GraphLayoutMode, GraphForceSettings>
     linkIterations: 1,
     collideIterations: 1,
   },
-  hierarchy: {
+  tree: {
     centerStrength: 0.518713248970312,
     localGravityStrength: 0.1,
     repelStrength: 35,
@@ -94,6 +95,7 @@ export const DEFAULT_FORCE_SETTINGS: Record<GraphLayoutMode, GraphForceSettings>
 export const DEFAULT_APPEARANCE_SETTINGS: GraphAppearanceSettings = {
   showArrows: true,
   textOpacity: 0.8,
+  linkOpacity: 1,
   nodeRadius: 6,
   focusNodeRadius: 9,
   linkWidth: 1.5,
@@ -117,14 +119,11 @@ export const DEFAULT_LAYOUT_SETTINGS: GraphLayoutSettings = {
   preserveSelectedPreset: true,
 };
 
-export const DEFAULT_COLOR_GROUP_SETTINGS: GraphColorGroup[] = ensureColorGroups(DEFAULT_GRAPH_LEVEL_COLOR_GROUPS);
-
 export const defaultGraphSettings: GraphSettings = {
   filters: DEFAULT_FILTER_SETTINGS,
   appearance: DEFAULT_APPEARANCE_SETTINGS,
   forces: DEFAULT_FORCE_SETTINGS.force,
   layout: DEFAULT_LAYOUT_SETTINGS,
-  colorGroups: DEFAULT_COLOR_GROUP_SETTINGS,
 };
 
 export const MODE_DEFAULTS: Record<GraphViewMode, { forces: GraphForceSettings; appearance: GraphAppearanceSettings; filters: GraphFilterSettings }> = {
@@ -215,12 +214,55 @@ export function resolveGraphSettings(mode: GraphViewMode, preset: GraphLayoutMod
       preset,
       ...(overrides.layout ?? {}),
     },
-    colorGroups: ensureColorGroups(overrides.colorGroups ?? DEFAULT_COLOR_GROUP_SETTINGS),
   };
 }
 
 export function getActiveLayoutPreset(settings: GraphSettings) {
-  return settings.layout.preset ?? DEFAULT_LAYOUT;
+  return normalizeLayoutPreset(settings.layout.preset);
+}
+
+export function normalizeLayoutPreset(preset?: GraphLayoutMode | 'hierarchy') {
+  if (preset === 'hierarchy') {
+    return 'tree' satisfies GraphLayoutMode;
+  }
+
+  return preset ?? DEFAULT_LAYOUT;
+}
+
+export function getAvailableLayoutsForMode(mode: GraphViewMode) {
+  return mode === 'local' ? LOCAL_GRAPH_LAYOUTS : GLOBAL_GRAPH_LAYOUTS;
+}
+
+export function getEffectiveLayoutPreset(mode: GraphViewMode, settings: GraphSettings) {
+  const requested = normalizeLayoutPreset(settings.layout.preset);
+  if (mode === 'global') {
+    return 'force' satisfies GraphLayoutMode;
+  }
+
+  return requested;
+}
+
+export function normalizeGraphSettingsForMode(mode: GraphViewMode, settings: GraphSettings): GraphSettings {
+  return {
+    ...settings,
+    layout: {
+      ...settings.layout,
+      preset: getEffectiveLayoutPreset(mode, settings),
+    },
+  };
+}
+
+export function getLayoutCapabilities(mode: GraphViewMode, settings: GraphSettings) {
+  const preset = getEffectiveLayoutPreset(mode, settings);
+  const availableLayouts = getAvailableLayoutsForMode(mode);
+
+  return {
+    availableLayouts,
+    effectivePreset: preset,
+    showDepthControl: mode === 'local' && preset !== 'brain',
+    showBrainAnchorStrength: preset === 'brain',
+    showGlobalLegend: mode === 'local' && preset === 'force',
+  };
 }
 
 export function getEffectiveCollisionRadius(settings: GraphSettings) {

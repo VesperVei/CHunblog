@@ -1,5 +1,5 @@
 ---
-import { DEFAULT_DEPTH, DEFAULT_LAYOUT, resolveGraphSettings } from '../../graph/constants';
+import { DEFAULT_DEPTH, DEFAULT_LAYOUT, getAvailableLayoutsForMode, resolveGraphSettings } from '../../graph/constants';
 import I18nKey from '../../i18n/i18nKey';
 import { useTranslations } from '../../i18n/translation';
 import graphClientUrl from './graph-client.ts?url';
@@ -11,7 +11,7 @@ interface Props {
   height?: string;
   locale?: string;
   depth?: number;
-  layout?: 'force' | 'brain' | 'radial' | 'hierarchy';
+  layout?: 'force' | 'brain' | 'radial' | 'tree';
   physics?: Record<string, number>;
   render?: Record<string, number>;
   navigationSearch?: string;
@@ -37,6 +37,7 @@ const {
 } = Astro.props;
 
 const t = useTranslations(locale);
+const availableLayouts = getAvailableLayoutsForMode(mode);
 const toolbarSearchPlaceholder = t(I18nKey.graph_toolbar_search_placeholder);
 const enterFullscreenLabel = t(I18nKey.graph_enter_fullscreen);
 const exitFullscreenLabel = t(I18nKey.graph_exit_fullscreen);
@@ -75,7 +76,6 @@ const initialSettings = resolveGraphSettings(mode, layout, {
   class="graph-shell"
   data-graph-shell
   data-graph-controls-mode={controlsMode}
-  data-graph-delete-color-group-label={t(I18nKey.graph_delete_color_group)}
   data-graph-enter-fullscreen-label={enterFullscreenLabel}
   data-graph-exit-fullscreen-label={exitFullscreenLabel}
   data-graph-legend-label={legendLabel}
@@ -223,6 +223,13 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                     <output data-graph-setting-value="textOpacity"></output>
                   </div>
                 </label>
+                <label class="graph-settings-field" data-graph-setting-field="linkOpacity">
+                  <span>{t(I18nKey.graph_link_opacity)}</span>
+                  <div class="graph-settings-range-row">
+                    <input type="range" min="0" max="1" step="0.05" data-graph-setting-input="linkOpacity" />
+                    <output data-graph-setting-value="linkOpacity"></output>
+                  </div>
+                </label>
                 <label class="graph-settings-field" data-graph-setting-field="nodeRadius">
                   <span>{t(I18nKey.graph_node_radius)}</span>
                   <div class="graph-settings-range-row">
@@ -244,20 +251,6 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                     <output data-graph-setting-value="labelSize"></output>
                   </div>
                 </label>
-              </div>
-            </section>
-
-            <section class="graph-settings-group" data-graph-settings-group>
-              <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
-                <span class="graph-settings-chevron" aria-hidden="true"></span>
-                <span>{t(I18nKey.graph_color_groups)}</span>
-              </button>
-              <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
-                <div class="graph-color-groups" data-graph-color-groups></div>
-                <div class="graph-settings-actions-row">
-                  <button type="button" class="graph-settings-action" data-graph-color-group-add>{t(I18nKey.graph_add_color_group)}</button>
-                  <button type="button" class="graph-settings-action" data-graph-color-group-reset>{t(I18nKey.graph_reset_color_groups)}</button>
-                </div>
               </div>
             </section>
 
@@ -351,10 +344,10 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                 <label class="graph-settings-field" data-graph-setting-field="preset">
                   <span>{t(I18nKey.graph_layout)}</span>
                   <select data-graph-setting-input="preset">
-                    <option value="force">{t(I18nKey.graph_layout_default)}</option>
-                    <option value="brain">{t(I18nKey.graph_layout_brain)}</option>
-                    <option value="radial">{t(I18nKey.graph_layout_radial)}</option>
-                    <option value="hierarchy">{t(I18nKey.graph_layout_hierarchy)}</option>
+                    {availableLayouts.includes('force') && <option value="force">{t(I18nKey.graph_layout_default)}</option>}
+                    {availableLayouts.includes('brain') && <option value="brain">{t(I18nKey.graph_layout_brain)}</option>}
+                    {availableLayouts.includes('radial') && <option value="radial">{t(I18nKey.graph_layout_radial)}</option>}
+                    {availableLayouts.includes('tree') && <option value="tree">{t(I18nKey.graph_layout_tree)}</option>}
                   </select>
                 </label>
                 <label class="graph-settings-field" data-graph-setting-field="brainAnchorStrength">
@@ -482,6 +475,13 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                 <output data-graph-setting-value="textOpacity"></output>
               </div>
             </label>
+            <label class="graph-settings-field" data-graph-setting-field="linkOpacity">
+              <span>{t(I18nKey.graph_link_opacity)}</span>
+              <div class="graph-settings-range-row">
+                <input type="range" min="0" max="1" step="0.05" data-graph-setting-input="linkOpacity" />
+                <output data-graph-setting-value="linkOpacity"></output>
+              </div>
+            </label>
             <label class="graph-settings-field" data-graph-setting-field="nodeRadius">
               <span>{t(I18nKey.graph_node_radius)}</span>
               <div class="graph-settings-range-row">
@@ -503,20 +503,6 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                 <output data-graph-setting-value="labelSize"></output>
               </div>
             </label>
-          </div>
-        </section>
-
-        <section class="graph-settings-group" data-graph-settings-group>
-          <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
-            <span class="graph-settings-chevron" aria-hidden="true"></span>
-            <span>{t(I18nKey.graph_color_groups)}</span>
-          </button>
-          <div class="graph-settings-group-content is-collapsed" data-graph-section-content>
-            <div class="graph-color-groups" data-graph-color-groups></div>
-            <div class="graph-settings-actions-row">
-              <button type="button" class="graph-settings-action" data-graph-color-group-add>{t(I18nKey.graph_add_color_group)}</button>
-              <button type="button" class="graph-settings-action" data-graph-color-group-reset>{t(I18nKey.graph_reset_color_groups)}</button>
-            </div>
           </div>
         </section>
 
@@ -610,10 +596,10 @@ const initialSettings = resolveGraphSettings(mode, layout, {
             <label class="graph-settings-field" data-graph-setting-field="preset">
               <span>{t(I18nKey.graph_layout)}</span>
               <select data-graph-setting-input="preset">
-                <option value="force">{t(I18nKey.graph_layout_default)}</option>
-                <option value="brain">{t(I18nKey.graph_layout_brain)}</option>
-                <option value="radial">{t(I18nKey.graph_layout_radial)}</option>
-                <option value="hierarchy">{t(I18nKey.graph_layout_hierarchy)}</option>
+                {availableLayouts.includes('force') && <option value="force">{t(I18nKey.graph_layout_default)}</option>}
+                {availableLayouts.includes('brain') && <option value="brain">{t(I18nKey.graph_layout_brain)}</option>}
+                {availableLayouts.includes('radial') && <option value="radial">{t(I18nKey.graph_layout_radial)}</option>}
+                {availableLayouts.includes('tree') && <option value="tree">{t(I18nKey.graph_layout_tree)}</option>}
               </select>
             </label>
             <label class="graph-settings-field" data-graph-setting-field="brainAnchorStrength">
@@ -844,6 +830,15 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     pointer-events: none;
   }
 
+  .graph-label-group,
+  .graph-label-bg {
+    pointer-events: none;
+  }
+
+  .graph-label-bg {
+    vector-effect: non-scaling-stroke;
+  }
+
   .graph-link-line,
   .graph-node {
     vector-effect: non-scaling-stroke;
@@ -851,7 +846,8 @@ const initialSettings = resolveGraphSettings(mode, layout, {
 
   .graph-node,
   .graph-link,
-  .graph-label {
+  .graph-label,
+  .graph-label-bg {
     transition:
       opacity 160ms ease-out,
       stroke-width 160ms ease-out,
@@ -1147,9 +1143,12 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     width: 2.6rem;
     height: 1.5rem;
     appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     border: 1px solid var(--graph-panel-border);
     border-radius: 999px;
     background: color-mix(in srgb, var(--graph-muted) 24%, transparent);
+    background-image: none;
     transition: background 180ms ease-out, border-color 180ms ease-out, box-shadow 180ms ease-out, transform 160ms ease-out;
     cursor: pointer;
   }
@@ -1174,163 +1173,6 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.18);
     transform: translateY(-50%);
     transition: transform 180ms ease-out;
-  }
-
-  .graph-color-groups {
-    display: grid;
-    gap: 0.65rem;
-  }
-
-  .graph-color-group {
-    display: grid;
-    gap: 0.55rem;
-    padding: 0.75rem;
-    border: 1px solid var(--graph-panel-border);
-    border-radius: 0.9rem;
-    background: color-mix(in srgb, var(--bg-color) 90%, transparent);
-  }
-
-  .graph-color-group[aria-disabled='true'] {
-    opacity: 0.75;
-  }
-
-  .graph-color-group-header {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.65rem;
-    align-items: center;
-  }
-
-  .graph-color-group-color {
-    width: 2.1rem;
-    height: 2.1rem;
-    border: 1px solid var(--graph-panel-border);
-    border-radius: 999px;
-    padding: 0;
-    cursor: pointer;
-    box-shadow: inset 0 0 0 2px color-mix(in srgb, white 55%, transparent);
-  }
-
-  .graph-color-group-meta {
-    display: grid;
-    gap: 0.2rem;
-    min-width: 0;
-  }
-
-  .graph-color-group-name {
-    color: var(--graph-panel-text);
-    font-size: 0.92rem;
-    font-weight: 600;
-    line-height: 1.2;
-  }
-
-  .graph-color-group-rule {
-    color: var(--graph-muted);
-    font-size: 0.78rem;
-    line-height: 1.3;
-    word-break: break-word;
-  }
-
-  .graph-color-group-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-  }
-
-  .graph-color-group-match-row,
-  .graph-color-group-editor-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    gap: 0.5rem;
-    align-items: center;
-  }
-
-  .graph-color-group-editor-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .graph-color-group-separator {
-    color: var(--graph-muted);
-    font-weight: 700;
-  }
-
-  .graph-color-group-input {
-    width: 100%;
-    border: 1px solid var(--graph-panel-border);
-    border-radius: 0.8rem;
-    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
-    padding: 0.5rem 0.65rem;
-    color: var(--graph-panel-text);
-    font: inherit;
-  }
-
-  .graph-color-group-editor {
-    display: grid;
-    gap: 0.65rem;
-    border-top: 1px dashed var(--graph-panel-border);
-    padding-top: 0.65rem;
-  }
-
-  .graph-color-group-preview {
-    height: 2.75rem;
-    border-radius: 0.85rem;
-    border: 1px solid var(--graph-panel-border);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, white 18%, transparent);
-  }
-
-  .graph-color-group-modes {
-    display: flex;
-    gap: 0.45rem;
-    flex-wrap: wrap;
-  }
-
-  .graph-color-mode-button {
-    appearance: none;
-    border: 1px solid var(--graph-panel-border);
-    border-radius: 999px;
-    background: transparent;
-    padding: 0.32rem 0.7rem;
-    color: var(--graph-muted);
-    font: inherit;
-    cursor: pointer;
-  }
-
-  .graph-color-mode-button.is-active {
-    border-color: color-mix(in srgb, var(--graph-accent) 40%, var(--graph-panel-border));
-    background: color-mix(in srgb, var(--graph-accent) 12%, transparent);
-    color: var(--graph-panel-text);
-  }
-
-  .graph-color-group-native-picker {
-    width: 100%;
-    min-height: 2.2rem;
-    border: 1px solid var(--graph-panel-border);
-    border-radius: 0.8rem;
-    background: transparent;
-    padding: 0.15rem;
-    cursor: pointer;
-  }
-
-  .graph-color-group-editor-row {
-    display: grid;
-  }
-
-  .graph-color-group-delete {
-    appearance: none;
-    border: 1px solid var(--graph-panel-border);
-    border-radius: 999px;
-    background: transparent;
-    padding: 0.3rem 0.65rem;
-    color: var(--graph-muted);
-    font: inherit;
-    cursor: pointer;
-    transition: color 160ms ease-out, border-color 160ms ease-out, background 160ms ease-out;
-  }
-
-  .graph-color-group-delete:hover {
-    color: var(--graph-panel-text);
-    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
-    background: color-mix(in srgb, var(--graph-accent) 8%, transparent);
   }
 
   .graph-switch:checked {

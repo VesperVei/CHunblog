@@ -1,6 +1,6 @@
 ---
 import Base from "../../layouts/Base.astro";
-import { getTagList, siteConfig } from "../../utils/pages";
+import { getTagList, getTagPathParam } from "../../utils/pages";
 import I18nKey from "../../i18n/i18nKey";
 import { useTranslations } from "../../i18n/translation";
 import { detectLocale, buildLocaleUrl } from "../../utils/i18n";
@@ -25,7 +25,7 @@ const description = pageDescription || t(I18nKey.n_tags, { count: tags.length })
   <ul class="tags">
     {tags.map(tag => (
       <li>
-      <a href={buildLocaleUrl(currentLocale, `/tags/${encodeURIComponent(tag.name)}`)}>
+      <a href={buildLocaleUrl(currentLocale, `/tags/${getTagPathParam(tag.name)}`)}>
           <span class="tag">{tag.name}</span>
           <span class="count">{tag.count}</span>
         </a>
