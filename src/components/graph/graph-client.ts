@@ -645,16 +645,6 @@ function bindPresetActions(root: HTMLElement, shell: HTMLElement) {
     syncSettingsUI(shell, root);
   });
 
-  shell.querySelector('[data-graph-preset-reset]')?.addEventListener('click', () => {
-    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-    const { presets } = getAllPresets();
-    const preset = getGraphPresetById(presets, currentState.activePresetId);
-    const nextSettings = applyPresetKeepingFilters(currentState.settings, preset);
-    const nextState = { ...currentState, settings: nextSettings };
-    applyNextState(root, nextState, 'settings');
-    syncSettingsUI(shell, root);
-  });
-
   shell.querySelector('[data-graph-preset-overwrite]')?.addEventListener('click', () => {
     const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
     const { presets, userPresets } = getAllPresets();

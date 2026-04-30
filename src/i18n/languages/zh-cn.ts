@@ -21,7 +21,6 @@ export const zh_cn: Translation = {
   [I18nKey.graph_templates]: "模板",
   [I18nKey.graph_template]: "模板",
   [I18nKey.graph_save_preset]: "保存为模板",
-  [I18nKey.graph_reset_preset]: "重置当前模板",
   [I18nKey.graph_overwrite_preset]: "覆盖当前模板",
   [I18nKey.graph_export_preset]: "导出 JSON",
   [I18nKey.graph_import_preset]: "导入 JSON",

@@ -148,13 +148,12 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                   <select data-graph-preset-select></select>
                 </label>
                 <div class="graph-settings-actions-row">
-                  <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
-                  <button type="button" class="graph-settings-action" data-graph-preset-reset>{t(I18nKey.graph_reset_preset)}</button>
-                </div>
-                <div class="graph-settings-actions-row" data-graph-debug-only hidden>
-                  <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
                   <button type="button" class="graph-settings-action" data-graph-preset-export>{t(I18nKey.graph_export_preset)}</button>
                   <button type="button" class="graph-settings-action" data-graph-preset-import>{t(I18nKey.graph_import_preset)}</button>
+                </div>
+                <div class="graph-settings-actions-row" data-graph-debug-only hidden>
+                  <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
+                  <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
                 </div>
               </div>
             </section>
@@ -400,13 +399,12 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               <select data-graph-preset-select></select>
             </label>
             <div class="graph-settings-actions-row">
-              <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
-              <button type="button" class="graph-settings-action" data-graph-preset-reset>{t(I18nKey.graph_reset_preset)}</button>
-            </div>
-            <div class="graph-settings-actions-row" data-graph-debug-only hidden>
-              <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
               <button type="button" class="graph-settings-action" data-graph-preset-export>{t(I18nKey.graph_export_preset)}</button>
               <button type="button" class="graph-settings-action" data-graph-preset-import>{t(I18nKey.graph_import_preset)}</button>
+            </div>
+            <div class="graph-settings-actions-row" data-graph-debug-only hidden>
+              <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
             </div>
           </div>
         </section>

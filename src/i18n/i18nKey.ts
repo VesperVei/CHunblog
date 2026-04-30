@@ -18,7 +18,6 @@ enum I18nKey {
   graph_templates = "graph_templates",
   graph_template = "graph_template",
   graph_save_preset = "graph_save_preset",
-  graph_reset_preset = "graph_reset_preset",
   graph_overwrite_preset = "graph_overwrite_preset",
   graph_export_preset = "graph_export_preset",
   graph_import_preset = "graph_import_preset",

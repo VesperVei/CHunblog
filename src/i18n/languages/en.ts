@@ -21,7 +21,6 @@ export const en: Translation = {
   [I18nKey.graph_templates]: "Templates",
   [I18nKey.graph_template]: "Template",
   [I18nKey.graph_save_preset]: "Save as preset",
-  [I18nKey.graph_reset_preset]: "Reset preset",
   [I18nKey.graph_overwrite_preset]: "Overwrite preset",
   [I18nKey.graph_export_preset]: "Export JSON",
   [I18nKey.graph_import_preset]: "Import JSON",
