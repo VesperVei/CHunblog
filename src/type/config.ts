@@ -100,6 +100,7 @@ export const LinkPreset = {
   About: 2,
   Demo: 3,
   Tag: 4,
+  Friends: 5,
 } as const;
 
 export type LinkPreset = typeof LinkPreset[keyof typeof LinkPreset];

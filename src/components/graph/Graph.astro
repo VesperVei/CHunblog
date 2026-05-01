@@ -18,6 +18,9 @@ interface Props {
   settingsEnabled?: boolean;
   controlsMode?: 'overlay' | 'toolbar';
   fullscreenEnabled?: boolean;
+  visibleSettingsGroups?: string[];
+  visibleSettingsFields?: string[];
+  legendEnabled?: boolean;
 }
 
 const {
@@ -34,6 +37,9 @@ const {
   settingsEnabled = false,
   controlsMode = 'overlay',
   fullscreenEnabled = false,
+  visibleSettingsGroups,
+  visibleSettingsFields,
+  legendEnabled = true,
 } = Astro.props;
 
 const t = useTranslations(locale);
@@ -70,6 +76,8 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     preset: layout,
   },
 });
+const serializedVisibleSettingsGroups = visibleSettingsGroups ? JSON.stringify(visibleSettingsGroups) : undefined;
+const serializedVisibleSettingsFields = visibleSettingsFields ? JSON.stringify(visibleSettingsFields) : undefined;
 ---
 
 <div
@@ -87,6 +95,9 @@ const initialSettings = resolveGraphSettings(mode, layout, {
   data-graph-tags-label={tagsLabel}
   data-graph-created-label={createdLabel}
   data-graph-updated-label={updatedLabel}
+  data-graph-legend-enabled={legendEnabled ? 'true' : 'false'}
+  data-graph-visible-settings-groups={serializedVisibleSettingsGroups}
+  data-graph-visible-settings-fields={serializedVisibleSettingsFields}
 >
   {controlsMode === 'toolbar' && (
     <div class="graph-toolbar" data-graph-toolbar>
@@ -137,7 +148,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
             </div>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="templates">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_templates)}</span>
@@ -158,7 +169,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="filters">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_filters)}</span>
@@ -204,7 +215,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="appearance">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_appearance)}</span>
@@ -253,7 +264,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group data-graph-debug-only hidden>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="advancedForces" data-graph-debug-only hidden>
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_advanced_forces)}</span>
@@ -297,7 +308,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="forces">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_forces)}</span>
@@ -334,7 +345,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="layout">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_layout_section)}</span>
@@ -388,7 +399,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
         </div>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="templates">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_templates)}</span>
@@ -409,7 +420,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="filters">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_filters)}</span>
@@ -455,7 +466,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="appearance">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_appearance)}</span>
@@ -504,7 +515,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group data-graph-debug-only hidden>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="advancedForces" data-graph-debug-only hidden>
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_advanced_forces)}</span>
@@ -548,7 +559,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="forces">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_forces)}</span>
@@ -585,7 +596,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="layout">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_layout_section)}</span>
@@ -618,7 +629,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
   )}
 
   <div class="graph-workspace">
-    {mode === 'global' && controlsMode === 'toolbar' && (
+    {mode === 'global' && controlsMode === 'toolbar' && legendEnabled && (
       <>
         <button type="button" class="graph-side-toggle graph-toolbar-button" data-graph-legend-toggle aria-expanded="false">
           {legendFiltersLabel}
@@ -632,10 +643,10 @@ const initialSettings = resolveGraphSettings(mode, layout, {
 
           <div class="graph-side-panel-divider"></div>
 
-          <div class="graph-side-panel-header graph-side-panel-header-secondary">
+          <div class="graph-side-panel-header graph-side-panel-header-secondary" data-graph-global-filters-header>
             <strong>{t(I18nKey.graph_filters)}</strong>
           </div>
-          <div class="graph-side-filter-list">
+          <div class="graph-side-filter-list" data-graph-global-filters-list>
             <label class="graph-settings-toggle-row" data-graph-setting-field="showTags">
               <span>{t(I18nKey.graph_show_tags)}</span>
               <input type="checkbox" class="graph-switch" data-graph-setting-input="showTags" />

@@ -71,7 +71,7 @@ export const navBarConfig: NavBarConfig = {
   links: [
     {
       name: "_links",
-      items: [LinkPreset.Blog, LinkPreset.About],
+      items: [LinkPreset.Blog, LinkPreset.About, LinkPreset.Friends],
     },
     {
       preset: LinkPreset.Demo,
@@ -89,5 +89,6 @@ export const footerConfig: FooterConfig = {
     LinkPreset.Home,
     LinkPreset.Blog,
     LinkPreset.About,
+    LinkPreset.Friends,
   ],
 };

@@ -74,6 +74,7 @@ enum I18nKey {
   archive = "archive",
   search = "search",
   links = "links",
+  friends = "friends",
   feed = "feed",
   demo = "demo",
   tags = "tags",

@@ -37,6 +37,8 @@ type ApplyStateOptions = {
   skipLocalGraphSync?: boolean;
 };
 
+type VisibilityMap = Set<string> | null;
+
 type FieldScope = 'filters' | 'appearance' | 'forces' | 'layout';
 type FieldControl = 'search' | 'slider' | 'toggle' | 'select';
 type UpdateMode = 'filters' | 'appearance' | 'forces' | 'settings';
@@ -55,6 +57,27 @@ type FieldConfig = {
 const formatFloat = (value: string | boolean) => Number(value).toFixed(2);
 const formatFloat3 = (value: string | boolean) => Number(value).toFixed(3);
 const formatInteger = (value: string | boolean) => String(Math.round(Number(value)));
+
+function parseVisibilityMap(raw?: string): VisibilityMap {
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    return new Set(parsed.filter((item): item is string => typeof item === 'string'));
+  } catch {
+    return null;
+  }
+}
+
+function isVisibleByMap(map: VisibilityMap, key: string) {
+  return map ? map.has(key) : true;
+}
 
 function updateScope(state: GraphClientState, scope: FieldScope, patch: Record<string, unknown>): GraphClientState {
   return {
@@ -422,19 +445,33 @@ function syncLegendUI(shell: HTMLElement, state: GraphClientState) {
   const legendPanel = shell.querySelector<HTMLElement>('[data-graph-legend-panel]');
   const legendToggle = shell.querySelector<HTMLButtonElement>('[data-graph-legend-toggle]');
   const legendItems = shell.querySelector<HTMLElement>('[data-graph-legend-items]');
+  const filtersHeader = shell.querySelector<HTMLElement>('[data-graph-global-filters-header]');
+  const filtersList = shell.querySelector<HTMLElement>('[data-graph-global-filters-list]');
   if (!legendPanel || !legendItems) {
     return;
   }
 
+  const legendEnabled = shell.dataset.graphLegendEnabled !== 'false';
+  const visibleGroups = parseVisibilityMap(shell.dataset.graphVisibleSettingsGroups);
+  const filtersVisible = isVisibleByMap(visibleGroups, 'filters');
+
   if (legendToggle) {
-    legendToggle.hidden = !capabilities.showGlobalLegend;
+    legendToggle.hidden = !legendEnabled || !capabilities.showGlobalLegend;
   }
-  legendPanel.hidden = !capabilities.showGlobalLegend;
-  if (!capabilities.showGlobalLegend) {
+  legendPanel.hidden = !legendEnabled || !capabilities.showGlobalLegend;
+  if (!legendEnabled || !capabilities.showGlobalLegend) {
     legendPanel.classList.remove('is-open');
     legendPanel.setAttribute('aria-hidden', 'true');
     legendToggle?.setAttribute('aria-expanded', 'false');
     return;
+  }
+
+  if (filtersHeader) {
+    filtersHeader.hidden = !filtersVisible;
+  }
+
+  if (filtersList) {
+    filtersList.hidden = !filtersVisible;
   }
 
   const isOpen = getLegendOpenState(shell);
@@ -534,17 +571,24 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
 function syncSettingsUI(shell: HTMLElement, root: HTMLElement) {
   const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
   const ctx: GraphSidebarContext = { state, debug: state.debug };
-  const capabilities = getLayoutCapabilities(state.mode, state.settings);
+  const visibleGroups = parseVisibilityMap(shell.dataset.graphVisibleSettingsGroups);
+  const visibleFields = parseVisibilityMap(shell.dataset.graphVisibleSettingsFields);
 
   syncDebugVisibility(shell, state.debug);
   syncPresetUI(shell, state);
   syncLegendUI(shell, state);
   syncDetailDrawer(shell, root);
 
+  shell.querySelectorAll<HTMLElement>('[data-graph-settings-group-id]').forEach((group) => {
+    const key = group.dataset.graphSettingsGroupId || '';
+    group.hidden = !isVisibleByMap(visibleGroups, key);
+  });
+
   shell.querySelectorAll<HTMLElement>('[data-graph-setting-field]').forEach((field) => {
     const key = field.dataset.graphSettingField || '';
     const config = FIELD_CONFIG[key];
-    const visible = config ? (!config.debugOnly || ctx.debug) && (config.visible?.(ctx) ?? true) : true;
+    const visible = isVisibleByMap(visibleFields, key)
+      && (config ? (!config.debugOnly || ctx.debug) && (config.visible?.(ctx) ?? true) : true);
     field.hidden = !visible;
   });
 

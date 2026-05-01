@@ -26,6 +26,10 @@ export function getLinkPreset(locale: string, item: LinkPreset | PresetNavBarLin
       name: t(I18nKey.tags),
       url: "/tags/",
     },
+    [LinkPreset.Friends]: {
+      name: t(I18nKey.friends),
+      url: "/links/",
+    },
   }[preset];
 
   return typeof item === 'number'

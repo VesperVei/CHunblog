@@ -77,6 +77,7 @@ export const en: Translation = {
   [I18nKey.archive]: "Archive",
   [I18nKey.search]: "Search",
   [I18nKey.links]: "Links",
+  [I18nKey.friends]: "Friends",
   [I18nKey.feed]: "Feed",
   [I18nKey.demo]: "Demo",
   [I18nKey.tags]: "Tags",

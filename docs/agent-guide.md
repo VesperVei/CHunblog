@@ -97,9 +97,10 @@ Check `git status --short` before editing and before committing.
 
 Use the smallest useful verification command.
 
-- `pnpm dev`: runs `scripts/import-obsidian-blog.mjs`, then `scripts/generate-graph.mjs`, then starts Astro. The importer runs in `dev` context, skips fresh LLM translation by default, and should avoid rewriting unchanged generated files.
+- `pnpm dev`: runs `scripts/import-obsidian-blog.mjs`, then `scripts/generate-graph.mjs`, then `scripts/build-dev-search-index.mjs`, then starts Astro. The importer runs in `dev` context, skips fresh LLM translation by default, and should avoid rewriting unchanged generated files.
 - `pnpm build`: runs graph generation, Astro build, then Pagefind index generation.
 - `pnpm preview`: preview built output.
+- Dev search cache metadata lives under `.cache/search/`, while the browser-served dev index is emitted to `public/dev-search-index.json`.
 
 When `pnpm build` passes with warnings, report the warnings and whether they are related to the change.
 
