@@ -1,22 +1,19 @@
 ---
-import Graph from "../graph/Graph.astro";
-import friendsGraphData from "../../data/friends-graph.json";
-import friendsGraphUrl from "../../data/friends-graph.json?url";
+import Graph from "../../graph/Graph.astro";
+import {
+  friendsGraphUrl,
+  friendsGraphVisibleSettingsGroups,
+  getFriendsGraphAnchorIds,
+  getFriendsGraphCopy,
+} from "./config";
 
 interface Props {
   locale: string;
 }
 
 const { locale } = Astro.props;
-
-const tagAnchors = friendsGraphData.nodes
-  .map((node) => node.urls?.[locale as "en" | "zh-cn"] ?? node.urls?.en)
-  .filter((url): url is string => typeof url === "string" && url.includes("#"))
-  .map((url) => url.slice(url.indexOf("#") + 1));
-
-const copy = locale === "zh-cn"
-  ? "这里的朋友关系单独维护：共享标签会自然聚在一起，少量重要关系则直接落在边上。"
-  : "This friend graph is maintained separately: shared tags gather people into small constellations, while important ties live directly on the edges.";
+const tagAnchors = getFriendsGraphAnchorIds(locale);
+const copy = getFriendsGraphCopy(locale);
 ---
 
 <section class="friends-graph-panel" data-category-panel="friends" hidden>
@@ -39,7 +36,7 @@ const copy = locale === "zh-cn"
     controlsMode="toolbar"
     fullscreenEnabled={true}
     height="min(72vh, 42rem)"
-    visibleSettingsGroups={["appearance", "forces", "layout"]}
+    visibleSettingsGroups={friendsGraphVisibleSettingsGroups}
     legendEnabled={false}
   />
 </section>

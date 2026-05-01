@@ -484,17 +484,6 @@ export function syncGraphScene(scene, data, locale: string, focusId?: string) {
     .join('line')
     .attr('class', 'graph-link-line graph-link');
 
-  scene.link.each(function (edge) {
-    const line = this as SVGLineElement;
-    let title = line.querySelector('title');
-    if (!(title instanceof SVGTitleElement)) {
-      title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-      line.appendChild(title);
-    }
-
-    title.textContent = edge.relation ? String(edge.relation) : '';
-  });
-
   scene.node = scene.nodeLayer
     .selectAll('circle')
     .data(data.nodes, (item) => item.id)

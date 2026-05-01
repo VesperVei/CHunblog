@@ -32,7 +32,7 @@ Most visual styling uses CSS variables such as `--bg-color`, `--fg-color`, `--ac
 
 The friend links page under `src/components/links/LinksPage.astro` intentionally reuses those variables directly instead of defining a separate color system. Its hover borders, active filter pills, tag accents, and soft glow all derive from the existing accent color runtime so the page stays in sync with the palette controls.
 
-The friends category now uses `src/components/links/FriendsGraph.astro`, which still runs on the shared graph runtime but reads from a separately maintained `src/data/friends-graph.json` data source rather than the site-wide `public/graph.json`.
+The friends category now uses `src/components/links/friends-graph/FriendsGraph.astro`, which still runs on the shared graph runtime but reads from a separately maintained `src/data/friends-graph.json` data source rather than the site-wide `public/graph.json`.
 
 That friends graph can selectively hide settings groups while keeping the same graph engine. The current friends view hides the generic filters group and only exposes appearance, forces, and layout controls.
 

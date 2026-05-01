@@ -1,9 +1,9 @@
 ---
 import Base from "../../layouts/Base.astro";
 import LinkCard from "./LinkCard.astro";
-import FriendsGraph from "./FriendsGraph.astro";
+import FriendsGraph from "./friends-graph/FriendsGraph.astro";
 import { linkCategories, links } from "../../data/links";
-import friendsGraphData from "../../data/friends-graph.json";
+import { getFriendsGraphCount } from "./friends-graph/config";
 import { buildLocaleUrl } from "../../utils/i18n";
 
 interface Props {
@@ -71,7 +71,7 @@ const categoryCounts = Object.fromEntries(
   linkCategories.map((category) => [
     category,
     category === "friends"
-      ? friendsGraphData.nodes.filter((node) => node.type === "friend").length
+      ? getFriendsGraphCount()
       : links.filter((link) => link.category === category).length,
   ]),
 ) as Record<(typeof linkCategories)[number], number>;

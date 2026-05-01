@@ -54,7 +54,7 @@ In multilingual mode, the unprefixed pages usually redirect or return empty outp
 
 - `components/blog/`: blog cards, lists, post metadata, tags, TOC, pagination, comment provider components, and previous/next navigation.
 - `components/common/`: icons, formatted dates, generated CSS variables, Mermaid setup, and shared scripts.
-- `components/links/`: friend links page layout, link cards, and the dedicated `FriendsGraph.astro` wrapper for the friends relationship graph.
+- `components/links/`: friend links page layout and link cards. The dedicated friends relationship graph now lives under `components/links/friends-graph/`.
 - `components/shell/`: HTML head metadata and footer pieces used by page layouts.
 - `components/markdown/`: MDX rendering wrapper.
 - `components/nav/`: header, nav links, language switcher, theme switcher, accent color controls, and feed menu.
