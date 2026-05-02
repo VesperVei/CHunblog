@@ -4,6 +4,16 @@ import { URL } from 'node:url';
 import path from 'node:path';
 import { generateFriendsData, readFriendsSource, writeFriendsSource } from './generate-friends-data.mjs';
 import { runObsidianImport, saveUploadedObsidianNote, scanObsidianSources } from './import-obsidian-blog.mjs';
+import {
+  readAdminTranslationConfig,
+  readGraphDiagnostics,
+  readGraphPresets,
+  readGraphSnapshot,
+  scanBlogPosts,
+  withAdminTranslationEnv,
+  writeAdminTranslationConfig,
+  writeGraphPresets,
+} from './lib/admin-content.mjs';
 
 const ROOT = process.cwd();
 const HOST = '127.0.0.1';
@@ -76,30 +86,6 @@ function runNodeScript(scriptPath) {
       reject(new Error(`${path.relative(ROOT, scriptPath)} exited with code ${code}\n${stderr || stdout}`));
     });
   });
-}
-
-async function withTranslationEnv(options, callback) {
-  const keys = ['OBSIDIAN_TRANSLATE', 'OBSIDIAN_FORCE_RETRANSLATE'];
-  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
-
-  if (options.translate !== undefined) {
-    process.env.OBSIDIAN_TRANSLATE = options.translate ? 'true' : 'false';
-  }
-  if (options.forceRetranslate !== undefined) {
-    process.env.OBSIDIAN_FORCE_RETRANSLATE = options.forceRetranslate ? 'true' : 'false';
-  }
-
-  try {
-    return await callback();
-  } finally {
-    for (const key of keys) {
-      if (previous[key] === undefined) {
-        delete process.env[key];
-      } else {
-        process.env[key] = previous[key];
-      }
-    }
-  }
 }
 
 function pageHtml() {
@@ -194,6 +180,13 @@ function pageHtml() {
     .nav-tab.active { border-color: color-mix(in srgb, var(--accent) 72%, var(--line)); background: rgba(143, 183, 255, 0.16); box-shadow: 0 8px 30px rgba(143, 183, 255, 0.12); }
     .page { display: none; }
     .page.active { display: block; }
+    .subgrid { display: grid; grid-template-columns: 1.25fr 0.75fr; gap: 1rem; align-items: start; }
+    .mini-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+    .json-editor { min-height: 24rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .compact-list { display: grid; gap: 0.65rem; max-height: 680px; overflow: auto; }
+    .info-card { border: 1px solid var(--line); border-radius: 1rem; padding: 0.85rem; background: rgba(255, 255, 255, 0.04); }
+    .info-card h3 { margin: 0 0 0.35rem; font-size: 0.98rem; }
+    .info-card p { margin: 0.25rem 0; color: var(--muted); line-height: 1.5; }
     .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
     .full { grid-column: 1 / -1; }
     .required { color: var(--accent-2); font-size: 0.75rem; letter-spacing: 0.04em; }
@@ -234,7 +227,7 @@ function pageHtml() {
     .note-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; color: var(--muted); font-size: 0.78rem; }
     .pill { border-radius: 999px; padding: 0.18rem 0.5rem; background: rgba(255, 255, 255, 0.07); }
     @media (max-width: 980px) {
-      .grid, .form-grid, .metrics { grid-template-columns: 1fr; }
+      .grid, .subgrid, .form-grid, .metrics, .mini-grid { grid-template-columns: 1fr; }
       .topbar { align-items: flex-start; flex-direction: column; }
     }
   </style>
@@ -245,12 +238,13 @@ function pageHtml() {
       <div>
         <p class="eyebrow">Local Dev Backend</p>
         <h1>Goosequill Admin</h1>
-        <p class="subtitle">宽屏本地仪表盘，分开维护朋友关系图谱和 Obsidian Markdown 自动博客导入，避免操作混在一起。</p>
+        <p class="subtitle">宽屏本地仪表盘，分开维护友邻、Blog 内容与站点 Graph 数据；导入、文章列表、异常和模板不再混在一个面板里。</p>
       </div>
       <div class="actions">
         <nav class="nav-tabs" aria-label="后台页面">
           <button class="nav-tab active" type="button" data-page-target="relation">友邻管理</button>
-          <button class="nav-tab" type="button" data-page-target="md">MD 自动博客</button>
+          <button class="nav-tab" type="button" data-page-target="blog">Blog 管理</button>
+          <button class="nav-tab" type="button" data-page-target="graph">Graph 管理</button>
         </nav>
         <button id="refreshCurrent">刷新当前页</button>
         <button class="secondary" id="devSync">重建图谱和搜索</button>
@@ -344,17 +338,17 @@ function pageHtml() {
       </div>
     </section>
 
-    <section class="page" data-page="md">
+    <section class="page" data-page="blog">
       <section class="metrics">
-        <div class="metric"><strong id="metricNotes">-</strong><span>Obsidian MD</span></div>
-        <div class="metric"><strong id="metricZhOutputs">-</strong><span>中文 MDX</span></div>
-        <div class="metric"><strong id="metricCachedTranslations">-</strong><span>英文缓存</span></div>
-        <div class="metric"><strong id="metricChangedNotes">-</strong><span>需更新源文</span></div>
+        <button class="metric" type="button" data-blog-view="import"><strong id="metricNotes">-</strong><span>导入源文</span></button>
+        <button class="metric" type="button" data-blog-view="list"><strong id="metricBlogPosts">-</strong><span>Blog 列表</span></button>
+        <button class="metric" type="button" data-blog-view="list"><strong id="metricMissingEnglish">-</strong><span>缺英文</span></button>
+        <button class="metric" type="button" data-blog-view="llm"><strong id="metricCachedTranslations">-</strong><span>LLM/缓存</span></button>
       </section>
       <div class="grid">
-        <section class="panel">
+        <section class="panel" data-blog-panel="import">
           <div class="panel-header">
-            <h2 class="panel-title">MD 自动博客</h2>
+            <h2 class="panel-title">导入</h2>
             <div class="actions"><button class="secondary" id="scanNotes">扫描 my_md</button></div>
           </div>
           <div class="panel-body">
@@ -367,6 +361,7 @@ function pageHtml() {
               <label><input id="translate" type="checkbox" checked /> 允许 LLM 英文翻译</label>
               <label><input id="forceRetranslate" type="checkbox" /> 强制重翻</label>
             </div>
+            <p class="hint">导入时会读取“LLM 配置”面板保存的 baseUrl / apiKey / model，再叠加这里的临时开关。</p>
             <div class="actions" style="margin: 1rem 0;">
               <button id="runImport">清洗并导入 MDX</button>
               <button class="secondary" id="runImportNoTranslate">只生成中文/复用缓存</button>
@@ -375,9 +370,79 @@ function pageHtml() {
           </div>
         </section>
 
+        <section class="panel" data-blog-panel="list" hidden>
+          <div class="panel-header">
+            <h2 class="panel-title">Blog 列表</h2>
+            <div class="actions"><button class="secondary" id="scanBlogPosts">扫描 content/blog</button></div>
+          </div>
+          <div class="panel-body">
+            <div class="compact-list" id="blogPostList"></div>
+          </div>
+        </section>
+
+        <section class="panel" data-blog-panel="llm" hidden>
+          <div class="panel-header">
+            <h2 class="panel-title">LLM 配置</h2>
+            <div class="actions"><button class="secondary" id="reloadLlmConfig">重新读取</button></div>
+          </div>
+          <div class="panel-body">
+            <form id="llmConfigForm" class="form-grid">
+              <label>Base URL<input name="baseUrl" placeholder="http://127.0.0.1:8317/v1" /></label>
+              <label>Model<input name="model" placeholder="gpt-5.4" /></label>
+              <label class="full">API Key<input name="apiKey" placeholder="translated-language" /></label>
+              <label>目标语言<input name="targetLocales" placeholder="en" /></label>
+              <div class="check-row full">
+                <label><input name="translateEnabled" type="checkbox" /> 启用翻译</label>
+                <label><input name="translateInDev" type="checkbox" /> dev 允许新翻译请求</label>
+                <label><input name="forceRetranslate" type="checkbox" /> 默认强制重翻</label>
+              </div>
+              <div class="actions full">
+                <button type="submit" id="saveLlmConfig">保存 LLM 配置</button>
+              </div>
+              <p class="hint full">配置保存在 .cache/admin-dev/translation-config.json，不会提交。导入脚本仍支持环境变量临时覆盖。</p>
+            </form>
+          </div>
+        </section>
+
         <section class="panel">
-          <div class="panel-header"><h2 class="panel-title">MD 自动博客日志</h2><button class="secondary" id="clearMdLog">清空</button></div>
-          <div class="panel-body"><pre class="status" id="mdLog">等待操作...</pre></div>
+          <div class="panel-header"><h2 class="panel-title">Blog 管理日志</h2><button class="secondary" id="clearBlogLog">清空</button></div>
+          <div class="panel-body"><pre class="status" id="blogLog">等待操作...</pre></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="page" data-page="graph">
+      <section class="metrics">
+        <button class="metric" type="button" data-graph-view="overview"><strong id="metricGraphNodes">-</strong><span>Graph 节点</span></button>
+        <button class="metric" type="button" data-graph-view="overview"><strong id="metricGraphLinks">-</strong><span>Graph 边</span></button>
+        <button class="metric" type="button" data-graph-view="issues"><strong id="metricGraphMissing">-</strong><span>Missing 异常</span></button>
+        <button class="metric" type="button" data-graph-view="presets"><strong id="metricGraphPresets">-</strong><span>内置模板</span></button>
+      </section>
+      <div class="grid">
+        <section class="panel" data-graph-panel="overview">
+          <div class="panel-header"><h2 class="panel-title">Graph 概览</h2><button class="secondary" id="reloadGraph">读取 graph.json</button></div>
+          <div class="panel-body"><div id="graphOverview"></div></div>
+        </section>
+
+        <section class="panel" data-graph-panel="issues" hidden>
+          <div class="panel-header"><h2 class="panel-title">异常记录</h2><button class="secondary" id="generateGraph">重新生成 graph</button></div>
+          <div class="panel-body"><div id="graphIssues"></div></div>
+        </section>
+
+        <section class="panel" data-graph-panel="presets" hidden>
+          <div class="panel-header"><h2 class="panel-title">模板管理</h2><button class="secondary" id="reloadGraphPresets">重新读取</button></div>
+          <div class="panel-body">
+            <p class="hint">这里管理的是前台 Graph 设置里的内置模板，保存后会写入 src/data/graph-presets.json，并影响所有访客看到的内置模板。</p>
+            <label>内置模板 JSON<textarea id="graphPresetsJson" class="json-editor"></textarea></label>
+            <div class="actions" style="margin-top: 1rem;"><button id="saveGraphPresets">保存内置模板</button></div>
+            <div style="height: 1rem"></div>
+            <div id="graphPresetList"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-header"><h2 class="panel-title">Graph 管理日志</h2><button class="secondary" id="clearGraphLog">清空</button></div>
+          <div class="panel-body"><pre class="status" id="graphLog">等待操作...</pre></div>
         </section>
       </div>
     </section>
@@ -388,12 +453,28 @@ function pageHtml() {
     const $ = (id) => document.getElementById(id);
     const categoryLabels = { blog: '博客 blog', friends: '朋友 friends', tech: '技术 tech', other: '其他 other' };
     const categoryKeys = ['blog', 'friends', 'tech', 'other'];
-    const state = { friends: [], notes: [], editingFriendIndex: null, selectedNoteIndex: null, activePage: 'relation', relationView: 'source', formDirty: false };
+    const state = {
+      friends: [],
+      notes: [],
+      blogPosts: [],
+      blogSummary: null,
+      graph: null,
+      graphDiagnostics: { runs: [] },
+      graphPresets: [],
+      translationConfig: null,
+      editingFriendIndex: null,
+      selectedNoteIndex: null,
+      activePage: 'relation',
+      relationView: 'source',
+      blogView: 'import',
+      graphView: 'overview',
+      formDirty: false,
+    };
 
     function log(message, data, scope = state.activePage) {
       const lines = [new Date().toLocaleTimeString() + ' ' + message];
       if (data !== undefined) lines.push(typeof data === 'string' ? data : JSON.stringify(data, null, 2));
-      const target = scope === 'md' ? $('mdLog') : $('relationLog');
+      const target = scope === 'blog' ? $('blogLog') : scope === 'graph' ? $('graphLog') : $('relationLog');
       target.textContent = lines.join('\\n') + '\\n\\n' + target.textContent;
     }
 
@@ -544,9 +625,7 @@ function pageHtml() {
 
     function renderNotes() {
       $('metricNotes').textContent = state.notes.length;
-      $('metricZhOutputs').textContent = state.notes.filter((note) => note.hasZhOutput).length;
       $('metricCachedTranslations').textContent = state.notes.filter((note) => note.translations?.en?.cachedForCurrentSource).length;
-      $('metricChangedNotes').textContent = state.notes.filter((note) => note.changedSinceCache).length;
       $('noteList').innerHTML = state.notes.map((note, index) => '<article class="note-card ' + (state.selectedNoteIndex === index ? 'is-selected' : '') + '" data-note-index="' + index + '">' +
         '<h3>' + escapeHtml(note.title) + '</h3>' +
         '<div class="note-meta">' +
@@ -559,6 +638,71 @@ function pageHtml() {
       document.querySelectorAll('[data-note-index]').forEach((card) => {
         card.addEventListener('click', () => selectNote(Number(card.dataset.noteIndex)));
       });
+    }
+
+    function renderBlogPosts() {
+      const summary = state.blogSummary || { posts: 0, missingEnglish: 0 };
+      $('metricBlogPosts').textContent = summary.posts ?? state.blogPosts.length;
+      $('metricMissingEnglish').textContent = summary.missingEnglish ?? 0;
+      $('blogPostList').innerHTML = state.blogPosts.length ? state.blogPosts.map((post) => {
+        const langs = Object.keys(post.languages || {}).sort();
+        return '<article class="info-card"><h3>' + escapeHtml(post.title) + '</h3>' +
+          '<div class="note-meta"><span class="pill">note_id: ' + escapeHtml(post.noteId) + '</span><span class="pill">slug: ' + escapeHtml(post.slug) + '</span><span class="pill">语言: ' + escapeHtml(langs.join(', ') || '无') + '</span>' +
+          '<span class="pill">' + (post.languages?.en ? 'en 已生成' : '缺 en') + '</span><span class="pill">graphLevel: ' + escapeHtml(post.graphLevel ?? '未设置') + '</span></div>' +
+          '<p>' + escapeHtml((post.tags || []).join('、') || '无标签') + '</p>' +
+          '<p>' + escapeHtml((post.files || []).join('\\n')) + '</p></article>';
+      }).join('') : '<p class="empty-state">没有扫描到 Blog 内容。</p>';
+    }
+
+    function fillLlmConfigForm() {
+      const config = state.translationConfig || {};
+      const form = $('llmConfigForm');
+      form.elements.baseUrl.value = config.baseUrl || '';
+      form.elements.apiKey.value = config.apiKey || '';
+      form.elements.model.value = config.model || '';
+      form.elements.targetLocales.value = (config.targetLocales || ['en']).join(', ');
+      form.elements.translateEnabled.checked = Boolean(config.translateEnabled);
+      form.elements.translateInDev.checked = Boolean(config.translateInDev);
+      form.elements.forceRetranslate.checked = Boolean(config.forceRetranslate);
+    }
+
+    function configFromLlmForm() {
+      const form = $('llmConfigForm');
+      return {
+        baseUrl: form.elements.baseUrl.value,
+        apiKey: form.elements.apiKey.value,
+        model: form.elements.model.value,
+        targetLocales: form.elements.targetLocales.value.split(',').map((item) => item.trim()).filter(Boolean),
+        translateEnabled: form.elements.translateEnabled.checked,
+        translateInDev: form.elements.translateInDev.checked,
+        forceRetranslate: form.elements.forceRetranslate.checked,
+      };
+    }
+
+    function renderGraph() {
+      const summary = state.graph?.summary || { nodes: 0, links: 0, missing: 0, types: {}, graphLevels: {} };
+      $('metricGraphNodes').textContent = summary.nodes;
+      $('metricGraphLinks').textContent = summary.links;
+      $('metricGraphMissing').textContent = summary.missing;
+      $('metricGraphPresets').textContent = state.graphPresets.length;
+      const types = Object.entries(summary.types || {}).map(([key, value]) => '<span class="pill">' + escapeHtml(key) + ': ' + value + '</span>').join('');
+      const levels = Object.entries(summary.graphLevels || {}).map(([key, value]) => '<span class="pill">' + escapeHtml(key) + ': ' + value + '</span>').join('');
+      $('graphOverview').innerHTML = '<div class="card-list"><article class="info-card"><h3>public/graph.json</h3><p>生成时间：' + escapeHtml(state.graph?.generatedAt || '未生成') + '</p><div class="note-meta"><span class="pill">nodes: ' + summary.nodes + '</span><span class="pill">links: ' + summary.links + '</span><span class="pill">missing: ' + summary.missing + '</span></div></article><article class="info-card"><h3>类型分布</h3><div class="tag-list">' + (types || '<span class="tag">暂无</span>') + '</div></article><article class="info-card"><h3>GraphLevel 分布</h3><div class="tag-list">' + (levels || '<span class="tag">暂无</span>') + '</div></article></div>';
+      renderGraphIssues();
+      renderGraphPresets();
+    }
+
+    function renderGraphIssues() {
+      const missing = state.graph?.missing || [];
+      const runs = state.graphDiagnostics?.runs || [];
+      $('graphIssues').innerHTML = '<div class="card-list"><article class="info-card"><h3>当前 Missing Wikilinks</h3><p>这些就是 pnpm dev / generate-graph 输出的 missing 信息，来源为 public/graph.json。</p></article>' +
+        (missing.length ? missing.map((item) => '<article class="info-card"><h3>' + escapeHtml(item.source || 'unknown') + ' -> ' + escapeHtml(item.rawTarget || '') + '</h3><div class="note-meta"><span class="pill">normalized: ' + escapeHtml(item.normalizedTarget || '') + '</span><span class="pill">reason: ' + escapeHtml(item.reason || '') + '</span><span class="pill">heading: ' + escapeHtml(item.targetHeading || '无') + '</span></div></article>').join('') : '<p class="empty-state">当前没有 missing wikilink。</p>') +
+        '<article class="info-card"><h3>最近生成记录</h3>' + (runs.length ? runs.slice(0, 8).map((run) => '<p>' + escapeHtml(run.createdAt) + '：nodes ' + run.nodes + ' / links ' + run.links + ' / missing ' + run.missing + '</p>').join('') : '<p>暂无历史。</p>') + '</article></div>';
+    }
+
+    function renderGraphPresets() {
+      $('graphPresetsJson').value = JSON.stringify(state.graphPresets, null, 2);
+      $('graphPresetList').innerHTML = state.graphPresets.length ? '<div class="card-list">' + state.graphPresets.map((preset) => '<article class="info-card"><h3>' + escapeHtml(preset.name) + '</h3><div class="note-meta"><span class="pill">' + escapeHtml(preset.id) + '</span><span class="pill">layout: ' + escapeHtml(preset.layout?.preset || 'force') + '</span><span class="pill">' + (preset.builtin === false ? 'custom' : 'builtin') + '</span></div><p>' + escapeHtml(preset.description || '无描述') + '</p></article>').join('') + '</div>' : '<p class="empty-state">没有模板。</p>';
     }
 
     function friendFromForm(formElement) {
@@ -728,7 +872,7 @@ function pageHtml() {
         noteId: note.noteId,
         title: note.title,
         output: note.zhOutput,
-      }, 'md');
+      }, 'blog');
     }
 
     function escapeHtml(value) {
@@ -747,6 +891,31 @@ function pageHtml() {
       renderNotes();
     }
 
+    async function scanBlog() {
+      const payload = await api('/api/blog/posts');
+      state.blogPosts = payload.posts;
+      state.blogSummary = payload.summary;
+      renderBlogPosts();
+    }
+
+    async function loadLlmConfig() {
+      const payload = await api('/api/blog/translation-config');
+      state.translationConfig = payload.config;
+      fillLlmConfigForm();
+    }
+
+    async function loadGraph() {
+      const [snapshot, diagnostics, presets] = await Promise.all([
+        api('/api/graph/snapshot'),
+        api('/api/graph/diagnostics'),
+        api('/api/graph/presets'),
+      ]);
+      state.graph = snapshot;
+      state.graphDiagnostics = diagnostics;
+      state.graphPresets = presets.presets;
+      renderGraph();
+    }
+
     function showPage(page) {
       state.activePage = page;
       document.querySelectorAll('[data-page]').forEach((panel) => {
@@ -755,7 +924,27 @@ function pageHtml() {
       document.querySelectorAll('[data-page-target]').forEach((button) => {
         button.classList.toggle('active', button.dataset.pageTarget === page);
       });
-      location.hash = page === 'md' ? 'md-auto-blog' : 'relation';
+      location.hash = page === 'blog' ? 'blog' : page === 'graph' ? 'graph' : 'relation';
+    }
+
+    function selectBlogView(view) {
+      state.blogView = view;
+      document.querySelectorAll('[data-blog-view]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.blogView === view);
+      });
+      document.querySelectorAll('[data-blog-panel]').forEach((panel) => {
+        panel.hidden = panel.dataset.blogPanel !== view;
+      });
+    }
+
+    function selectGraphView(view) {
+      state.graphView = view;
+      document.querySelectorAll('[data-graph-view]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.graphView === view);
+      });
+      document.querySelectorAll('[data-graph-panel]').forEach((panel) => {
+        panel.hidden = panel.dataset.graphPanel !== view;
+      });
     }
 
     function hasUnsavedFriendForm() {
@@ -774,6 +963,14 @@ function pageHtml() {
 
     document.querySelectorAll('[data-relation-view]').forEach((button) => {
       button.addEventListener('click', () => selectRelationView(button.dataset.relationView || 'source'));
+    });
+
+    document.querySelectorAll('[data-blog-view]').forEach((button) => {
+      button.addEventListener('click', () => selectBlogView(button.dataset.blogView || 'import'));
+    });
+
+    document.querySelectorAll('[data-graph-view]').forEach((button) => {
+      button.addEventListener('click', () => selectGraphView(button.dataset.graphView || 'overview'));
     });
 
     $('friendForm').addEventListener('input', () => {
@@ -833,13 +1030,13 @@ function pageHtml() {
       await withBusy(event.currentTarget, '上传中...', async () => {
         const files = Array.from($('mdFiles').files || []);
         if (files.length === 0) {
-          log('没有选择 Markdown 文件', undefined, 'md');
+          log('没有选择 Markdown 文件', undefined, 'blog');
           return;
         }
         for (const file of files) {
           const content = await file.text();
           const payload = await api('/api/obsidian/upload', { method: 'POST', body: JSON.stringify({ filename: file.name, content }) });
-          log('已上传 ' + file.name, payload, 'md');
+          log('已上传 ' + file.name, payload, 'blog');
         }
         await scanNotes();
         toast('Markdown 上传完成');
@@ -849,24 +1046,86 @@ function pageHtml() {
     $('scanNotes').addEventListener('click', async (event) => {
       await withBusy(event.currentTarget, '扫描中...', async () => {
         await scanNotes();
-        log('Obsidian 源文件扫描完成', { count: state.notes.length }, 'md');
+        log('Obsidian 源文件扫描完成', { count: state.notes.length }, 'blog');
         toast('扫描完成：' + state.notes.length + ' 篇');
       });
     });
     $('runImport').addEventListener('click', async (event) => {
       await withBusy(event.currentTarget, '导入中...', async () => {
         const payload = await api('/api/obsidian/import', { method: 'POST', body: JSON.stringify({ translate: $('translate').checked, forceRetranslate: $('forceRetranslate').checked }) });
-        log('Obsidian 导入完成', payload.summary, 'md');
+        log('Obsidian 导入完成', payload.summary, 'blog');
         await scanNotes();
+        await scanBlog();
         toast('Obsidian 导入完成');
       });
     });
     $('runImportNoTranslate').addEventListener('click', async (event) => {
       await withBusy(event.currentTarget, '导入中...', async () => {
         const payload = await api('/api/obsidian/import', { method: 'POST', body: JSON.stringify({ translate: false, forceRetranslate: false }) });
-        log('Obsidian 中文导入完成', payload.summary, 'md');
+        log('Obsidian 中文导入完成', payload.summary, 'blog');
         await scanNotes();
+        await scanBlog();
         toast('中文导入完成');
+      });
+    });
+    $('scanBlogPosts').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '扫描中...', async () => {
+        await scanBlog();
+        log('Blog 列表扫描完成', state.blogSummary, 'blog');
+        toast('Blog 列表已刷新');
+      });
+    });
+    $('reloadLlmConfig').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '读取中...', async () => {
+        await loadLlmConfig();
+        log('LLM 配置已读取', state.translationConfig, 'blog');
+        toast('LLM 配置已读取');
+      });
+    });
+    $('llmConfigForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      await withBusy($('saveLlmConfig'), '保存中...', async () => {
+        const payload = await api('/api/blog/translation-config', { method: 'PUT', body: JSON.stringify(configFromLlmForm()) });
+        state.translationConfig = payload.config;
+        fillLlmConfigForm();
+        log('LLM 配置已保存', { file: payload.relativeFile, config: payload.config }, 'blog');
+        toast('LLM 配置已保存');
+      });
+    });
+    $('reloadGraph').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '读取中...', async () => {
+        await loadGraph();
+        log('Graph 快照已读取', state.graph.summary, 'graph');
+        toast('Graph 已刷新');
+      });
+    });
+    $('generateGraph').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '生成中...', async () => {
+        const payload = await api('/api/graph/generate', { method: 'POST', body: '{}' });
+        state.graph = payload.snapshot;
+        state.graphDiagnostics = payload.diagnostics;
+        renderGraph();
+        log('Graph 已重新生成', { summary: state.graph.summary, stdout: payload.stdout, stderr: payload.stderr }, 'graph');
+        toast('Graph 已重新生成');
+      });
+    });
+    $('reloadGraphPresets').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '读取中...', async () => {
+        const payload = await api('/api/graph/presets');
+        state.graphPresets = payload.presets;
+        renderGraph();
+        log('Graph 模板已读取', { count: state.graphPresets.length }, 'graph');
+        toast('Graph 模板已读取');
+      });
+    });
+    $('saveGraphPresets').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '保存中...', async () => {
+        const presets = JSON.parse($('graphPresetsJson').value);
+        const payload = await api('/api/graph/presets', { method: 'PUT', body: JSON.stringify({ presets }) });
+        state.graphPresets = payload.presets;
+        renderGraph();
+        log('Graph 内置模板已保存', { file: payload.file, count: payload.presets.length }, 'graph');
+        toast('Graph 内置模板已保存');
       });
     });
     $('devSync').addEventListener('click', async (event) => {
@@ -878,11 +1137,21 @@ function pageHtml() {
     });
     $('refreshCurrent').addEventListener('click', async (event) => {
       await withBusy(event.currentTarget, '刷新中...', async () => {
-        if (state.activePage === 'md') {
-          log('开始刷新 MD 自动博客状态...', undefined, 'md');
+        if (state.activePage === 'blog') {
+          log('开始刷新 Blog 管理状态...', undefined, 'blog');
           await scanNotes();
-          log('MD 自动博客状态已刷新', { notes: state.notes.length }, 'md');
-          toast('MD 状态已刷新');
+          await scanBlog();
+          await loadLlmConfig();
+          log('Blog 管理状态已刷新', { notes: state.notes.length, blog: state.blogSummary }, 'blog');
+          toast('Blog 状态已刷新');
+          return;
+        }
+
+        if (state.activePage === 'graph') {
+          log('开始刷新 Graph 管理状态...', undefined, 'graph');
+          await loadGraph();
+          log('Graph 管理状态已刷新', state.graph.summary, 'graph');
+          toast('Graph 状态已刷新');
           return;
         }
 
@@ -898,10 +1167,13 @@ function pageHtml() {
       });
     });
     $('clearRelationLog').addEventListener('click', () => { $('relationLog').textContent = ''; });
-    $('clearMdLog').addEventListener('click', () => { $('mdLog').textContent = ''; });
+    $('clearBlogLog').addEventListener('click', () => { $('blogLog').textContent = ''; });
+    $('clearGraphLog').addEventListener('click', () => { $('graphLog').textContent = ''; });
 
-    showPage(location.hash === '#md-auto-blog' ? 'md' : 'relation');
+    showPage(location.hash === '#blog' || location.hash === '#md-auto-blog' ? 'blog' : location.hash === '#graph' ? 'graph' : 'relation');
     selectRelationView('source');
+    selectBlogView('import');
+    selectGraphView('overview');
     log('友邻管理页面已加载，正在拉取初始状态...', undefined, 'relation');
     refreshFriends()
       .then(() => {
@@ -910,9 +1182,12 @@ function pageHtml() {
           graph: state.friends.filter((friend) => friend.graph).length,
           visible: state.friends.filter((friend) => !friend.hidden).length,
         }, 'relation');
-        return scanNotes();
+        return Promise.all([scanNotes(), scanBlog(), loadLlmConfig(), loadGraph()]);
       })
-      .then(() => log('Obsidian 初始状态已加载', { notes: state.notes.length }, 'md'))
+      .then(() => {
+        log('Blog 初始状态已加载', { notes: state.notes.length, blog: state.blogSummary }, 'blog');
+        log('Graph 初始状态已加载', state.graph?.summary, 'graph');
+      })
       .catch((error) => log('初始化失败', error.message, state.activePage));
   </script>
 </body>
@@ -960,8 +1235,57 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'POST' && url.pathname === '/api/obsidian/import') {
     const body = await readJsonBody(req);
-    const result = await withTranslationEnv(body, () => runObsidianImport({ context: 'dev' }));
+    const result = await withAdminTranslationEnv({
+      translateEnabled: body.translate,
+      forceRetranslate: body.forceRetranslate,
+    }, () => runObsidianImport({ context: 'dev' }));
     jsonResponse(res, 200, result);
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/blog/posts') {
+    jsonResponse(res, 200, await scanBlogPosts());
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/blog/translation-config') {
+    jsonResponse(res, 200, await readAdminTranslationConfig());
+    return;
+  }
+
+  if (req.method === 'PUT' && url.pathname === '/api/blog/translation-config') {
+    jsonResponse(res, 200, await writeAdminTranslationConfig(await readJsonBody(req)));
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/graph/snapshot') {
+    jsonResponse(res, 200, await readGraphSnapshot());
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/graph/diagnostics') {
+    jsonResponse(res, 200, await readGraphDiagnostics());
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/graph/presets') {
+    jsonResponse(res, 200, await readGraphPresets());
+    return;
+  }
+
+  if (req.method === 'PUT' && url.pathname === '/api/graph/presets') {
+    const body = await readJsonBody(req);
+    jsonResponse(res, 200, await writeGraphPresets(body.presets));
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/graph/generate') {
+    const output = await runNodeScript(path.join(ROOT, 'scripts/generate-graph.mjs'));
+    jsonResponse(res, 200, {
+      ...output,
+      snapshot: await readGraphSnapshot(),
+      diagnostics: await readGraphDiagnostics(),
+    });
     return;
   }
 

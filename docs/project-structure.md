@@ -80,3 +80,4 @@ Theme variables are defined in `src/sass/_variables.scss`. The project uses CSS 
 - `src/data/friends.json`: human-maintained friend/link source data used by the local admin dashboard and friend data generator. Visible front-page cards can use `order` for per-category sorting.
 - `src/data/links.ts`: generated links data for the blog, tech, and other categories on the links page. Do not hand-edit it; update `src/data/friends.json` and run `npm run generate:friends`.
 - `src/data/friends-graph.json`: generated relationship graph data for the friends category, including tag anchors and optional friend-to-friend relation edges.
+- `src/data/graph-presets.json`: built-in Graph view presets shown to every visitor in the Graph settings template selector. It is editable through `npm run admin` under `Graph 管理 -> 模板管理`.

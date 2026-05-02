@@ -36,6 +36,10 @@ The friends category now uses `src/components/links/friends-graph/FriendsGraph.a
 
 That friends graph can selectively hide settings groups while keeping the same graph engine. The current friends view hides the generic filters group and only exposes appearance, forces, and layout controls.
 
+The site-wide Graph view loads its built-in template presets from `src/data/graph-presets.json` through `src/graph/presets.ts`. Editing this JSON, either directly or via `npm run admin` under `Graph 管理 -> 模板管理`, changes the built-in presets available to all visitors. Browser-local presets remain stored in `localStorage` and are still private to each visitor.
+
+`scripts/generate-graph.mjs` writes `public/graph.json` and records recent graph diagnostics under `.cache/admin-dev/graph-diagnostics.json`. The admin dashboard reads those diagnostics to show the same missing wikilink issues that appear during `pnpm dev` or graph regeneration.
+
 ## Accent Color
 
 Accent color behavior is configured in `siteConfig.theme_color` in `src/config.ts`.
