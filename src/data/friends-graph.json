@@ -2,6 +2,45 @@
   "generatedAt": "2026-05-02T00:00:00.000Z",
   "nodes": [
     {
+      "id": "friend:vespervei",
+      "type": "friend",
+      "titles": {
+        "en": "VesperVei",
+        "zh-cn": "VesperVei"
+      },
+      "urls": {
+        "en": "https://github.com/VesperVei",
+        "zh-cn": "https://github.com/VesperVei"
+      },
+      "tags": ["Pwn", "博客", "开发"],
+      "aliases": [],
+      "metadata": {
+        "description": "博客站主，专注 Pwn 与开发。",
+        "githubId": "VesperVei",
+        "blog": "https://vespervei.com"
+      }
+    },
+    {
+      "id": "friend:IDCM-svg",
+      "type": "friend",
+      "titles": {
+        "en": "TimeMachine",
+        "zh-cn": "时光机"
+      },
+      "urls": {
+        "en": "https://github.com/IDCM-svg",
+        "zh-cn": "https://github.com/IDCM-svg"
+      },
+      "tags": ["Pwn", "博客"],
+      "aliases": [],
+      "metadata": {
+        "description": "同为研究Pwn方向的朋友，wp写的很出色",
+        "githubId": "IDCM-svg",
+        "blog": "https://idcm-svg.github.io/HFTTC.github.io/"
+      }
+    },
+
+    {
       "id": "friend:lingchen",
       "type": "friend",
       "titles": {
@@ -54,6 +93,48 @@
         "description": "更像一个长期在线的朋友书签，偶尔分享链接，偶尔分享生活。",
         "githubId": "gaearon"
       }
+    },
+    {
+      "id": "tag:Pwn",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Pwn",
+        "zh-cn": "Pwn"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-pwn",
+        "zh-cn": "/zh-cn/links/#friend-tag-pwn"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:博客",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Blog",
+        "zh-cn": "博客"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-blog",
+        "zh-cn": "/zh-cn/links/#friend-tag-blog"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:开发",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Development",
+        "zh-cn": "开发"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-development",
+        "zh-cn": "/zh-cn/links/#friend-tag-development"
+      },
+      "tags": [],
+      "aliases": []
     },
     {
       "id": "tag:技术",
@@ -142,6 +223,36 @@
   ],
   "links": [
     {
+      "source": "friend:vespervei",
+      "target": "tag:Pwn",
+      "exists": true,
+      "relation": "Pwn"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "tag:Pwn",
+      "exists": true,
+      "relation": "Pwn"
+    },
+    {
+      "source": "friend:vespervei",
+      "target": "tag:博客",
+      "exists": true,
+      "relation": "博客"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "tag:博客",
+      "exists": true,
+      "relation": "博客"
+    },
+    {
+      "source": "friend:vespervei",
+      "target": "tag:开发",
+      "exists": true,
+      "relation": "开发"
+    },
+    {
       "source": "friend:lingchen",
       "target": "tag:技术",
       "exists": true,
@@ -182,6 +293,12 @@
       "target": "friend:aster",
       "exists": true,
       "relation": "队友"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "friend:vespervei",
+      "exists": true,
+      "relation": "兄弟"
     }
   ]
 }

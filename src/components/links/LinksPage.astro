@@ -186,6 +186,16 @@ const otherLinks = links.filter((link) => link.category === "other");
           panel.toggleAttribute("hidden", !isActive);
           panel.setAttribute("aria-hidden", String(!isActive));
         });
+
+        if (nextFilter === "friends") {
+          const friendsGraph = root.querySelector("[data-friends-graph]");
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              friendsGraph?.dispatchEvent(new CustomEvent("friends-graph:shown"));
+              friendsGraph?.__friendsGraphControls?.fitView?.();
+            });
+          });
+        }
       };
 
       buttons.forEach((button) => {

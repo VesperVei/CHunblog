@@ -8,7 +8,7 @@ interface Props {
 
 const { link } = Astro.props;
 
-const siteLabel = getSiteLabel(link.url, link.site);
+const siteLabel = getSiteLabel(link.blog || link.url);
 const avatar = getPrimaryAvatar(link);
 const avatarLabel = link.name.slice(0, 1).toUpperCase();
 ---

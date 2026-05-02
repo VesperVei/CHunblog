@@ -1,17 +1,7 @@
 import friendsGraphData from "../../../data/friends-graph.json";
-import friendsGraphUrl from "../../../data/friends-graph.json?url";
-
-export { friendsGraphUrl };
 
 export function getFriendsGraphCount() {
   return friendsGraphData.nodes.filter((node) => node.type === "friend").length;
-}
-
-export function getFriendsGraphAnchorIds(locale: string) {
-  return friendsGraphData.nodes
-    .map((node) => node.urls?.[locale as "en" | "zh-cn"] ?? node.urls?.en)
-    .filter((url): url is string => typeof url === "string" && url.includes("#"))
-    .map((url) => url.slice(url.indexOf("#") + 1));
 }
 
 export function getFriendsGraphCopy(locale: string) {
@@ -20,4 +10,4 @@ export function getFriendsGraphCopy(locale: string) {
     : "This friend graph is maintained separately: shared tags gather people into small constellations, while important ties live directly on the edges.";
 }
 
-export const friendsGraphVisibleSettingsGroups = ["appearance", "forces", "layout"];
+export { friendsGraphData };

@@ -1,19 +1,38 @@
 ---
-import Graph from "../../graph/Graph.astro";
-import {
-  friendsGraphUrl,
-  friendsGraphVisibleSettingsGroups,
-  getFriendsGraphAnchorIds,
-  getFriendsGraphCopy,
-} from "./config";
+import friendsGraphClientUrl from "./friends-graph-client.ts?url";
+import { friendsGraphData, getFriendsGraphCopy } from "./config";
 
 interface Props {
   locale: string;
 }
 
 const { locale } = Astro.props;
-const tagAnchors = getFriendsGraphAnchorIds(locale);
 const copy = getFriendsGraphCopy(locale);
+const graphDataJson = JSON.stringify(friendsGraphData);
+const detailsTitle = locale === "zh-cn" ? "关系详情" : "Connection Details";
+const detailsHint = locale === "zh-cn" ? "点击节点查看这位朋友或标签的关系卡片。" : "Click a node to inspect its profile and relations.";
+const resetLabel = locale === "zh-cn" ? "重置视图" : "Reset View";
+const fitLabel = locale === "zh-cn" ? "重新聚焦" : "Refocus";
+const settingsLabel = locale === "zh-cn" ? "图谱设置" : "Graph Settings";
+const friendScaleLabel = locale === "zh-cn" ? "朋友节点尺寸" : "Friend Node Size";
+const tagScaleLabel = locale === "zh-cn" ? "标签节点尺寸" : "Tag Node Size";
+const linkDistanceLabel = locale === "zh-cn" ? "连线长度" : "Link Distance";
+const chargeLabel = locale === "zh-cn" ? "节点间排斥力" : "Repel Strength";
+const visitGithubLabel = locale === "zh-cn" ? "访问 GitHub" : "Visit GitHub";
+const visitBlogLabel = locale === "zh-cn" ? "访问博客" : "Visit Blog";
+const centerStrengthLabel = locale === "zh-cn" ? "图谱向心力" : "Center Strength";
+const linkStrengthLabel = locale === "zh-cn" ? "相连标签吸引力" : "Tag Link Strength";
+const enterFullscreenLabel = locale === "zh-cn" ? "进入全屏" : "Enter Fullscreen";
+const exitFullscreenLabel = locale === "zh-cn" ? "退出全屏" : "Exit Fullscreen";
+const relationToggleLabel = locale === "zh-cn" ? "显示关系边" : "Show Relation Edges";
+const subtitleLabel = locale === "zh-cn" ? "朋友关系图谱" : "Friends Relationship Graph";
+const legendFriendLabel = locale === "zh-cn" ? "朋友" : "Friend";
+const legendTagLabel = locale === "zh-cn" ? "标签" : "Tag";
+const closeLabel = locale === "zh-cn" ? "关闭" : "Close";
+const visitSiteLabel = locale === "zh-cn" ? "访问站点" : "Visit Site";
+const tagsLabel = locale === "zh-cn" ? "标签" : "Tags";
+const relationsLabel = locale === "zh-cn" ? "关系" : "Relations";
+const friendsLabel = locale === "zh-cn" ? "关联朋友" : "Related Friends";
 ---
 
 <section class="friends-graph-panel" data-category-panel="friends" hidden>
@@ -21,24 +40,148 @@ const copy = getFriendsGraphCopy(locale);
     <p>{copy}</p>
   </div>
 
-  <div class="friends-graph-anchors" aria-hidden="true">
-    {tagAnchors.map((anchorId) => (
-      <span id={anchorId}></span>
-    ))}
-  </div>
+  <section
+    class="friends-graph-card"
+    data-friends-graph
+    data-locale={locale}
+    data-details-title={detailsTitle}
+    data-details-hint={detailsHint}
+    data-close-label={closeLabel}
+    data-visit-github-label={visitGithubLabel}
+    data-visit-blog-label={visitBlogLabel}
+    data-tags-label={tagsLabel}
+    data-relations-label={relationsLabel}
+    data-friends-label={friendsLabel}
+    data-enter-fullscreen-label={enterFullscreenLabel}
+    data-exit-fullscreen-label={exitFullscreenLabel}
+  >
+    <script type="application/json" data-friends-graph-source set:html={graphDataJson}></script>
 
-  <Graph
-    graphUrl={friendsGraphUrl}
-    mode="global"
-    locale={locale}
-    depth={5}
-    settingsEnabled={true}
-    controlsMode="toolbar"
-    fullscreenEnabled={true}
-    height="min(72vh, 42rem)"
-    visibleSettingsGroups={friendsGraphVisibleSettingsGroups}
-    legendEnabled={false}
-  />
+    <header class="friends-graph-header">
+      <div class="friends-graph-title">
+        <strong>{subtitleLabel}</strong>
+        <p>{copy}</p>
+      </div>
+      <div class="friends-graph-toolbar">
+        <button type="button" class="friends-graph-tool-btn" data-friends-graph-fit title={fitLabel}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="2" width="12" height="12" rx="1.5"/>
+            <path d="M5 8h6M8 5v6"/>
+          </svg>
+          <span>{fitLabel}</span>
+        </button>
+        <button type="button" class="friends-graph-tool-btn" data-friends-graph-reset title={resetLabel}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M13 8a5 5 0 1 1-1.5-3.5M13 2v4h-4"/>
+          </svg>
+          <span>{resetLabel}</span>
+        </button>
+        <button type="button" class="friends-graph-tool-btn" data-friends-graph-fullscreen aria-pressed="false" title={enterFullscreenLabel}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M2 5V2h3M14 5V2h-3M2 11v3h3M14 11v3h-3"/>
+          </svg>
+          <span>{enterFullscreenLabel}</span>
+        </button>
+        <button type="button" class="friends-graph-tool-btn" data-friends-graph-settings-toggle aria-expanded="false" title={settingsLabel}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="8" cy="8" r="2.5"/>
+            <path d="M8 1v2M8 13v2M15 8h-2M3 8H1M12.5 3.5l-1.4 1.4M4.9 11.1l-1.4 1.4M12.5 12.5l-1.4-1.4M4.9 4.9L3.5 3.5"/>
+          </svg>
+          <span>{settingsLabel}</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="friends-graph-main">
+      <div class="friends-graph-stage" data-friends-graph-stage>
+        <div class="friends-graph-relation-tip" data-friends-graph-relation-tip hidden></div>
+      </div>
+    </div>
+
+    <div class="friends-graph-details-modal" data-friends-graph-details-modal hidden>
+      <div class="modal-backdrop" data-modal-backdrop></div>
+      <div class="modal-content">
+        <button type="button" class="modal-close-btn" data-modal-close aria-label={closeLabel}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 4L4 12M4 4l8 8"/>
+          </svg>
+        </button>
+        <div class="modal-body" data-friends-graph-details></div>
+      </div>
+    </div>
+
+    <div class="friends-graph-settings-popover" data-friends-graph-settings hidden>
+      <div class="settings-popover-content">
+        <header class="settings-popover-header">
+          <strong>{settingsLabel}</strong>
+          <button type="button" class="settings-close-btn" data-friends-graph-settings-close aria-label={closeLabel}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 4L4 12M4 4l8 8"/>
+            </svg>
+          </button>
+        </header>
+        <div class="settings-popover-body">
+          <div class="settings-section">
+            <h4>节点</h4>
+            <label class="friends-graph-control">
+              <span>{friendScaleLabel}</span>
+              <div class="control-input-group">
+                <input type="range" min="0.7" max="1.7" step="0.05" value="1" data-friends-graph-control="friendScale" />
+                <output data-control-output="friendScale">1.00</output>
+              </div>
+            </label>
+            <label class="friends-graph-control">
+              <span>{tagScaleLabel}</span>
+              <div class="control-input-group">
+                <input type="range" min="0.7" max="1.8" step="0.05" value="1" data-friends-graph-control="tagScale" />
+                <output data-control-output="tagScale">1.00</output>
+              </div>
+            </label>
+          </div>
+          <div class="settings-section">
+            <h4>力学</h4>
+            <label class="friends-graph-control">
+              <span>{centerStrengthLabel}</span>
+              <div class="control-input-group">
+                <input type="range" min="0" max="1" step="0.01" value="0.50" data-friends-graph-control="centerStrength" />
+                <output data-control-output="centerStrength">0.50</output>
+              </div>
+            </label>
+            <label class="friends-graph-control">
+              <span>{chargeLabel}</span>
+              <div class="control-input-group">
+                <input type="range" min="10" max="200" step="1" value="74" data-friends-graph-control="chargeStrength" />
+                <output data-control-output="chargeStrength">74</output>
+              </div>
+            </label>
+            <label class="friends-graph-control">
+              <span>{linkStrengthLabel}</span>
+              <div class="control-input-group">
+                <input type="range" min="0" max="2" step="0.01" value="1.00" data-friends-graph-control="linkStrength" />
+                <output data-control-output="linkStrength">1.00</output>
+              </div>
+            </label>
+            <label class="friends-graph-control">
+              <span>{linkDistanceLabel}</span>
+              <div class="control-input-group">
+                <input type="range" min="90" max="240" step="5" value="115" data-friends-graph-control="linkDistance" />
+                <output data-control-output="linkDistance">115</output>
+              </div>
+            </label>
+          </div>
+          <div class="settings-section">
+            <h4>显示</h4>
+            <label class="friends-graph-toggle">
+              <span>{relationToggleLabel}</span>
+              <input type="checkbox" checked data-friends-graph-control="showRelations" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module" src={friendsGraphClientUrl}></script>
 </section>
 
 <style>
@@ -52,16 +195,569 @@ const copy = getFriendsGraphCopy(locale);
     color: var(--fg-muted-5);
   }
 
-  .friends-graph-anchors {
-    position: absolute;
-    width: 0;
-    height: 0;
+  .friends-graph-card {
+    position: relative;
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    border: 1px solid var(--fg-muted-2);
+    border-radius: calc(var(--rounded-corner) + 0.25rem);
+    background: color-mix(in srgb, var(--glass-bg) 88%, transparent);
     overflow: hidden;
   }
 
-  .friends-graph-anchors span {
+  .friends-graph-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--fg-muted-2) 60%, transparent);
+    padding: 1.25rem 1.5rem 1rem;
+  }
+
+  .friends-graph-title {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .friends-graph-title strong {
     display: block;
-    width: 0;
-    height: 0;
+    margin-bottom: 0.375rem;
+    color: var(--fg-color);
+    font-size: 1.125rem;
+    font-family: var(--heading-font-family);
+    line-height: 1.3;
+  }
+
+  .friends-graph-title p {
+    margin: 0;
+    color: var(--fg-muted-5);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .friends-graph-toolbar {
+    display: flex;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  .friends-graph-tool-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    transition: border-color var(--transition), background-color var(--transition), color var(--transition), transform var(--transition);
+    box-shadow: var(--edge-highlight);
+    border: 1px solid var(--fg-muted-2);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--glass-bg) 82%, transparent);
+    padding: 0.4rem 0.75rem;
+    color: var(--fg-muted-5);
+    font: inherit;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .friends-graph-tool-btn svg {
+    flex-shrink: 0;
+  }
+
+  .friends-graph-tool-btn:hover {
+    border-color: color-mix(in srgb, var(--accent-color) 38%, var(--fg-muted-2));
+    background: color-mix(in srgb, var(--accent-color) 5%, transparent);
+    color: var(--accent-color);
+  }
+
+  .friends-graph-tool-btn:active {
+    transform: scale(0.97);
+  }
+
+  .friends-graph-main {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .friends-graph-stage {
+    position: relative;
+    background:
+      radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent-color) 4%, transparent) 0%, transparent 56%),
+      linear-gradient(color-mix(in srgb, var(--glass-bg) 78%, transparent), color-mix(in srgb, var(--glass-bg) 78%, transparent));
+    min-height: 38rem;
+    overflow: hidden;
+  }
+
+  .friends-graph-stage::before {
+    position: absolute;
+    inset: 0;
+    opacity: 0.22;
+    background-image: radial-gradient(circle, var(--fg-muted-3) 1px, transparent 1px);
+    background-size: 1.2rem 1.2rem;
+    pointer-events: none;
+    content: "";
+  }
+
+  .friends-graph-stage :global(svg) {
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 100%;
+    height: 38rem;
+  }
+
+  .friends-graph-details-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+  }
+
+  .friends-graph-details-modal[hidden] {
+    display: none;
+  }
+
+  .modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--bg-color) 75%, transparent);
+    backdrop-filter: blur(4px);
+    animation: fade-in 0.2s ease-out;
+  }
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .modal-content {
+    position: relative;
+    z-index: 1;
+    box-shadow: var(--edge-highlight), 0 12px 40px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--fg-muted-2);
+    border-radius: calc(var(--rounded-corner) + 0.25rem);
+    background: color-mix(in srgb, var(--glass-bg) 96%, transparent);
+    width: 100%;
+    max-width: 28rem;
+    max-height: 80vh;
+    overflow-y: auto;
+    backdrop-filter: blur(16px);
+    animation: modal-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes modal-in {
+    from {
+      transform: scale(0.95) translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    z-index: 2;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition), color var(--transition);
+    border: none;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--glass-bg) 80%, transparent);
+    width: 2rem;
+    height: 2rem;
+    color: var(--fg-muted-4);
+    cursor: pointer;
+  }
+
+  .modal-close-btn:hover {
+    background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+    color: var(--accent-color);
+  }
+
+  .modal-body {
+    display: grid;
+    gap: 0.875rem;
+    padding: 1.5rem;
+  }
+
+  .modal-body strong {
+    color: var(--fg-color);
+    font-family: var(--heading-font-family);
+    font-size: 1.125rem;
+  }
+
+  .modal-body :global(.friends-graph-detail-head) {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.875rem;
+    align-items: start;
+  }
+
+  .modal-body :global(.friends-graph-detail-avatar) {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    box-shadow: var(--edge-highlight);
+    border: 1px solid var(--fg-muted-2);
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent-color) 8%, var(--glass-bg));
+    width: 4.5rem;
+    height: 4.5rem;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    color: var(--accent-color);
+    font-weight: 700;
+    font-size: 1.75rem;
+    line-height: 0;
+  }
+
+  .modal-body :global(.friends-graph-detail-avatar img) {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .modal-body :global(.friends-graph-detail-avatar-svg) {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .modal-body :global(.friends-graph-detail-actions) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .modal-body :global(.friends-graph-detail-copy) {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .modal-body :global(.friends-graph-detail-section) {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .modal-body :global(.friends-graph-detail-section h4) {
+    margin: 0;
+    color: var(--fg-muted-4);
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .modal-body :global(.friends-graph-detail-tags) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+
+  .modal-body :global(.friends-graph-detail-tag) {
+    box-shadow: var(--edge-highlight);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-color) 8%, transparent);
+    padding: 0.3125rem 0.625rem;
+    color: var(--accent-color);
+    font-size: 0.8rem;
+    line-height: 1;
+  }
+
+  .modal-body :global(.friends-graph-visit-btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    justify-self: start;
+    transition: border-color var(--transition), background-color var(--transition), color var(--transition);
+    box-shadow: var(--edge-highlight);
+    border: 1px solid color-mix(in srgb, var(--accent-color) 28%, var(--fg-muted-2));
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent-color) 5%, transparent);
+    padding: 0.5rem 0.875rem;
+    color: var(--accent-color);
+    font-size: 0.875rem;
+    line-height: 1;
+    text-decoration: none;
+  }
+
+  .modal-body :global(.friends-graph-visit-btn:hover) {
+    border-color: var(--accent-color);
+    background: color-mix(in srgb, var(--accent-color) 12%, transparent);
+  }
+
+  .modal-body p,
+  .modal-body ul {
+    margin: 0;
+    color: var(--fg-muted-5);
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .modal-body ul {
+    padding-left: 1.1rem;
+  }
+
+  .modal-body :global(.friends-graph-detail-site) {
+    color: var(--fg-muted-4);
+    font-size: 0.85rem;
+    word-break: break-all;
+  }
+
+  .modal-body :global(.friends-graph-friend-list) {
+    display: grid;
+    gap: 0.375rem;
+    padding: 0;
+    list-style: none;
+  }
+
+  .modal-body :global(.friends-graph-friend-list li) {
+    color: var(--fg-muted-5);
+    font-size: 0.875rem;
+  }
+
+  .friends-graph-relation-tip {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    border: 1px solid var(--fg-muted-2);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--glass-bg) 94%, transparent);
+    padding: 0.3rem 0.625rem;
+    color: var(--fg-color);
+    font-size: 0.8rem;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+  }
+
+  .friends-graph-settings-popover {
+    position: absolute;
+    top: 4.5rem;
+    right: 1.5rem;
+    z-index: 10;
+    box-shadow: var(--edge-highlight), 0 8px 24px rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--fg-muted-2);
+    border-radius: var(--rounded-corner);
+    background: color-mix(in srgb, var(--glass-bg) 94%, transparent);
+    width: min(22rem, calc(100vw - 3rem));
+    backdrop-filter: blur(16px);
+    animation: popover-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes popover-in {
+    from {
+      transform: translateY(-8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .settings-popover-content {
+    display: grid;
+  }
+
+  .settings-popover-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid color-mix(in srgb, var(--fg-muted-2) 60%, transparent);
+    padding: 1rem 1.25rem;
+  }
+
+  .settings-popover-header strong {
+    color: var(--fg-color);
+    font-family: var(--heading-font-family);
+    font-size: 1rem;
+  }
+
+  .settings-close-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color var(--transition), color var(--transition);
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    width: 1.75rem;
+    height: 1.75rem;
+    color: var(--fg-muted-4);
+    cursor: pointer;
+  }
+
+  .settings-close-btn:hover {
+    background: color-mix(in srgb, var(--accent-color) 8%, transparent);
+    color: var(--accent-color);
+  }
+
+  .settings-popover-body {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.25rem;
+  }
+
+  .settings-section {
+    display: grid;
+    gap: 0.875rem;
+  }
+
+  .settings-section h4 {
+    margin: 0;
+    color: var(--fg-muted-4);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .friends-graph-control {
+    display: grid;
+    gap: 0.5rem;
+    color: var(--fg-muted-5);
+    font-size: 0.875rem;
+  }
+
+  .control-input-group {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .friends-graph-control input[type="range"] {
+    width: 100%;
+  }
+
+  .control-input-group output {
+    min-width: 2.5rem;
+    color: var(--fg-muted-4);
+    font-size: 0.8rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .friends-graph-toggle {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--fg-muted-5);
+    font-size: 0.875rem;
+  }
+
+  .modal-body :global(.friends-graph-visit-btn-secondary) {
+    border-color: color-mix(in srgb, var(--fg-muted-3) 60%, transparent);
+    background: color-mix(in srgb, var(--glass-bg) 90%, transparent);
+    color: var(--fg-color);
+  }
+
+  .modal-body :global(.friends-graph-visit-btn-secondary:hover) {
+    border-color: color-mix(in srgb, var(--accent-color) 28%, var(--fg-muted-2));
+    background: color-mix(in srgb, var(--accent-color) 8%, transparent);
+    color: var(--accent-color);
+  }
+
+  .friends-graph-card:fullscreen {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .friends-graph-card:fullscreen .friends-graph-main {
+    flex: 1;
+  }
+
+  .friends-graph-card:fullscreen .friends-graph-stage,
+  .friends-graph-card:fullscreen .friends-graph-stage :global(svg) {
+    min-height: 100%;
+    height: 100%;
+  }
+
+  .friends-graph-stage :global(.friends-graph-link) {
+    transition: stroke-opacity var(--transition), stroke-width var(--transition);
+  }
+
+  .friends-graph-stage :global(.friends-graph-link.is-highlighted) {
+    stroke-opacity: 1;
+    stroke-width: 2.8;
+  }
+
+  .friends-graph-stage :global(.friends-graph-node.is-selected .friends-graph-node-ring),
+  .friends-graph-stage :global(.friends-graph-node.is-selected .friends-graph-tag-box) {
+    stroke: color-mix(in srgb, var(--accent-color) 70%, white);
+    stroke-width: 2.2;
+    filter: drop-shadow(0 0 12px color-mix(in srgb, var(--accent-color) 45%, transparent));
+  }
+
+  .friends-graph-stage :global(.friends-graph-node-label) {
+    font-family: var(--font-family);
+    font-size: 0.78rem;
+    paint-order: stroke;
+    stroke: color-mix(in srgb, var(--bg-color) 86%, transparent);
+    stroke-width: 4px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  @media only screen and (max-width: 960px) {
+    .friends-graph-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .friends-graph-toolbar {
+      justify-content: flex-end;
+    }
+
+    .friends-graph-settings-popover {
+      position: fixed;
+      top: auto;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      max-height: 80vh;
+      border-radius: var(--rounded-corner) var(--rounded-corner) 0 0;
+    }
+  }
+
+  @media only screen and (max-width: 760px) {
+    .friends-graph-header {
+      padding: 1rem 1.125rem 0.875rem;
+    }
+
+    .friends-graph-tool-btn span {
+      display: none;
+    }
+
+    .friends-graph-tool-btn {
+      padding: 0.5rem;
+    }
+
+    .friends-graph-stage,
+    .friends-graph-stage :global(svg) {
+      min-height: 32rem;
+      height: 32rem;
+    }
+
+    .modal-content {
+      max-width: calc(100vw - 2rem);
+    }
   }
 </style>

@@ -8,7 +8,7 @@ export type FriendLink = {
   description: string;
   avatar?: string;
   githubId?: string;
-  site?: string;
+  blog?: string;
   tags: string[];
   category: LinkCategory;
 };
@@ -43,7 +43,7 @@ export function getGitHubAvatarUrl(githubId?: string): string | undefined {
 }
 
 export function getPrimaryAvatar(link: FriendLink): string | undefined {
-  return link.avatar ?? getGitHubAvatarUrl(link.githubId) ?? getSiteFavicon(link.url);
+  return link.avatar ?? getGitHubAvatarUrl(link.githubId) ?? getSiteFavicon(link.blog || link.url);
 }
 
 export const links: FriendLink[] = [
