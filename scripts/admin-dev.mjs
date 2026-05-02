@@ -419,7 +419,7 @@ function pageHtml() {
               <div class="actions full">
                 <button type="submit" id="saveLlmConfig">保存 LLM 配置</button>
               </div>
-              <p class="hint full">配置保存在 .cache/admin-dev/translation-config.json，不会提交。导入脚本仍支持环境变量临时覆盖。</p>
+              <p class="hint full">配置保存在 .cache/admin-dev/translation-config.json，不会提交。Base URL 会自动补齐根路径上的 /v1；如果你的代理不是 OpenAI 兼容路径，请直接填写完整接口前缀。</p>
             </form>
           </div>
         </section>
@@ -931,6 +931,10 @@ function pageHtml() {
       return [];
     }
 
+    function confirmLlmTranslation(scope, count) {
+      return confirm(scope + '会把 ' + count + ' 篇文章的完整正文发送给 LLM，并产生输入和输出 token 消耗。是否继续？');
+    }
+
     function escapeHtml(value) {
       return String(value ?? '').replace(/[&<>"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[char]));
     }
@@ -1124,6 +1128,7 @@ function pageHtml() {
       await withBusy(event.currentTarget, '导入中...', async () => {
         const noteIds = selectedNoteIdsOrAllConfirmed();
         if (noteIds === null) return;
+        if ($('translate').checked && !confirmLlmTranslation('Obsidian 导入翻译', noteIds.length || state.notes.length)) return;
         const payload = await api('/api/obsidian/import', { method: 'POST', body: JSON.stringify({ noteIds, translate: $('translate').checked, forceRetranslate: $('forceRetranslate').checked }) });
         log('Obsidian 导入完成', { selected: noteIds.length || '全部', summary: payload.summary, results: payload.results }, 'blog');
         await scanNotes();
@@ -1166,6 +1171,7 @@ function pageHtml() {
           toast('请先选择缺英文文章');
           return;
         }
+        if (!confirmLlmTranslation('缺英文批量翻译', state.selectedMissingEnglishIds.size)) return;
         const payload = await api('/api/blog/translate-missing', { method: 'POST', body: JSON.stringify({ noteIds: [...state.selectedMissingEnglishIds] }) });
         log('缺英文文章批量翻译完成', { summary: payload.summary, results: payload.results }, 'blog');
         await scanBlog();

@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 
@@ -7,8 +6,6 @@ const ASTRO_BIN = path.join(ROOT, 'node_modules/.bin/astro');
 
 let running = false;
 let queued = false;
-let debounceTimer;
-
 function runNodeScript(scriptPath) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [scriptPath], {
@@ -55,32 +52,8 @@ async function syncImportedContent() {
   }
 }
 
-function watchBlogContent() {
-  const blogDir = path.join(ROOT, 'src/content/blog');
-  if (!fs.existsSync(blogDir)) {
-    return;
-  }
-
-  fs.watch(blogDir, { recursive: true }, (_eventType, filename) => {
-    if (!filename || !/\.mdx?$/.test(filename)) {
-      return;
-    }
-
-    scheduleSync(`blog content change: ${filename}`);
-  });
-}
-
-function scheduleSync(reason) {
-  clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
-    console.log(`[dev-sync] detected ${reason}, re-importing Obsidian sources...`);
-    void syncImportedContent();
-  }, 150);
-}
-
 async function main() {
   await syncImportedContent();
-  watchBlogContent();
 
   const astro = spawn(ASTRO_BIN, ['dev'], {
     cwd: ROOT,

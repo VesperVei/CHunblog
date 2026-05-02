@@ -172,7 +172,7 @@ export async function scanBlogPosts() {
 
 function translationConfigToEnv(config = {}) {
   return {
-    ...(config.baseUrl ? { OBSIDIAN_LLM_BASE_URL: String(config.baseUrl) } : {}),
+    ...(config.baseUrl ? { OBSIDIAN_LLM_BASE_URL: normalizeOpenAiBaseUrl(config.baseUrl) } : {}),
     ...(config.apiKey ? { OBSIDIAN_LLM_API_KEY: String(config.apiKey) } : {}),
     ...(config.model !== undefined ? { OBSIDIAN_LLM_MODEL: String(config.model) } : {}),
     ...(config.translateEnabled !== undefined ? { OBSIDIAN_TRANSLATE: config.translateEnabled ? 'true' : 'false' } : {}),
@@ -180,6 +180,22 @@ function translationConfigToEnv(config = {}) {
     ...(config.forceRetranslate !== undefined ? { OBSIDIAN_FORCE_RETRANSLATE: config.forceRetranslate ? 'true' : 'false' } : {}),
     ...(Array.isArray(config.targetLocales) ? { OBSIDIAN_TRANSLATION_TARGET_LOCALES: config.targetLocales.join(',') } : {}),
   };
+}
+
+function normalizeOpenAiBaseUrl(value) {
+  const raw = String(value ?? '').trim().replace(/\/+$/g, '');
+  if (!raw) return raw;
+
+  try {
+    const url = new URL(raw);
+    if (url.pathname === '' || url.pathname === '/') {
+      url.pathname = '/v1';
+      return url.toString().replace(/\/+$/g, '');
+    }
+    return raw;
+  } catch {
+    return raw.endsWith('/v1') ? raw : `${raw}/v1`;
+  }
 }
 
 export async function readAdminTranslationConfig() {
@@ -195,7 +211,7 @@ export async function readAdminTranslationConfig() {
 
 export async function writeAdminTranslationConfig(config) {
   const normalized = {
-    baseUrl: String(config.baseUrl ?? '').trim(),
+    baseUrl: normalizeOpenAiBaseUrl(config.baseUrl),
     apiKey: String(config.apiKey ?? '').trim(),
     model: String(config.model ?? '').trim(),
     translateEnabled: Boolean(config.translateEnabled),
