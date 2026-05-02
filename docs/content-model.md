@@ -46,6 +46,8 @@ Obsidian imports currently come from `src/content/my_md/*.md` through `scripts/i
 
 Obsidian plugin cleanup is handled by the import transform pipeline. Dataview blocks are not executed yet; fenced `dataview` and `dataviewjs` blocks are converted to static callout placeholders and recorded as diagnostics so dynamic content loss is visible instead of silent. Meta Bind embed blocks are removed with diagnostics because they represent Obsidian-local UI modules.
 
+Code block cleanup targets Shiki Highlighter / Expressive Code syntax. Compatible meta such as `showLineNumbers`, `startLineNumber=10`, `{3-4,8-9}`, `title="..."`, `ins={...}`, and `del={...}` is preserved. Language aliases are normalized for the generated site: IDA pseudocode (`IDA`, `ida`, `pseudocode`) becomes `cpp`, explicit disassembly (`ida-asm`, `disasm`, `assembly`) becomes `asm`, and mixed debugger or dump output (`gdb`, `pwndbg`, `hex`, `hexdump`) becomes `txt`. Unknown code block meta is preserved but recorded as diagnostics.
+
 For local editing, `npm run admin` starts a dashboard at `http://127.0.0.1:4323`. Its `Blog 管理` page can upload Markdown files into `src/content/my_md/`, scan existing sources, trigger the same importer with optional LLM translation or forced retranslation, and scan generated `src/content/blog/**/index*.mdx` entries as a grouped Blog list. The import source list supports multi-select and selected-only imports; the Blog list also exposes missing-English posts for selected batch translation to `index_en.mdx`.
 
 When translation is enabled, the importer always generates the Chinese source variant first, then optionally generates `index_en.mdx` from the translated result. English generation can reuse cached translations for unchanged notes.

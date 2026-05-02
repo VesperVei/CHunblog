@@ -60,14 +60,14 @@ b *$rebase(0x13BB)
 c
 ```
 ![image.png](https://chenhun.oss-cn-beijing.aliyuncs.com/photo/202512151901602.png)
-```text
+```txt
 %p..%p..%p..%p..%p..%p..%p..%p..
 ```
 ![image.png](https://chenhun.oss-cn-beijing.aliyuncs.com/photo/202512151906110.png)
 简单数一下在第6个位置出现的，所以 `off_site = 6` 
 #### canary泄漏
 接下来去寻找canary在栈上的位置，emmm这种基本功就不带截图了，哪怕看IDA都知道
-```txt
+```cpp
 char format[32]; // [rsp+0h] [rbp-60h] BYREF
 _BYTE buf_0x40[56]; // [rsp+20h] [rbp-40h] BYREF
 unsigned __int64 canary; // [rsp+58h] [rbp-8h]

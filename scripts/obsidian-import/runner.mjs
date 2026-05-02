@@ -7,6 +7,7 @@ import { loadCache, saveCache } from './cache.mjs';
 import { buildLocalizedDocument, buildSourceDocument } from './documents.mjs';
 import { toImportError } from './errors.mjs';
 import { writeIfChanged } from './fs-utils.mjs';
+import { transformCodeBlocks } from './plugins/code-blocks.mjs';
 import { resolveImportFiles } from './scanner.mjs';
 import { sha256 } from './utils.mjs';
 import { resolveTranslation } from './translation/import-translation.mjs';
@@ -58,6 +59,12 @@ export async function importOne(filePath, cache, translationConfig, context = IM
       continue;
     }
 
+    const translatedCodeBlocks = transformCodeBlocks(resolved.translated.content);
+    sourceDocument.diagnostics.push(...translatedCodeBlocks.diagnostics.map((diagnostic) => ({
+      ...diagnostic,
+      locale,
+    })));
+
     const localizedDocument = buildLocalizedDocument({
       sourcePath: filePath,
       sourceFrontmatter: data,
@@ -65,7 +72,7 @@ export async function importOne(filePath, cache, translationConfig, context = IM
       locale,
       title: resolved.translated.title,
       description: resolved.translated.description,
-      content: resolved.translated.content,
+      content: translatedCodeBlocks.content,
     });
     const localizedWrite = await writeIfChanged(localizedDocument.outputFile, localizedDocument.serialized);
 
@@ -74,7 +81,7 @@ export async function importOne(filePath, cache, translationConfig, context = IM
       model: translationConfig.model,
       title: resolved.translated.title,
       description: resolved.translated.description,
-      content: resolved.translated.content,
+      content: translatedCodeBlocks.content,
       outputPath: localizedDocument.outputFile,
       outputHash: localizedWrite.hash,
     };

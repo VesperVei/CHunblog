@@ -61,6 +61,8 @@ When the active theme changes, the script reapplies the accent color so derived 
 
 Expressive Code is configured in `astro.config.mjs`.
 
+Obsidian imports normalize Shiki Highlighter style code fences before content reaches Astro. The import pipeline preserves Expressive Code meta like `showLineNumbers`, `startLineNumber`, `{1,3-5}`, `ins={...}`, `del={...}`, and `title="..."`. Reverse-engineering aliases are normalized during import: IDA pseudocode to `cpp`, explicit disassembly to `asm`, and mixed `gdb`/`pwndbg`/hex dump output to `txt`.
+
 Current behavior:
 
 - Uses `github-light` and `github-dark`.

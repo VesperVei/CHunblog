@@ -8,7 +8,7 @@ export function normalizeCodeFenceLanguages(content) {
   return {
     content: content
       .replace(/```pwndbg\b/g, '```txt')
-      .replace(/```IDA\b/g, '```txt')
+      .replace(/```IDA\b/g, '```cpp')
       .replace(/```txet\b/g, '```txt'),
   };
 }

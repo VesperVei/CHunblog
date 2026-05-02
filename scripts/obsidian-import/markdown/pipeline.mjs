@@ -1,3 +1,4 @@
+import { transformCodeBlocks } from '../plugins/code-blocks.mjs';
 import { transformDataviewBlocks } from '../plugins/dataview.mjs';
 import { transformMetaBindEmbeds } from '../plugins/meta-bind.mjs';
 import { injectRelationshipNotice, normalizeCodeFenceLanguages, stripHtmlComments } from './transforms.mjs';
@@ -5,6 +6,7 @@ import { injectRelationshipNotice, normalizeCodeFenceLanguages, stripHtmlComment
 const SOURCE_TRANSFORMS = [
   transformMetaBindEmbeds,
   transformDataviewBlocks,
+  transformCodeBlocks,
   stripHtmlComments,
   normalizeCodeFenceLanguages,
   injectRelationshipNotice,
