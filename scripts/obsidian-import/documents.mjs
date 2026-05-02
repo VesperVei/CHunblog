@@ -5,7 +5,7 @@ import { serializeFrontmatter } from './frontmatter/serialize.mjs';
 import { transformSourceMarkdown } from './markdown/pipeline.mjs';
 
 export function buildSourceDocument(filePath, data, content) {
-  const { normalized, preserved } = buildFrontmatter(filePath, data, SOURCE_LOCALE);
+  const { normalized, preserved, diagnostics: frontmatterDiagnostics } = buildFrontmatter(filePath, data, SOURCE_LOCALE);
   const transformed = transformSourceMarkdown(content, {
     locale: SOURCE_LOCALE,
     frontmatter: data,
@@ -16,7 +16,7 @@ export function buildSourceDocument(filePath, data, content) {
     noteId: normalized.note_id,
     frontmatter: { normalized, preserved },
     content: transformed.content,
-    diagnostics: transformed.diagnostics,
+    diagnostics: [...frontmatterDiagnostics, ...transformed.diagnostics],
   };
 }
 

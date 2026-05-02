@@ -12,7 +12,7 @@ export function normalizeDateValue(value) {
 
 export function normalizeArray(value) {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
+    return value.map(cleanString).filter(Boolean);
   }
 
   const stringValue = cleanString(value);

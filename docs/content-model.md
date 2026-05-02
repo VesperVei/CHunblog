@@ -96,6 +96,14 @@ Optional metadata used by Obsidian-style content:
 - `note_type`
 - `aliases`
 - `cssclasses`
+- `contest`
+- `challenge`
+- `difficulty`
+- `architecture`
+- `protections`
+- `vulnerability`
+- `techniques`
+- `affected_area`
 
 `author` can be a string or an array. It is normalized to an array by the schema.
 
@@ -128,7 +136,9 @@ If `siteConfig.defaultLocale` is set, single-language mode is enabled. Routes ar
 
 Tags are read from blog frontmatter. Tag lists are computed per language with `getTagList(lang)` in `src/utils/pages.ts`. Tag detail pages filter posts by exact tag name.
 
-Because tags are language-specific content, localized posts can use localized tag names.
+Obsidian imports intentionally publish only a small set of stable flat tag slugs. `scripts/obsidian-import/frontmatter/tags.mjs` owns the alias table. Current public tags are focused on core exploitation techniques, such as `format-string`, `heap`, `uaf`, `double-free`, `rop`, `ret2libc`, `stack-pivot`, `orw`, `one-gadget`, `brop`, and `ret2syscall`. Import diagnostics record unrecognized tags and tags omitted by the per-post tag limit, instead of silently polluting the public tag list.
+
+Do not turn one-off Obsidian labels, contest names, challenge names, architecture labels, protection mechanisms, difficulty strings, or old nested tags such as `arch/...`, `mitigation/...`, `tech/...`, and `note/...` into public tags. Use structured fields such as `contest`, `challenge`, `difficulty`, `architecture`, `protections`, `vulnerability`, and `techniques` for that metadata.
 
 ## Obsidian Translation Settings
 
