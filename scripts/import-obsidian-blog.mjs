@@ -373,6 +373,26 @@ function getCachedTranslation(cacheEntry, locale, translationConfig, sourceHash)
   };
 }
 
+function toImportError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  let details;
+  const jsonMatch = message.match(/\{[\s\S]*\}$/);
+  if (jsonMatch) {
+    try {
+      details = JSON.parse(jsonMatch[0]);
+    } catch {
+      details = undefined;
+    }
+  }
+
+  return {
+    message,
+    details,
+    retryAfterSeconds: details?.error?.reset_seconds ?? details?.error?.resets_in_seconds,
+    code: details?.error?.code ?? details?.error?.type,
+  };
+}
+
 export async function importOne(filePath, cache, translationConfig, context = IMPORT_CONTEXT) {
   const rawSource = await fs.readFile(filePath, 'utf8');
   const sourceHash = sha256(rawSource);
@@ -420,15 +440,27 @@ export async function importOne(filePath, cache, translationConfig, context = IM
     let translatedNow = false;
 
     if (!translated && canTranslateNow) {
-      translated = await translateDocument({
-        config: translationConfig,
-        sourceLocale: SOURCE_LOCALE,
-        targetLocale: locale,
-        title: sourceDocument.frontmatter.normalized.title,
-        description: sourceDocument.frontmatter.normalized.description,
-        content: sourceDocument.content,
-      });
-      translatedNow = true;
+      try {
+        translated = await translateDocument({
+          config: translationConfig,
+          sourceLocale: SOURCE_LOCALE,
+          targetLocale: locale,
+          title: sourceDocument.frontmatter.normalized.title,
+          description: sourceDocument.frontmatter.normalized.description,
+          content: sourceDocument.content,
+        });
+        translatedNow = true;
+      } catch (error) {
+        localeResults.push({
+          locale,
+          output: path.join(TARGET_DIR, sourceDocument.noteId, `index_${locale}.mdx`),
+          changed: false,
+          translated: false,
+          cached: false,
+          error: toImportError(error),
+        });
+        continue;
+      }
     }
 
     if (!translated) {
@@ -473,13 +505,43 @@ export async function importOne(filePath, cache, translationConfig, context = IM
 }
 
 function summarizeResults(results) {
-  const localeSummaries = results.flatMap((result) => result.results);
+  const localeSummaries = results.flatMap((result) => result.results ?? []);
   const written = localeSummaries.filter((result) => result.changed).length;
   const skipped = localeSummaries.length - written;
   const translated = localeSummaries.filter((result) => result.translated).length;
   const reused = localeSummaries.filter((result) => result.cached && result.locale !== SOURCE_LOCALE).length;
+  const failed = results.filter((result) => result.error).length + localeSummaries.filter((result) => result.error).length;
 
-  return { written, skipped, translated, reused };
+  return { written, skipped, translated, reused, failed };
+}
+
+async function resolveImportFiles({ sources, noteIds } = {}) {
+  const files = await fg(SOURCE_GLOB, { absolute: true });
+  const sourceSet = new Set((Array.isArray(sources) ? sources : []).map((source) => String(source)));
+  const noteIdSet = new Set((Array.isArray(noteIds) ? noteIds : []).map((noteId) => String(noteId)));
+
+  if (sourceSet.size === 0 && noteIdSet.size === 0) {
+    return files;
+  }
+
+  const selected = [];
+  for (const filePath of files) {
+    const relativeSource = path.relative(process.cwd(), filePath);
+    if (sourceSet.has(filePath) || sourceSet.has(relativeSource) || sourceSet.has(path.basename(filePath))) {
+      selected.push(filePath);
+      continue;
+    }
+    if (noteIdSet.size > 0) {
+      const rawSource = await fs.readFile(filePath, 'utf8');
+      const { data, content } = matter(rawSource);
+      const sourceDocument = buildSourceDocument(filePath, data, content);
+      if (noteIdSet.has(sourceDocument.noteId)) {
+        selected.push(filePath);
+      }
+    }
+  }
+
+  return selected;
 }
 
 export async function scanObsidianSources() {
@@ -537,14 +599,23 @@ export async function saveUploadedObsidianNote({ filename, content }) {
   };
 }
 
-export async function runObsidianImport({ context = IMPORT_CONTEXT } = {}) {
-  const files = await fg(SOURCE_GLOB, { absolute: true });
+export async function runObsidianImport({ context = IMPORT_CONTEXT, sources, noteIds } = {}) {
+  const files = await resolveImportFiles({ sources, noteIds });
   const results = [];
   const cache = await loadCache();
   const translationConfig = getTranslationConfig();
 
   for (const filePath of files) {
-    results.push(await importOne(filePath, cache, translationConfig, context));
+    try {
+      results.push(await importOne(filePath, cache, translationConfig, context));
+    } catch (error) {
+      results.push({
+        source: filePath,
+        noteId: null,
+        results: [],
+        error: toImportError(error),
+      });
+    }
   }
 
   await saveCache(cache);
@@ -565,12 +636,18 @@ async function main() {
     for (const localized of result.results) {
       const action = localized.changed ? 'wrote' : 'kept';
       const tags = [localized.locale];
+      if (localized.error) {
+        tags.push('failed');
+      }
       if (localized.translated) {
         tags.push('translated');
       } else if (localized.cached && localized.locale !== SOURCE_LOCALE) {
         tags.push('cached');
       }
       console.log(`- ${path.basename(result.source)} -> ${path.relative(process.cwd(), localized.output)} [${tags.join(', ')}; ${action}]`);
+    }
+    if (result.error) {
+      console.log(`- ${path.basename(result.source)} failed: ${result.error.message}`);
     }
   }
 }

@@ -44,9 +44,11 @@ The directory name becomes the post slug. Localized variants use suffixes such a
 
 Obsidian imports currently come from `src/content/my_md/*.md` through `scripts/import-obsidian-blog.mjs`. The importer writes generated blog files into `src/content/blog/<note_id>/` and keeps a local cache under `.cache/obsidian-import/` so unchanged documents are not rewritten on every dev rebuild.
 
-For local editing, `npm run admin` starts a dashboard at `http://127.0.0.1:4323`. Its `Blog 管理` page can upload Markdown files into `src/content/my_md/`, scan existing sources, trigger the same importer with optional LLM translation or forced retranslation, and scan generated `src/content/blog/**/index*.mdx` entries as a grouped Blog list.
+For local editing, `npm run admin` starts a dashboard at `http://127.0.0.1:4323`. Its `Blog 管理` page can upload Markdown files into `src/content/my_md/`, scan existing sources, trigger the same importer with optional LLM translation or forced retranslation, and scan generated `src/content/blog/**/index*.mdx` entries as a grouped Blog list. The import source list supports multi-select and selected-only imports; the Blog list also exposes missing-English posts for selected batch translation to `index_en.mdx`.
 
 When translation is enabled, the importer always generates the Chinese source variant first, then optionally generates `index_en.mdx` from the translated result. English generation can reuse cached translations for unchanged notes.
+
+Translation failures such as model cooldown, 429, or usage limits are reported per document/locale. They should not prevent Chinese output from being written or stop the rest of a batch import.
 
 ## Blog Frontmatter
 

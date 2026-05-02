@@ -3,7 +3,7 @@ import path from 'node:path';
 import fg from 'fast-glob';
 import matter from 'gray-matter';
 import { getLangFromId, getSlugFromId } from '../../src/utils/content-id.mjs';
-import { getTranslationConfig } from './translate.mjs';
+import { getTranslationConfig, shouldTranslate, translateDocument } from './translate.mjs';
 
 const ROOT = process.cwd();
 const ADMIN_CACHE_DIR = path.join(ROOT, '.cache', 'admin-dev');
@@ -46,6 +46,42 @@ async function readJsonFile(filePath, fallback) {
 async function writeJsonFile(filePath, data) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`);
+}
+
+async function readFileIfExists(filePath) {
+  try {
+    return await fs.readFile(filePath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') return undefined;
+    throw error;
+  }
+}
+
+async function writeIfChanged(filePath, content) {
+  const existing = await readFileIfExists(filePath);
+  if (existing === content) return { changed: false };
+  await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, content);
+  return { changed: true };
+}
+
+function toAdminError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  let details;
+  const jsonMatch = message.match(/\{[\s\S]*\}$/);
+  if (jsonMatch) {
+    try {
+      details = JSON.parse(jsonMatch[0]);
+    } catch {
+      details = undefined;
+    }
+  }
+  return {
+    message,
+    details,
+    retryAfterSeconds: details?.error?.reset_seconds ?? details?.error?.resets_in_seconds,
+    code: details?.error?.code ?? details?.error?.type,
+  };
 }
 
 export async function scanBlogPosts() {
@@ -187,6 +223,82 @@ export async function withAdminTranslationEnv(overrides, callback) {
       else process.env[key] = previous[key];
     }
   }
+}
+
+export async function translateMissingEnglishPosts({ noteIds } = {}) {
+  const { posts } = await scanBlogPosts();
+  const noteIdSet = new Set((Array.isArray(noteIds) ? noteIds : []).map((noteId) => String(noteId)));
+  const targets = posts.filter((post) => {
+    if (noteIdSet.size > 0 && !noteIdSet.has(post.noteId)) return false;
+    return post.languages?.['zh-cn'] && !post.languages?.en;
+  });
+  const config = getTranslationConfig();
+  const results = [];
+
+  if (!shouldTranslate({ config, context: 'dev', targetLocale: 'en' })) {
+    return {
+      results: targets.map((post) => ({
+        noteId: post.noteId,
+        title: post.title,
+        skipped: true,
+        error: { message: 'LLM translation is disabled for dev context or target locale en.' },
+      })),
+      summary: { total: targets.length, translated: 0, skipped: targets.length, failed: 0, written: 0 },
+      translationConfig: config,
+    };
+  }
+
+  for (const post of targets) {
+    const zhPath = path.join(ROOT, post.languages['zh-cn'].relativePath);
+    const outputFile = path.join(path.dirname(zhPath), 'index_en.mdx');
+    try {
+      const raw = await fs.readFile(zhPath, 'utf8');
+      const { data, content } = matter(raw);
+      const translated = await translateDocument({
+        config,
+        sourceLocale: 'zh-cn',
+        targetLocale: 'en',
+        title: String(data.title ?? post.title),
+        description: String(data.description ?? post.description ?? ''),
+        content,
+      });
+      const serialized = matter.stringify(`${translated.content.trim()}\n`, {
+        ...data,
+        title: translated.title,
+        description: translated.description,
+      });
+      const write = await writeIfChanged(outputFile, serialized.endsWith('\n') ? serialized : `${serialized}\n`);
+      results.push({
+        noteId: post.noteId,
+        title: post.title,
+        output: outputFile,
+        relativeOutput: path.relative(ROOT, outputFile),
+        translated: true,
+        changed: write.changed,
+      });
+    } catch (error) {
+      results.push({
+        noteId: post.noteId,
+        title: post.title,
+        output: outputFile,
+        translated: false,
+        changed: false,
+        error: toAdminError(error),
+      });
+    }
+  }
+
+  return {
+    results,
+    summary: {
+      total: results.length,
+      translated: results.filter((result) => result.translated).length,
+      skipped: results.filter((result) => result.skipped).length,
+      failed: results.filter((result) => result.error).length,
+      written: results.filter((result) => result.changed).length,
+    },
+    translationConfig: config,
+  };
 }
 
 export async function readGraphSnapshot() {

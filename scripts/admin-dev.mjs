@@ -10,6 +10,7 @@ import {
   readGraphPresets,
   readGraphSnapshot,
   scanBlogPosts,
+  translateMissingEnglishPosts,
   withAdminTranslationEnv,
   writeAdminTranslationConfig,
   writeGraphPresets,
@@ -364,8 +365,11 @@ function pageHtml() {
             <p class="hint">导入时会读取“LLM 配置”面板保存的 baseUrl / apiKey / model，再叠加这里的临时开关。</p>
             <div class="actions" style="margin: 1rem 0;">
               <button id="runImport">清洗并导入 MDX</button>
-              <button class="secondary" id="runImportNoTranslate">只生成中文/复用缓存</button>
+              <button class="secondary" id="runImportNoTranslate">只生成中文 + 复用英文缓存</button>
+              <button class="secondary" id="selectAllNotes">全选</button>
+              <button class="secondary" id="clearSelectedNotes">清空选择</button>
             </div>
+            <p class="hint" id="selectedNotesHint">已选 0 / 0。未选择时会提示是否导入全部源文。</p>
             <div class="note-list" id="noteList"></div>
           </div>
         </section>
@@ -377,6 +381,22 @@ function pageHtml() {
           </div>
           <div class="panel-body">
             <div class="compact-list" id="blogPostList"></div>
+            <div style="height: 1rem"></div>
+            <section class="card-group">
+              <div class="card-group-header">
+                <strong>缺英文文章</strong>
+                <span id="missingEnglishHint">已选 0 / 0</span>
+              </div>
+              <div class="panel-body">
+                <p class="hint">这里列出已有 zh-cn 但缺少 en 的文章，可多选后转发到 LLM 翻译接口生成 index_en.mdx。</p>
+                <div class="actions" style="margin: 0.8rem 0;">
+                  <button class="secondary" id="selectAllMissingEnglish">全选缺英文</button>
+                  <button class="secondary" id="clearSelectedMissingEnglish">清空选择</button>
+                  <button id="translateMissingEnglish">翻译选中为英文</button>
+                </div>
+                <div class="compact-list" id="missingEnglishList"></div>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -463,7 +483,8 @@ function pageHtml() {
       graphPresets: [],
       translationConfig: null,
       editingFriendIndex: null,
-      selectedNoteIndex: null,
+      selectedNoteIds: new Set(),
+      selectedMissingEnglishIds: new Set(),
       activePage: 'relation',
       relationView: 'source',
       blogView: 'import',
@@ -626,12 +647,15 @@ function pageHtml() {
     function renderNotes() {
       $('metricNotes').textContent = state.notes.length;
       $('metricCachedTranslations').textContent = state.notes.filter((note) => note.translations?.en?.cachedForCurrentSource).length;
-      $('noteList').innerHTML = state.notes.map((note, index) => '<article class="note-card ' + (state.selectedNoteIndex === index ? 'is-selected' : '') + '" data-note-index="' + index + '">' +
+      $('selectedNotesHint').textContent = '已选 ' + state.selectedNoteIds.size + ' / ' + state.notes.length + '。未选择时会提示是否导入全部源文。';
+      $('noteList').innerHTML = state.notes.map((note, index) => '<article class="note-card ' + (state.selectedNoteIds.has(note.noteId) ? 'is-selected' : '') + '" data-note-index="' + index + '">' +
         '<h3>' + escapeHtml(note.title) + '</h3>' +
         '<div class="note-meta">' +
+          '<span class="pill">' + (state.selectedNoteIds.has(note.noteId) ? '已选' : '未选') + '</span>' +
           '<span class="pill">' + escapeHtml(note.filename) + '</span>' +
           '<span class="pill">note_id: ' + escapeHtml(note.noteId) + '</span>' +
           '<span class="pill">zh: ' + (note.hasZhOutput ? '已生成' : '未生成') + '</span>' +
+          '<span class="pill">en: ' + (note.translations?.en?.cachedForCurrentSource ? '缓存可用' : '缺缓存') + '</span>' +
           '<span class="pill">缓存: ' + (note.changedSinceCache ? '需更新' : '已匹配') + '</span>' +
         '</div>' +
       '</article>').join('') || '<p style="color: var(--muted);">没有扫描到 Markdown 文件。</p>';
@@ -644,6 +668,8 @@ function pageHtml() {
       const summary = state.blogSummary || { posts: 0, missingEnglish: 0 };
       $('metricBlogPosts').textContent = summary.posts ?? state.blogPosts.length;
       $('metricMissingEnglish').textContent = summary.missingEnglish ?? 0;
+      const missingEnglish = state.blogPosts.filter((post) => post.languages?.['zh-cn'] && !post.languages?.en);
+      $('missingEnglishHint').textContent = '已选 ' + state.selectedMissingEnglishIds.size + ' / ' + missingEnglish.length;
       $('blogPostList').innerHTML = state.blogPosts.length ? state.blogPosts.map((post) => {
         const langs = Object.keys(post.languages || {}).sort();
         return '<article class="info-card"><h3>' + escapeHtml(post.title) + '</h3>' +
@@ -652,6 +678,10 @@ function pageHtml() {
           '<p>' + escapeHtml((post.tags || []).join('、') || '无标签') + '</p>' +
           '<p>' + escapeHtml((post.files || []).join('\\n')) + '</p></article>';
       }).join('') : '<p class="empty-state">没有扫描到 Blog 内容。</p>';
+      $('missingEnglishList').innerHTML = missingEnglish.length ? missingEnglish.map((post) => '<article class="note-card ' + (state.selectedMissingEnglishIds.has(post.noteId) ? 'is-selected' : '') + '" data-missing-english-note-id="' + escapeHtml(post.noteId) + '"><h3>' + escapeHtml(post.title) + '</h3><div class="note-meta"><span class="pill">' + (state.selectedMissingEnglishIds.has(post.noteId) ? '已选' : '未选') + '</span><span class="pill">note_id: ' + escapeHtml(post.noteId) + '</span><span class="pill">zh-cn 来源</span><span class="pill">缺 en</span></div><p>' + escapeHtml((post.tags || []).join('、') || '无标签') + '</p></article>').join('') : '<p class="empty-state">没有缺英文的文章。</p>';
+      document.querySelectorAll('[data-missing-english-note-id]').forEach((card) => {
+        card.addEventListener('click', () => toggleMissingEnglish(card.dataset.missingEnglishNoteId));
+      });
     }
 
     function fillLlmConfigForm() {
@@ -864,15 +894,41 @@ function pageHtml() {
     }
 
     function selectNote(index) {
-      state.selectedNoteIndex = index;
-      renderNotes();
       const note = state.notes[index];
+      if (!note) return;
+      if (state.selectedNoteIds.has(note.noteId)) {
+        state.selectedNoteIds.delete(note.noteId);
+      } else {
+        state.selectedNoteIds.add(note.noteId);
+      }
+      renderNotes();
       log('已选中 Obsidian 源文件', {
         filename: note.filename,
         noteId: note.noteId,
         title: note.title,
         output: note.zhOutput,
+        selected: state.selectedNoteIds.has(note.noteId),
       }, 'blog');
+    }
+
+    function toggleMissingEnglish(noteId) {
+      if (!noteId) return;
+      if (state.selectedMissingEnglishIds.has(noteId)) {
+        state.selectedMissingEnglishIds.delete(noteId);
+      } else {
+        state.selectedMissingEnglishIds.add(noteId);
+      }
+      renderBlogPosts();
+    }
+
+    function selectedNoteIdsOrAllConfirmed() {
+      if (state.selectedNoteIds.size > 0) {
+        return [...state.selectedNoteIds];
+      }
+      if (!confirm('当前没有选择源文件，将导入全部 Obsidian Markdown，是否继续？')) {
+        return null;
+      }
+      return [];
     }
 
     function escapeHtml(value) {
@@ -888,6 +944,8 @@ function pageHtml() {
     async function scanNotes() {
       const payload = await api('/api/obsidian/scan');
       state.notes = payload.notes;
+      const available = new Set(state.notes.map((note) => note.noteId));
+      state.selectedNoteIds = new Set([...state.selectedNoteIds].filter((noteId) => available.has(noteId)));
       renderNotes();
     }
 
@@ -895,6 +953,8 @@ function pageHtml() {
       const payload = await api('/api/blog/posts');
       state.blogPosts = payload.posts;
       state.blogSummary = payload.summary;
+      const availableMissing = new Set(state.blogPosts.filter((post) => post.languages?.['zh-cn'] && !post.languages?.en).map((post) => post.noteId));
+      state.selectedMissingEnglishIds = new Set([...state.selectedMissingEnglishIds].filter((noteId) => availableMissing.has(noteId)));
       renderBlogPosts();
     }
 
@@ -1050,19 +1110,33 @@ function pageHtml() {
         toast('扫描完成：' + state.notes.length + ' 篇');
       });
     });
+    $('selectAllNotes').addEventListener('click', () => {
+      state.selectedNoteIds = new Set(state.notes.map((note) => note.noteId));
+      renderNotes();
+      log('已全选 Obsidian 源文件', { count: state.selectedNoteIds.size }, 'blog');
+    });
+    $('clearSelectedNotes').addEventListener('click', () => {
+      state.selectedNoteIds.clear();
+      renderNotes();
+      log('已清空 Obsidian 源文件选择', undefined, 'blog');
+    });
     $('runImport').addEventListener('click', async (event) => {
       await withBusy(event.currentTarget, '导入中...', async () => {
-        const payload = await api('/api/obsidian/import', { method: 'POST', body: JSON.stringify({ translate: $('translate').checked, forceRetranslate: $('forceRetranslate').checked }) });
-        log('Obsidian 导入完成', payload.summary, 'blog');
+        const noteIds = selectedNoteIdsOrAllConfirmed();
+        if (noteIds === null) return;
+        const payload = await api('/api/obsidian/import', { method: 'POST', body: JSON.stringify({ noteIds, translate: $('translate').checked, forceRetranslate: $('forceRetranslate').checked }) });
+        log('Obsidian 导入完成', { selected: noteIds.length || '全部', summary: payload.summary, results: payload.results }, 'blog');
         await scanNotes();
         await scanBlog();
-        toast('Obsidian 导入完成');
+        toast('Obsidian 导入完成，失败 ' + (payload.summary?.failed || 0) + ' 项');
       });
     });
     $('runImportNoTranslate').addEventListener('click', async (event) => {
       await withBusy(event.currentTarget, '导入中...', async () => {
-        const payload = await api('/api/obsidian/import', { method: 'POST', body: JSON.stringify({ translate: false, forceRetranslate: false }) });
-        log('Obsidian 中文导入完成', payload.summary, 'blog');
+        const noteIds = selectedNoteIdsOrAllConfirmed();
+        if (noteIds === null) return;
+        const payload = await api('/api/obsidian/import', { method: 'POST', body: JSON.stringify({ noteIds, translate: false, forceRetranslate: false }) });
+        log('Obsidian 中文导入完成', { selected: noteIds.length || '全部', summary: payload.summary, results: payload.results }, 'blog');
         await scanNotes();
         await scanBlog();
         toast('中文导入完成');
@@ -1073,6 +1147,29 @@ function pageHtml() {
         await scanBlog();
         log('Blog 列表扫描完成', state.blogSummary, 'blog');
         toast('Blog 列表已刷新');
+      });
+    });
+    $('selectAllMissingEnglish').addEventListener('click', () => {
+      state.selectedMissingEnglishIds = new Set(state.blogPosts.filter((post) => post.languages?.['zh-cn'] && !post.languages?.en).map((post) => post.noteId));
+      renderBlogPosts();
+      log('已全选缺英文文章', { count: state.selectedMissingEnglishIds.size }, 'blog');
+    });
+    $('clearSelectedMissingEnglish').addEventListener('click', () => {
+      state.selectedMissingEnglishIds.clear();
+      renderBlogPosts();
+      log('已清空缺英文文章选择', undefined, 'blog');
+    });
+    $('translateMissingEnglish').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '翻译中...', async () => {
+        if (state.selectedMissingEnglishIds.size === 0) {
+          log('没有选择缺英文文章', undefined, 'blog');
+          toast('请先选择缺英文文章');
+          return;
+        }
+        const payload = await api('/api/blog/translate-missing', { method: 'POST', body: JSON.stringify({ noteIds: [...state.selectedMissingEnglishIds] }) });
+        log('缺英文文章批量翻译完成', { summary: payload.summary, results: payload.results }, 'blog');
+        await scanBlog();
+        toast('批量翻译完成，失败 ' + (payload.summary?.failed || 0) + ' 项');
       });
     });
     $('reloadLlmConfig').addEventListener('click', async (event) => {
@@ -1238,7 +1335,11 @@ async function handleApi(req, res, url) {
     const result = await withAdminTranslationEnv({
       translateEnabled: body.translate,
       forceRetranslate: body.forceRetranslate,
-    }, () => runObsidianImport({ context: 'dev' }));
+    }, () => runObsidianImport({
+      context: 'dev',
+      sources: body.sources,
+      noteIds: body.noteIds,
+    }));
     jsonResponse(res, 200, result);
     return;
   }
@@ -1255,6 +1356,16 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'PUT' && url.pathname === '/api/blog/translation-config') {
     jsonResponse(res, 200, await writeAdminTranslationConfig(await readJsonBody(req)));
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/blog/translate-missing') {
+    const body = await readJsonBody(req);
+    const result = await withAdminTranslationEnv({
+      translateEnabled: true,
+      forceRetranslate: body.forceRetranslate,
+    }, () => translateMissingEnglishPosts({ noteIds: body.noteIds }));
+    jsonResponse(res, 200, result);
     return;
   }
 
