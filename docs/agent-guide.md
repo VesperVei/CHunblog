@@ -97,8 +97,10 @@ Check `git status --short` before editing and before committing.
 
 Use the smallest useful verification command.
 
-- `pnpm dev`: runs `scripts/import-obsidian-blog.mjs`, then `scripts/generate-graph.mjs`, then `scripts/build-dev-search-index.mjs`, then starts Astro. The importer runs in `dev` context, skips fresh LLM translation by default, and should avoid rewriting unchanged generated files.
-- `pnpm build`: runs graph generation, Astro build, then Pagefind index generation.
+- `pnpm dev`: runs `scripts/import-obsidian-blog.mjs`, then `scripts/generate-friends-data.mjs`, then `scripts/generate-graph.mjs`, then `scripts/build-dev-search-index.mjs`, then starts Astro. It no longer watches `src/content/my_md/`; use `npm run admin` to upload, scan, and trigger Obsidian imports explicitly.
+- `pnpm build`: runs Obsidian import, friend data generation, graph generation, Astro build, then Pagefind index generation.
+- `npm run admin`: starts the local-only admin dashboard at `http://127.0.0.1:4323`. It can edit `src/data/friends.json`, regenerate `src/data/links.ts` and `src/data/friends-graph.json`, upload Markdown into `src/content/my_md/`, scan Obsidian sources, and trigger the shared import/translation flow. Port `4322` is intentionally avoided because Astro dev commonly uses it in this repository.
+- Friend links should be maintained in `src/data/friends.json`. Treat `src/data/links.ts` and `src/data/friends-graph.json` as generated outputs from `scripts/generate-friends-data.mjs`. The optional `order` field controls visible Links-page card order within each category.
 - `pnpm preview`: preview built output.
 - Dev search cache metadata lives under `.cache/search/`, while the browser-served dev index is emitted to `public/dev-search-index.json`.
 

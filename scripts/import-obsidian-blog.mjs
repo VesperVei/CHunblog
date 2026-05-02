@@ -6,6 +6,7 @@ import matter from 'gray-matter';
 import { getTranslationConfig, shouldTranslate, translateDocument } from './lib/translate.mjs';
 
 const SOURCE_GLOB = 'src/content/my_md/*.md';
+const SOURCE_DIR = path.join(process.cwd(), 'src/content/my_md');
 const TARGET_DIR = path.join(process.cwd(), 'src/content/blog');
 const CACHE_DIR = path.join(process.cwd(), '.cache', 'obsidian-import');
 const CACHE_FILE = path.join(CACHE_DIR, 'cache.json');
@@ -372,7 +373,7 @@ function getCachedTranslation(cacheEntry, locale, translationConfig, sourceHash)
   };
 }
 
-async function importOne(filePath, cache, translationConfig) {
+export async function importOne(filePath, cache, translationConfig, context = IMPORT_CONTEXT) {
   const rawSource = await fs.readFile(filePath, 'utf8');
   const sourceHash = sha256(rawSource);
   const { data, content } = matter(rawSource);
@@ -414,7 +415,7 @@ async function importOne(filePath, cache, translationConfig) {
       continue;
     }
 
-    const canTranslateNow = shouldTranslate({ config: translationConfig, context: IMPORT_CONTEXT, targetLocale: locale });
+    const canTranslateNow = shouldTranslate({ config: translationConfig, context, targetLocale: locale });
     let translated = getCachedTranslation(cache.documents[sourceDocument.noteId], locale, translationConfig, sourceHash);
     let translatedNow = false;
 
@@ -481,23 +482,84 @@ function summarizeResults(results) {
   return { written, skipped, translated, reused };
 }
 
-async function main() {
+export async function scanObsidianSources() {
+  const files = await fg(SOURCE_GLOB, { absolute: true });
+  const cache = await loadCache();
+
+  return Promise.all(files.map(async (filePath) => {
+    const rawSource = await fs.readFile(filePath, 'utf8');
+    const sourceHash = sha256(rawSource);
+    const { data, content } = matter(rawSource);
+    const sourceDocument = buildSourceDocument(filePath, data, content);
+    const cacheEntry = cache.documents[sourceDocument.noteId];
+    const targetDir = path.join(TARGET_DIR, sourceDocument.noteId);
+
+    return {
+      source: filePath,
+      relativeSource: path.relative(process.cwd(), filePath),
+      filename: path.basename(filePath),
+      noteId: sourceDocument.noteId,
+      title: sourceDocument.frontmatter.normalized.title,
+      description: sourceDocument.frontmatter.normalized.description,
+      createdAt: sourceDocument.frontmatter.normalized.created_at,
+      updatedAt: sourceDocument.frontmatter.normalized.updated_at,
+      tags: sourceDocument.frontmatter.normalized.tags,
+      sourceHash,
+      changedSinceCache: cacheEntry?.sourceHash !== sourceHash,
+      zhOutput: path.join(targetDir, `index_${SOURCE_LOCALE}.mdx`),
+      hasZhOutput: Boolean(await readFileIfExists(path.join(targetDir, `index_${SOURCE_LOCALE}.mdx`))),
+      translations: Object.fromEntries(
+        Object.entries(cacheEntry?.translations ?? {}).map(([locale, entry]) => [
+          locale,
+          {
+            model: entry.model,
+            outputPath: entry.outputPath,
+            cachedForCurrentSource: entry.sourceHash === sourceHash,
+          },
+        ]),
+      ),
+    };
+  }));
+}
+
+export async function saveUploadedObsidianNote({ filename, content }) {
+  const safeName = path.basename(String(filename || '')).replace(/[^\w.\-\u4e00-\u9fa5]/g, '-');
+  if (!safeName || !safeName.endsWith('.md')) {
+    throw new Error('Uploaded note filename must end with .md');
+  }
+
+  await fs.mkdir(SOURCE_DIR, { recursive: true });
+  const outputFile = path.join(SOURCE_DIR, safeName);
+  await fs.writeFile(outputFile, String(content ?? ''));
+  return {
+    outputFile,
+    relativeOutput: path.relative(process.cwd(), outputFile),
+  };
+}
+
+export async function runObsidianImport({ context = IMPORT_CONTEXT } = {}) {
   const files = await fg(SOURCE_GLOB, { absolute: true });
   const results = [];
   const cache = await loadCache();
   const translationConfig = getTranslationConfig();
 
-  if (!translationConfig.model && translationConfig.translateEnabled !== false) {
-    console.log('[import-obsidian] English translation disabled: set LLM_TRANSLATION_CONFIG.model in scripts/lib/translate.mjs, or override it with OBSIDIAN_LLM_MODEL / LLM_MODEL.');
-  }
-
   for (const filePath of files) {
-    results.push(await importOne(filePath, cache, translationConfig));
+    results.push(await importOne(filePath, cache, translationConfig, context));
   }
 
   await saveCache(cache);
 
   const summary = summarizeResults(results);
+  return { results, summary, translationConfig, context };
+}
+
+async function main() {
+  const { results, summary, translationConfig } = await runObsidianImport();
+
+  if (!translationConfig.model && translationConfig.translateEnabled !== false) {
+    console.log('[import-obsidian] English translation disabled: set LLM_TRANSLATION_CONFIG.model in scripts/lib/translate.mjs, or override it with OBSIDIAN_LLM_MODEL / LLM_MODEL.');
+  }
+
   console.log(`Imported ${results.length} Obsidian notes (${summary.written} written, ${summary.skipped} unchanged, ${summary.translated} translated, ${summary.reused} cached translations reused).`);
   for (const result of results) {
     for (const localized of result.results) {
@@ -513,7 +575,9 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+}

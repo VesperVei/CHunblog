@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-02T00:00:00.000Z",
+  "generatedAt": "2026-05-02T07:46:56.524Z",
   "nodes": [
     {
       "id": "friend:vespervei",
@@ -12,7 +12,11 @@
         "en": "https://github.com/VesperVei",
         "zh-cn": "https://github.com/VesperVei"
       },
-      "tags": ["Pwn", "博客", "开发"],
+      "tags": [
+        "Pwn",
+        "博客",
+        "开发"
+      ],
       "aliases": [],
       "metadata": {
         "description": "博客站主，专注 Pwn 与开发。",
@@ -31,15 +35,17 @@
         "en": "https://github.com/IDCM-svg",
         "zh-cn": "https://github.com/IDCM-svg"
       },
-      "tags": ["Pwn", "博客"],
+      "tags": [
+        "Pwn",
+        "博客"
+      ],
       "aliases": [],
       "metadata": {
-        "description": "同为研究Pwn方向的朋友，wp写的很出色",
+        "description": "一位志同道合的 Pwn 友，他的 WP 也很出色。",
         "githubId": "IDCM-svg",
         "blog": "https://idcm-svg.github.io/HFTTC.github.io/"
       }
     },
-
     {
       "id": "friend:lingchen",
       "type": "friend",
@@ -51,7 +57,10 @@
         "en": "https://github.com/octocat",
         "zh-cn": "https://github.com/octocat"
       },
-      "tags": ["技术", "写作"],
+      "tags": [
+        "技术",
+        "写作"
+      ],
       "aliases": [],
       "metadata": {
         "description": "总能在技术讨论和日常碎片之间，保持一种认真又松弛的记录感。",
@@ -69,7 +78,10 @@
         "en": "https://github.com/torvalds",
         "zh-cn": "https://github.com/torvalds"
       },
-      "tags": ["工具", "工程"],
+      "tags": [
+        "工具",
+        "工程"
+      ],
       "aliases": [],
       "metadata": {
         "description": "没有固定博客，但会把代码、工具和奇怪的兴趣整理得很干净。",
@@ -87,11 +99,35 @@
         "en": "https://github.com/gaearon",
         "zh-cn": "https://github.com/gaearon"
       },
-      "tags": ["日常", "分享"],
+      "tags": [
+        "日常",
+        "分享"
+      ],
       "aliases": [],
       "metadata": {
         "description": "更像一个长期在线的朋友书签，偶尔分享链接，偶尔分享生活。",
         "githubId": "gaearon"
+      }
+    },
+    {
+      "id": "friend:ErinaYip",
+      "type": "friend",
+      "titles": {
+        "en": "ErinaYip",
+        "zh-cn": "ErinaYip"
+      },
+      "urls": {
+        "en": "https://github.com/ErinaYip",
+        "zh-cn": "https://github.com/ErinaYip"
+      },
+      "tags": [
+        "Web",
+        "开发"
+      ],
+      "aliases": [],
+      "metadata": {
+        "description": "本站点的原作者，没有开源的贡献，就没有本博客的诞生",
+        "githubId": "ErinaYip"
       }
     },
     {
@@ -116,8 +152,8 @@
         "zh-cn": "博客"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-blog",
-        "zh-cn": "/zh-cn/links/#friend-tag-blog"
+        "en": "/en/links/#friend-tag-e58d9ae5aea2",
+        "zh-cn": "/zh-cn/links/#friend-tag-e58d9ae5aea2"
       },
       "tags": [],
       "aliases": []
@@ -130,8 +166,8 @@
         "zh-cn": "开发"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-development",
-        "zh-cn": "/zh-cn/links/#friend-tag-development"
+        "en": "/en/links/#friend-tag-e5bc80e58f91",
+        "zh-cn": "/zh-cn/links/#friend-tag-e5bc80e58f91"
       },
       "tags": [],
       "aliases": []
@@ -144,8 +180,8 @@
         "zh-cn": "技术"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-tech",
-        "zh-cn": "/zh-cn/links/#friend-tag-tech"
+        "en": "/en/links/#friend-tag-e68a80e69caf",
+        "zh-cn": "/zh-cn/links/#friend-tag-e68a80e69caf"
       },
       "tags": [],
       "aliases": []
@@ -158,8 +194,8 @@
         "zh-cn": "写作"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-writing",
-        "zh-cn": "/zh-cn/links/#friend-tag-writing"
+        "en": "/en/links/#friend-tag-e58699e4bd9c",
+        "zh-cn": "/zh-cn/links/#friend-tag-e58699e4bd9c"
       },
       "tags": [],
       "aliases": []
@@ -172,8 +208,8 @@
         "zh-cn": "工具"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-tools",
-        "zh-cn": "/zh-cn/links/#friend-tag-tools"
+        "en": "/en/links/#friend-tag-e5b7a5e585b7",
+        "zh-cn": "/zh-cn/links/#friend-tag-e5b7a5e585b7"
       },
       "tags": [],
       "aliases": []
@@ -186,8 +222,8 @@
         "zh-cn": "工程"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-engineering",
-        "zh-cn": "/zh-cn/links/#friend-tag-engineering"
+        "en": "/en/links/#friend-tag-e5b7a5e7a88b",
+        "zh-cn": "/zh-cn/links/#friend-tag-e5b7a5e7a88b"
       },
       "tags": [],
       "aliases": []
@@ -200,8 +236,8 @@
         "zh-cn": "日常"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-everyday",
-        "zh-cn": "/zh-cn/links/#friend-tag-everyday"
+        "en": "/en/links/#friend-tag-e697a5e5b8b8",
+        "zh-cn": "/zh-cn/links/#friend-tag-e697a5e5b8b8"
       },
       "tags": [],
       "aliases": []
@@ -214,8 +250,22 @@
         "zh-cn": "分享"
       },
       "urls": {
-        "en": "/en/links/#friend-tag-sharing",
-        "zh-cn": "/zh-cn/links/#friend-tag-sharing"
+        "en": "/en/links/#friend-tag-e58886e4baab",
+        "zh-cn": "/zh-cn/links/#friend-tag-e58886e4baab"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:Web",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Web",
+        "zh-cn": "Web"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-web",
+        "zh-cn": "/zh-cn/links/#friend-tag-web"
       },
       "tags": [],
       "aliases": []
@@ -229,19 +279,7 @@
       "relation": "Pwn"
     },
     {
-      "source": "friend:IDCM-svg",
-      "target": "tag:Pwn",
-      "exists": true,
-      "relation": "Pwn"
-    },
-    {
       "source": "friend:vespervei",
-      "target": "tag:博客",
-      "exists": true,
-      "relation": "博客"
-    },
-    {
-      "source": "friend:IDCM-svg",
       "target": "tag:博客",
       "exists": true,
       "relation": "博客"
@@ -251,6 +289,18 @@
       "target": "tag:开发",
       "exists": true,
       "relation": "开发"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "tag:Pwn",
+      "exists": true,
+      "relation": "Pwn"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "tag:博客",
+      "exists": true,
+      "relation": "博客"
     },
     {
       "source": "friend:lingchen",
@@ -289,16 +339,34 @@
       "relation": "分享"
     },
     {
-      "source": "friend:lingchen",
-      "target": "friend:aster",
+      "source": "friend:ErinaYip",
+      "target": "tag:Web",
       "exists": true,
-      "relation": "队友"
+      "relation": "Web"
+    },
+    {
+      "source": "friend:ErinaYip",
+      "target": "tag:开发",
+      "exists": true,
+      "relation": "开发"
     },
     {
       "source": "friend:IDCM-svg",
       "target": "friend:vespervei",
       "exists": true,
       "relation": "兄弟"
+    },
+    {
+      "source": "friend:aster",
+      "target": "friend:lingchen",
+      "exists": true,
+      "relation": "队友"
+    },
+    {
+      "source": "friend:ErinaYip",
+      "target": "friend:vespervei",
+      "exists": true,
+      "relation": "队友"
     }
   ]
 }

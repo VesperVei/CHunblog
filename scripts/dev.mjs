@@ -3,7 +3,6 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 
 const ROOT = process.cwd();
-const IMPORT_SOURCE_DIR = path.join(ROOT, 'src/content/my_md');
 const ASTRO_BIN = path.join(ROOT, 'node_modules/.bin/astro');
 
 let running = false;
@@ -42,6 +41,7 @@ async function syncImportedContent() {
 
   try {
     await runNodeScript(path.join(ROOT, 'scripts/import-obsidian-blog.mjs'));
+    await runNodeScript(path.join(ROOT, 'scripts/generate-friends-data.mjs'));
     await runNodeScript(path.join(ROOT, 'scripts/generate-graph.mjs'));
     await runNodeScript(path.join(ROOT, 'scripts/build-dev-search-index.mjs'));
   } catch (error) {
@@ -78,23 +78,8 @@ function scheduleSync(reason) {
   }, 150);
 }
 
-function watchImportSources() {
-  if (!fs.existsSync(IMPORT_SOURCE_DIR)) {
-    return;
-  }
-
-  fs.watch(IMPORT_SOURCE_DIR, { recursive: true }, (_eventType, filename) => {
-    if (!filename || !filename.endsWith('.md')) {
-      return;
-    }
-
-    scheduleSync(filename);
-  });
-}
-
 async function main() {
   await syncImportedContent();
-  watchImportSources();
   watchBlogContent();
 
   const astro = spawn(ASTRO_BIN, ['dev'], {

@@ -77,5 +77,6 @@ Theme variables are defined in `src/sass/_variables.scss`. The project uses CSS 
 - `src/utils/theme-script.ts`: client-side theme and accent color controls.
 - `src/utils/remark-mermaid.js`: remark plugin for Mermaid support.
 - `src/utils/link-presets.ts`: named navigation link presets.
-- `src/data/links.ts`: structured links data for the blog, tech, and other categories on the links page.
-- `src/data/friends-graph.json`: separately maintained relationship graph data for the friends category, including tag anchors and optional friend-to-friend relation edges.
+- `src/data/friends.json`: human-maintained friend/link source data used by the local admin dashboard and friend data generator. Visible front-page cards can use `order` for per-category sorting.
+- `src/data/links.ts`: generated links data for the blog, tech, and other categories on the links page. Do not hand-edit it; update `src/data/friends.json` and run `npm run generate:friends`.
+- `src/data/friends-graph.json`: generated relationship graph data for the friends category, including tag anchors and optional friend-to-friend relation edges.
