@@ -76,7 +76,7 @@ const links = navBarConfig.links.map(item => {
 })}
 {siteConfig.search.enable && (
   <li id="search">
-    <button id="search-toggle" class="circle">
+    <button id="search-toggle" class="circle" type="button" aria-label={t(I18nKey.search)}>
       <Icon name="magnifying-glass" />
     </button>
   </li>

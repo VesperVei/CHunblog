@@ -17,6 +17,7 @@ src/
   assets/        Images imported through Astro.
   components/    Reusable Astro components.
   content/       MDX pages and blog posts.
+  data/          Structured UI data such as friend links.
   i18n/          Translation keys and language strings.
   layouts/       Page-level layout shells.
   pages/         Astro filesystem routes.
@@ -33,6 +34,7 @@ Routes are defined in `src/pages/`.
 - `src/pages/index.astro`: root index. In multilingual mode it redirects to `/en`.
 - `src/pages/[lang]/index.astro`: localized home page.
 - `src/pages/about/index.astro` and `src/pages/[lang]/about.astro`: about pages.
+- `src/pages/links.astro` and `src/pages/[lang]/links.astro`: friend links page rendered from structured data instead of MDX page content.
 - `src/pages/blog/[...page].astro` and `src/pages/[lang]/blog/[...page].astro`: paginated blog lists.
 - `src/pages/blog/[slug].astro` and `src/pages/[lang]/blog/[slug].astro`: blog post detail pages.
 - `src/pages/tags/index.astro` and `src/pages/[lang]/tags/index.astro`: tag index pages.
@@ -52,6 +54,7 @@ In multilingual mode, the unprefixed pages usually redirect or return empty outp
 
 - `components/blog/`: blog cards, lists, post metadata, tags, TOC, pagination, comment provider components, and previous/next navigation.
 - `components/common/`: icons, formatted dates, generated CSS variables, Mermaid setup, and shared scripts.
+- `components/links/`: friend links page layout and link cards. The dedicated friends relationship graph now lives under `components/links/friends-graph/`.
 - `components/shell/`: HTML head metadata and footer pieces used by page layouts.
 - `components/markdown/`: MDX rendering wrapper.
 - `components/nav/`: header, nav links, language switcher, theme switcher, accent color controls, and feed menu.
@@ -74,3 +77,5 @@ Theme variables are defined in `src/sass/_variables.scss`. The project uses CSS 
 - `src/utils/theme-script.ts`: client-side theme and accent color controls.
 - `src/utils/remark-mermaid.js`: remark plugin for Mermaid support.
 - `src/utils/link-presets.ts`: named navigation link presets.
+- `src/data/links.ts`: structured links data for the blog, tech, and other categories on the links page.
+- `src/data/friends-graph.json`: separately maintained relationship graph data for the friends category, including tag anchors and optional friend-to-friend relation edges.

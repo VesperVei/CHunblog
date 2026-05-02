@@ -77,6 +77,7 @@ export const zh_cn: Translation = {
   [I18nKey.archive]: "归档",
   [I18nKey.search]: "搜索",
   [I18nKey.links]: "链接",
+  [I18nKey.friends]: "友邻",
   [I18nKey.feed]: "推送",
   [I18nKey.demo]: "演示",
   [I18nKey.tags]: "标签",

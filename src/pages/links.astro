@@ -1,0 +1,13 @@
+---
+import LinksPage from "../components/links/LinksPage.astro";
+import { isMultiLangMode } from "../utils/pages";
+import { getDefaultLocale } from "../utils/site-config";
+
+if (isMultiLangMode()) {
+  return Astro.redirect("/en/links");
+}
+
+const locale = getDefaultLocale();
+---
+
+<LinksPage locale={locale} />

@@ -1,0 +1,16 @@
+---
+import LinksPage from "../../components/links/LinksPage.astro";
+import { getLocalizedStaticPaths, isMultiLangMode } from "../../utils/pages";
+
+export function getStaticPaths() {
+  return getLocalizedStaticPaths();
+}
+
+const { lang } = Astro.params;
+
+if (!isMultiLangMode()) {
+  return Astro.redirect("/404");
+}
+---
+
+<LinksPage locale={lang} />

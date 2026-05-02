@@ -1,14 +1,15 @@
 ---
 import HeaderLink from '../nav/HeaderLink.astro';
 import { siteConfig, footerConfig } from '../../config';
-import I18nKey from "../../i18n/i18nKey";
 import { detectLocale } from "../../utils/i18n";
-import I18nLabel from "../common/I18nLabel.astro"
 import { type NavBarLink, type PresetNavBarLink } from "../../type/config.ts";
 import { getLinkPreset } from '../../utils/link-presets';
 
 const today = new Date();
 const currentLocale = detectLocale(Astro.url.pathname);
+const footerNote = currentLocale === 'zh-cn'
+  ? 'Vesper Vei 的个人博客，记录写作、思考与实验。'
+  : 'Personal notes, writings, and experiments by Vesper Vei.';
 
 const isPresetLink = (item: NavBarLink | number | PresetNavBarLink): item is PresetNavBarLink => {
   return typeof item === 'object' && item !== null && 'preset' in item;
@@ -36,11 +37,6 @@ const links = footerConfig.links.map(item => {
     &copy; { siteConfig.title }, {today.getFullYear()}
   </p>
   <p>
-    <small>
-      <I18nLabel k={I18nKey.powered_by} p={{
-        Astro: '<a class="link external" href="https://astro.build/">Astro</a>',
-        Goosequill: '<a class="link external" href="https://github.com/ErinaYip/goosequill">Goosequill</a>',
-      }} />
-    </small>
+    <small>{footerNote}</small>
   </p>
 </footer>

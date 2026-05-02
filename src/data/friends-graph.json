@@ -1,0 +1,304 @@
+{
+  "generatedAt": "2026-05-02T00:00:00.000Z",
+  "nodes": [
+    {
+      "id": "friend:vespervei",
+      "type": "friend",
+      "titles": {
+        "en": "VesperVei",
+        "zh-cn": "VesperVei"
+      },
+      "urls": {
+        "en": "https://github.com/VesperVei",
+        "zh-cn": "https://github.com/VesperVei"
+      },
+      "tags": ["Pwn", "博客", "开发"],
+      "aliases": [],
+      "metadata": {
+        "description": "博客站主，专注 Pwn 与开发。",
+        "githubId": "VesperVei",
+        "blog": "https://vespervei.com"
+      }
+    },
+    {
+      "id": "friend:IDCM-svg",
+      "type": "friend",
+      "titles": {
+        "en": "TimeMachine",
+        "zh-cn": "时光机"
+      },
+      "urls": {
+        "en": "https://github.com/IDCM-svg",
+        "zh-cn": "https://github.com/IDCM-svg"
+      },
+      "tags": ["Pwn", "博客"],
+      "aliases": [],
+      "metadata": {
+        "description": "同为研究Pwn方向的朋友，wp写的很出色",
+        "githubId": "IDCM-svg",
+        "blog": "https://idcm-svg.github.io/HFTTC.github.io/"
+      }
+    },
+
+    {
+      "id": "friend:lingchen",
+      "type": "friend",
+      "titles": {
+        "en": "Lingchen Notes",
+        "zh-cn": "凌晨备忘录"
+      },
+      "urls": {
+        "en": "https://github.com/octocat",
+        "zh-cn": "https://github.com/octocat"
+      },
+      "tags": ["技术", "写作"],
+      "aliases": [],
+      "metadata": {
+        "description": "总能在技术讨论和日常碎片之间，保持一种认真又松弛的记录感。",
+        "githubId": "octocat"
+      }
+    },
+    {
+      "id": "friend:aster",
+      "type": "friend",
+      "titles": {
+        "en": "Aster",
+        "zh-cn": "Aster"
+      },
+      "urls": {
+        "en": "https://github.com/torvalds",
+        "zh-cn": "https://github.com/torvalds"
+      },
+      "tags": ["工具", "工程"],
+      "aliases": [],
+      "metadata": {
+        "description": "没有固定博客，但会把代码、工具和奇怪的兴趣整理得很干净。",
+        "githubId": "torvalds"
+      }
+    },
+    {
+      "id": "friend:mori",
+      "type": "friend",
+      "titles": {
+        "en": "Mori",
+        "zh-cn": "Mori"
+      },
+      "urls": {
+        "en": "https://github.com/gaearon",
+        "zh-cn": "https://github.com/gaearon"
+      },
+      "tags": ["日常", "分享"],
+      "aliases": [],
+      "metadata": {
+        "description": "更像一个长期在线的朋友书签，偶尔分享链接，偶尔分享生活。",
+        "githubId": "gaearon"
+      }
+    },
+    {
+      "id": "tag:Pwn",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Pwn",
+        "zh-cn": "Pwn"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-pwn",
+        "zh-cn": "/zh-cn/links/#friend-tag-pwn"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:博客",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Blog",
+        "zh-cn": "博客"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-blog",
+        "zh-cn": "/zh-cn/links/#friend-tag-blog"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:开发",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Development",
+        "zh-cn": "开发"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-development",
+        "zh-cn": "/zh-cn/links/#friend-tag-development"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:技术",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Tech",
+        "zh-cn": "技术"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-tech",
+        "zh-cn": "/zh-cn/links/#friend-tag-tech"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:写作",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Writing",
+        "zh-cn": "写作"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-writing",
+        "zh-cn": "/zh-cn/links/#friend-tag-writing"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:工具",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Tools",
+        "zh-cn": "工具"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-tools",
+        "zh-cn": "/zh-cn/links/#friend-tag-tools"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:工程",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Engineering",
+        "zh-cn": "工程"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-engineering",
+        "zh-cn": "/zh-cn/links/#friend-tag-engineering"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:日常",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Everyday",
+        "zh-cn": "日常"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-everyday",
+        "zh-cn": "/zh-cn/links/#friend-tag-everyday"
+      },
+      "tags": [],
+      "aliases": []
+    },
+    {
+      "id": "tag:分享",
+      "type": "friend-tag",
+      "titles": {
+        "en": "Sharing",
+        "zh-cn": "分享"
+      },
+      "urls": {
+        "en": "/en/links/#friend-tag-sharing",
+        "zh-cn": "/zh-cn/links/#friend-tag-sharing"
+      },
+      "tags": [],
+      "aliases": []
+    }
+  ],
+  "links": [
+    {
+      "source": "friend:vespervei",
+      "target": "tag:Pwn",
+      "exists": true,
+      "relation": "Pwn"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "tag:Pwn",
+      "exists": true,
+      "relation": "Pwn"
+    },
+    {
+      "source": "friend:vespervei",
+      "target": "tag:博客",
+      "exists": true,
+      "relation": "博客"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "tag:博客",
+      "exists": true,
+      "relation": "博客"
+    },
+    {
+      "source": "friend:vespervei",
+      "target": "tag:开发",
+      "exists": true,
+      "relation": "开发"
+    },
+    {
+      "source": "friend:lingchen",
+      "target": "tag:技术",
+      "exists": true,
+      "relation": "技术"
+    },
+    {
+      "source": "friend:lingchen",
+      "target": "tag:写作",
+      "exists": true,
+      "relation": "写作"
+    },
+    {
+      "source": "friend:aster",
+      "target": "tag:工具",
+      "exists": true,
+      "relation": "工具"
+    },
+    {
+      "source": "friend:aster",
+      "target": "tag:工程",
+      "exists": true,
+      "relation": "工程"
+    },
+    {
+      "source": "friend:mori",
+      "target": "tag:日常",
+      "exists": true,
+      "relation": "日常"
+    },
+    {
+      "source": "friend:mori",
+      "target": "tag:分享",
+      "exists": true,
+      "relation": "分享"
+    },
+    {
+      "source": "friend:lingchen",
+      "target": "friend:aster",
+      "exists": true,
+      "relation": "队友"
+    },
+    {
+      "source": "friend:IDCM-svg",
+      "target": "friend:vespervei",
+      "exists": true,
+      "relation": "兄弟"
+    }
+  ]
+}

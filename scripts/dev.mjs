@@ -43,6 +43,7 @@ async function syncImportedContent() {
   try {
     await runNodeScript(path.join(ROOT, 'scripts/import-obsidian-blog.mjs'));
     await runNodeScript(path.join(ROOT, 'scripts/generate-graph.mjs'));
+    await runNodeScript(path.join(ROOT, 'scripts/build-dev-search-index.mjs'));
   } catch (error) {
     console.error('[dev-sync] sync failed:', error.message);
   } finally {
@@ -52,6 +53,21 @@ async function syncImportedContent() {
       await syncImportedContent();
     }
   }
+}
+
+function watchBlogContent() {
+  const blogDir = path.join(ROOT, 'src/content/blog');
+  if (!fs.existsSync(blogDir)) {
+    return;
+  }
+
+  fs.watch(blogDir, { recursive: true }, (_eventType, filename) => {
+    if (!filename || !/\.mdx?$/.test(filename)) {
+      return;
+    }
+
+    scheduleSync(`blog content change: ${filename}`);
+  });
 }
 
 function scheduleSync(reason) {
@@ -79,6 +95,7 @@ function watchImportSources() {
 async function main() {
   await syncImportedContent();
   watchImportSources();
+  watchBlogContent();
 
   const astro = spawn(ASTRO_BIN, ['dev'], {
     cwd: ROOT,
