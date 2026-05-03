@@ -32,9 +32,13 @@ Most visual styling uses CSS variables such as `--bg-color`, `--fg-color`, `--ac
 
 The friend links page under `src/components/links/LinksPage.astro` intentionally reuses those variables directly instead of defining a separate color system. Its hover borders, active filter pills, tag accents, and soft glow all derive from the existing accent color runtime so the page stays in sync with the palette controls.
 
-The friends category now uses `src/components/links/friends-graph/FriendsGraph.astro`, which still runs on the shared graph runtime but reads from a separately maintained `src/data/friends-graph.json` data source rather than the site-wide `public/graph.json`.
+The friends category now uses `src/components/links/friends-graph/FriendsGraph.astro`, which still runs on the shared graph runtime but reads from generated `src/data/friends-graph.json` data rather than the site-wide `public/graph.json`. Maintain friend/link source data in `src/data/friends.json`, then run `npm run generate:friends` or use the local admin dashboard.
 
 That friends graph can selectively hide settings groups while keeping the same graph engine. The current friends view hides the generic filters group and only exposes appearance, forces, and layout controls.
+
+The site-wide Graph view loads its built-in template presets from `src/data/graph-presets.json` through `src/graph/presets.ts`. Editing this JSON, either directly or via `npm run admin` under `Graph 管理 -> 模板管理`, changes the built-in presets available to all visitors. Browser-local presets remain stored in `localStorage` and are still private to each visitor.
+
+`scripts/generate-graph.mjs` writes `public/graph.json` and records recent graph diagnostics under `.cache/admin-dev/graph-diagnostics.json`. The admin dashboard reads those diagnostics to show the same missing wikilink issues that appear during `pnpm dev` or graph regeneration.
 
 ## Accent Color
 
@@ -56,6 +60,8 @@ When the active theme changes, the script reapplies the accent color so derived 
 ## Expressive Code
 
 Expressive Code is configured in `astro.config.mjs`.
+
+Obsidian imports normalize Shiki Highlighter style code fences before content reaches Astro. The import pipeline preserves Expressive Code meta like `showLineNumbers`, `startLineNumber`, `{1,3-5}`, `ins={...}`, `del={...}`, and `title="..."`. Reverse-engineering aliases are normalized during import: IDA pseudocode to `cpp`, explicit disassembly to `asm`, and mixed `gdb`/`pwndbg`/hex dump output to `txt`.
 
 Current behavior:
 

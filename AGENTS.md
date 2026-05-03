@@ -12,7 +12,8 @@
 ## 仓库事实
 - 单包 Astro 站点，不是 workspace；核心命令只有 `pnpm dev`、`pnpm build`、`pnpm preview`。
 - `pnpm dev` / `pnpm build` 前都会先执行 `scripts/generate-graph.mjs`，生成统一的 `public/graph.json`。
-- `scripts/import-obsidian-blog.mjs` 会把 `src/content/my_md/*.md` 导入到 `src/content/blog/<note_id>/`，并把缓存写到 `.cache/obsidian-import/`；dev 模式默认跳过新的 LLM 翻译请求，只复用未过期缓存并避免重写未变化文件。
+- `scripts/import-obsidian-blog.mjs` 是 Obsidian 导入的兼容入口；真实分层逻辑在 `scripts/obsidian-import/`。它会把 `src/content/my_md/*.md` 导入到 `src/content/blog/<note_id>/`，缓存写到 `.cache/obsidian-import/`；dev 模式默认跳过新的 LLM 翻译请求，只复用未过期缓存并避免重写未变化文件。Obsidian 插件语法清洗走 transform 管线，Dataview 当前只保守转换为静态提示并记录诊断，不执行查询。导入 frontmatter 会把站点 tags 归一为少量稳定 slug，并将比赛/题目/难度/保护机制等中文字段映射到结构化元数据；未发布或超量标签会进入诊断。正文清洗会移除 Obsidian 进度条和内联 style，规范图片 alt/尺寸语法，并对未导入的本地图片嵌入记录诊断。Shiki Highlighter/Expressive Code 代码块 meta 会被保留，`IDA`/伪代码归一为 `cpp`，纯反汇编归一为 `asm`，`gdb`/`pwndbg`/十六进制 dump 归一为 `txt`。
+- `npm run admin` 启动本地后台，默认 `http://127.0.0.1:4323`；包含 `友邻管理`、`Blog 管理`、`Graph 管理`。Blog 管理可配置本地 LLM 导入参数（写入 `.cache/admin-dev/translation-config.json`），Graph 管理读取 `public/graph.json`、记录 missing wikilink 诊断并维护 `src/data/graph-presets.json` 内置模板。
 - `pnpm build` 实际执行 `astro build && pagefind --site dist`。搜索索引不是 Astro 自动产物，改搜索或构建逻辑时必须记住 Pagefind 这一步。
 - 部署工作流在 `.forgejo/workflows/deploy.yml`，CI 只跑 `pnpm install` 和 `pnpm run build`，Node 版本固定为 `20`。
 - `public/icons` 是 git submodule，来自 `.gitmodules`。不要把它当普通本地目录处理；缺图标时先确认 submodule 是否已初始化。
@@ -26,6 +27,7 @@
 - `src/content/` 下页面内容也走 collection；页面或文章的语言选择、slug 生成、分页、tag 路由都应复用 `src/utils/pages.ts`，不要在页面里重新实现。
 - 双链和图谱统一使用 `note_id` 作为内容主键；`created_at` / `updated_at` 取代旧的 `pubDate` / `updatedDate`。
 - 图谱节点模型按 `note_id` 聚合同一内容，并在单个节点上保留 `titles[lang]` 与 `urls[lang]` 的多语言映射；处理 wikilink、多语言导入或图谱跳转时，不要误以为一个节点只能对应单语标题或单一路径。
+- 站点 Graph 设置里的内置模板来自 `src/data/graph-presets.json`，会影响所有访客；浏览器 localStorage 里的用户模板只是个人本地状态。
 - 第一版双链只做 `[[target]]`、`[[target|alias]]`、`[[target#heading|alias]]`；`![[embed]]` 仍不做真实嵌入。
 
 ## 主题与渲染

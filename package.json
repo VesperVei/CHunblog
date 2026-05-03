@@ -4,8 +4,10 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
+    "admin": "node ./scripts/admin-dev.mjs",
+    "generate:friends": "node ./scripts/generate-friends-data.mjs",
     "import:obsidian": "node ./scripts/import-obsidian-blog.mjs",
-    "prebuild": "node ./scripts/import-obsidian-blog.mjs && node ./scripts/generate-graph.mjs",
+    "prebuild": "node ./scripts/import-obsidian-blog.mjs && node ./scripts/generate-friends-data.mjs && node ./scripts/generate-graph.mjs",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro"

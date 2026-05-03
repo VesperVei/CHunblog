@@ -77,5 +77,13 @@ Theme variables are defined in `src/sass/_variables.scss`. The project uses CSS 
 - `src/utils/theme-script.ts`: client-side theme and accent color controls.
 - `src/utils/remark-mermaid.js`: remark plugin for Mermaid support.
 - `src/utils/link-presets.ts`: named navigation link presets.
-- `src/data/links.ts`: structured links data for the blog, tech, and other categories on the links page.
-- `src/data/friends-graph.json`: separately maintained relationship graph data for the friends category, including tag anchors and optional friend-to-friend relation edges.
+- `src/data/friends.json`: human-maintained friend/link source data used by the local admin dashboard and friend data generator. Visible front-page cards can use `order` for per-category sorting.
+- `src/data/links.ts`: generated links data for the blog, tech, and other categories on the links page. Do not hand-edit it; update `src/data/friends.json` and run `npm run generate:friends`.
+- `src/data/friends-graph.json`: generated relationship graph data for the friends category, including tag anchors and optional friend-to-friend relation edges.
+- `src/data/graph-presets.json`: built-in Graph view presets shown to every visitor in the Graph settings template selector. It is editable through `npm run admin` under `Graph 管理 -> 模板管理`.
+
+## Import Scripts
+
+- `scripts/import-obsidian-blog.mjs`: compatibility entry for CLI, build, dev, and admin Obsidian imports. Keep its exported API stable for `runObsidianImport`, `scanObsidianSources`, `saveUploadedObsidianNote`, and `importOne`.
+- `scripts/obsidian-import/`: layered Obsidian import implementation. It separates config, cache, source scanning, frontmatter normalization/serialization, Markdown transform pipeline, plugin-specific cleanup, output writing, and translation orchestration.
+- `scripts/obsidian-import/plugins/`: static cleanup for Obsidian plugin syntax. Dataview is currently conservative: fenced `dataview`/`dataviewjs` blocks become static callout placeholders plus import diagnostics; the importer does not execute Dataview queries. Code block cleanup keeps Shiki Highlighter / Expressive Code meta and normalizes common reverse-engineering languages such as IDA pseudocode to `cpp`, disassembly to `asm`, and debugger/dump output to `txt`.

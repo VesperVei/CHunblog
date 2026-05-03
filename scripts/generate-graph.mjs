@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { readGraphSnapshot, recordGraphDiagnostics } from './lib/admin-content.mjs';
 import { buildContentIndex } from '../src/utils/content-index.mjs';
 import { parseWikiLink, slugifyHeading } from '../src/utils/wiki.mjs';
 
@@ -88,6 +89,8 @@ async function main() {
       2,
     ),
   );
+
+  await recordGraphDiagnostics({ graph: await readGraphSnapshot() });
 
   for (const warning of contentIndex.warnings) {
     console.warn(warning);
