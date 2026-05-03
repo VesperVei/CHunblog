@@ -46,6 +46,8 @@ Obsidian imports currently come from `src/content/my_md/*.md` through `scripts/i
 
 Obsidian plugin cleanup is handled by the import transform pipeline. Dataview blocks are not executed yet; fenced `dataview` and `dataviewjs` blocks are converted to static callout placeholders and recorded as diagnostics so dynamic content loss is visible instead of silent. Meta Bind embed blocks are removed with diagnostics because they represent Obsidian-local UI modules.
 
+The import pipeline also cleans presentation-only Obsidian artifacts from Markdown body content. Progress elements are removed, `font` tags and styled `span` wrappers are stripped or converted to plain/`mark` markup, inline `style` attributes are removed, Markdown image alt text is normalized, and Obsidian image size syntax such as `![image.png|579](...)` is reduced to standard Markdown image syntax. Local Obsidian image embeds such as `![[image.png]]` are not imported as attachments yet; they remain visible in diagnostics.
+
 Code block cleanup targets Shiki Highlighter / Expressive Code syntax. Compatible meta such as `showLineNumbers`, `startLineNumber=10`, `{3-4,8-9}`, `title="..."`, `ins={...}`, and `del={...}` is preserved. Language aliases are normalized for the generated site: IDA pseudocode (`IDA`, `ida`, `pseudocode`) becomes `cpp`, explicit disassembly (`ida-asm`, `disasm`, `assembly`) becomes `asm`, and mixed debugger or dump output (`gdb`, `pwndbg`, `hex`, `hexdump`) becomes `txt`. Unknown code block meta is preserved but recorded as diagnostics.
 
 For local editing, `npm run admin` starts a dashboard at `http://127.0.0.1:4323`. Its `Blog 管理` page can upload Markdown files into `src/content/my_md/`, scan existing sources, trigger the same importer with optional LLM translation or forced retranslation, and scan generated `src/content/blog/**/index*.mdx` entries as a grouped Blog list. The import source list supports multi-select and selected-only imports; the Blog list also exposes missing-English posts for selected batch translation to `index_en.mdx`.
@@ -106,6 +108,8 @@ Optional metadata used by Obsidian-style content:
 - `affected_area`
 
 `author` can be a string or an array. It is normalized to an array by the schema.
+
+Generated Obsidian blog frontmatter should not preserve import-only or writing-process fields such as `creation_time`, `modify_time`, `createTime`, `笔记ID`, `笔记类型`, `Link`, `multiFile`, `multiMedia`, `area`, `已插入部分`, or plugin state fields. These fields may be read during import to derive stable site metadata, but they should not become public blog metadata.
 
 ## Language And Slugs
 

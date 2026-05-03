@@ -8,9 +8,22 @@ import { buildLocalizedDocument, buildSourceDocument } from './documents.mjs';
 import { toImportError } from './errors.mjs';
 import { writeIfChanged } from './fs-utils.mjs';
 import { transformCodeBlocks } from './plugins/code-blocks.mjs';
+import { transformHtmlCleanup } from './plugins/html-cleanup.mjs';
+import { transformImages } from './plugins/images.mjs';
 import { resolveImportFiles } from './scanner.mjs';
 import { sha256 } from './utils.mjs';
 import { resolveTranslation } from './translation/import-translation.mjs';
+
+function transformLocalizedMarkdown(content) {
+  const diagnostics = [];
+  let nextContent = content;
+  for (const transform of [transformCodeBlocks, transformImages, transformHtmlCleanup]) {
+    const result = transform(nextContent) ?? { content: nextContent };
+    nextContent = result.content ?? nextContent;
+    diagnostics.push(...(result.diagnostics ?? []));
+  }
+  return { content: nextContent, diagnostics };
+}
 
 export async function importOne(filePath, cache, translationConfig, context = IMPORT_CONTEXT) {
   const rawSource = await fs.readFile(filePath, 'utf8');
@@ -59,8 +72,8 @@ export async function importOne(filePath, cache, translationConfig, context = IM
       continue;
     }
 
-    const translatedCodeBlocks = transformCodeBlocks(resolved.translated.content);
-    sourceDocument.diagnostics.push(...translatedCodeBlocks.diagnostics.map((diagnostic) => ({
+    const translatedMarkdown = transformLocalizedMarkdown(resolved.translated.content);
+    sourceDocument.diagnostics.push(...translatedMarkdown.diagnostics.map((diagnostic) => ({
       ...diagnostic,
       locale,
     })));
@@ -72,7 +85,7 @@ export async function importOne(filePath, cache, translationConfig, context = IM
       locale,
       title: resolved.translated.title,
       description: resolved.translated.description,
-      content: translatedCodeBlocks.content,
+      content: translatedMarkdown.content,
     });
     const localizedWrite = await writeIfChanged(localizedDocument.outputFile, localizedDocument.serialized);
 
@@ -81,7 +94,7 @@ export async function importOne(filePath, cache, translationConfig, context = IM
       model: translationConfig.model,
       title: resolved.translated.title,
       description: resolved.translated.description,
-      content: translatedCodeBlocks.content,
+      content: translatedMarkdown.content,
       outputPath: localizedDocument.outputFile,
       outputHash: localizedWrite.hash,
     };

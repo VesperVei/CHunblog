@@ -12,7 +12,7 @@
 ## 仓库事实
 - 单包 Astro 站点，不是 workspace；核心命令只有 `pnpm dev`、`pnpm build`、`pnpm preview`。
 - `pnpm dev` / `pnpm build` 前都会先执行 `scripts/generate-graph.mjs`，生成统一的 `public/graph.json`。
-- `scripts/import-obsidian-blog.mjs` 是 Obsidian 导入的兼容入口；真实分层逻辑在 `scripts/obsidian-import/`。它会把 `src/content/my_md/*.md` 导入到 `src/content/blog/<note_id>/`，缓存写到 `.cache/obsidian-import/`；dev 模式默认跳过新的 LLM 翻译请求，只复用未过期缓存并避免重写未变化文件。Obsidian 插件语法清洗走 transform 管线，Dataview 当前只保守转换为静态提示并记录诊断，不执行查询。导入 frontmatter 会把站点 tags 归一为少量稳定 slug，并将比赛/题目/难度/保护机制等中文字段映射到结构化元数据；未发布或超量标签会进入诊断。Shiki Highlighter/Expressive Code 代码块 meta 会被保留，`IDA`/伪代码归一为 `cpp`，纯反汇编归一为 `asm`，`gdb`/`pwndbg`/十六进制 dump 归一为 `txt`。
+- `scripts/import-obsidian-blog.mjs` 是 Obsidian 导入的兼容入口；真实分层逻辑在 `scripts/obsidian-import/`。它会把 `src/content/my_md/*.md` 导入到 `src/content/blog/<note_id>/`，缓存写到 `.cache/obsidian-import/`；dev 模式默认跳过新的 LLM 翻译请求，只复用未过期缓存并避免重写未变化文件。Obsidian 插件语法清洗走 transform 管线，Dataview 当前只保守转换为静态提示并记录诊断，不执行查询。导入 frontmatter 会把站点 tags 归一为少量稳定 slug，并将比赛/题目/难度/保护机制等中文字段映射到结构化元数据；未发布或超量标签会进入诊断。正文清洗会移除 Obsidian 进度条和内联 style，规范图片 alt/尺寸语法，并对未导入的本地图片嵌入记录诊断。Shiki Highlighter/Expressive Code 代码块 meta 会被保留，`IDA`/伪代码归一为 `cpp`，纯反汇编归一为 `asm`，`gdb`/`pwndbg`/十六进制 dump 归一为 `txt`。
 - `npm run admin` 启动本地后台，默认 `http://127.0.0.1:4323`；包含 `友邻管理`、`Blog 管理`、`Graph 管理`。Blog 管理可配置本地 LLM 导入参数（写入 `.cache/admin-dev/translation-config.json`），Graph 管理读取 `public/graph.json`、记录 missing wikilink 诊断并维护 `src/data/graph-presets.json` 内置模板。
 - `pnpm build` 实际执行 `astro build && pagefind --site dist`。搜索索引不是 Astro 自动产物，改搜索或构建逻辑时必须记住 Pagefind 这一步。
 - 部署工作流在 `.forgejo/workflows/deploy.yml`，CI 只跑 `pnpm install` 和 `pnpm run build`，Node 版本固定为 `20`。

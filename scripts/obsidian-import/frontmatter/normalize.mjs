@@ -112,6 +112,15 @@ const MAPPED_KEYS = new Set([
   '笔记类型',
   '创建时间',
   '阐述日期',
+  'Link',
+  'createTime',
+  'creation_time',
+  'modify_time',
+  'multiFile',
+  'multiMedia',
+  'area',
+  '已插入部分',
+  'libc',
 ]);
 
 function shouldPreserveEntry(key, value) {
