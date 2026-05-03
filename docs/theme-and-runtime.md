@@ -40,6 +40,12 @@ The site-wide Graph view loads its built-in template presets from `src/data/grap
 
 `scripts/generate-graph.mjs` writes `public/graph.json` and records recent graph diagnostics under `.cache/admin-dev/graph-diagnostics.json`. The admin dashboard reads those diagnostics to show the same missing wikilink issues that appear during `pnpm dev` or graph regeneration.
 
+Graph node right-click overlays should be implemented as `graph-workspace` overlay panels, not as children inside `graph-root`. The graph runtime replaces `graph-root` contents with the SVG scene, while `graph-workspace` stays stable and already hosts legend/detail overlays. The current browser helper lives in `src/graph/interaction/node-overlay-panel.ts` and fills a static overlay host rendered by `src/components/graph/Graph.astro`, positioning it against `graph-root` bounds.
+
+The current TheBrain-specific content provider is `src/components/graph/graph-node-overlay.ts`. Right-clicking an existing note node opens a single-column overlay panel next to the node. The current first version only shows the node's `graphLevel` plus direct graphLevel actions (`提升层级`, `下沉层级`, `设为顶层`, `设为指定层级...`, `清除层级`) and a placeholder line `关系设置未实现`. These graphLevel edits still require `npm run admin` on `http://127.0.0.1:4323`; the browser calls `/api/blog/graph-level`, the admin process updates matching blog frontmatter and any matching Obsidian source frontmatter, then regenerates `public/graph.json` and hot-swaps the graph data in the current view.
+
+Planned manual parent/child/sibling metadata should remain TheBrain-specific. Keep that future YAML/frontmatter scanned only by TheBrain graph-building code instead of promoting it into generic graph behavior.
+
 ## Accent Color
 
 Accent color behavior is configured in `siteConfig.theme_color` in `src/config.ts`.

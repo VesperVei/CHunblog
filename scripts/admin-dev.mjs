@@ -11,6 +11,7 @@ import {
   readGraphSnapshot,
   scanBlogPosts,
   translateMissingEnglishPosts,
+  updateBlogPostGraphLevel,
   withAdminTranslationEnv,
   writeAdminTranslationConfig,
   writeGraphPresets,
@@ -24,6 +25,9 @@ function jsonResponse(res, status, payload) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Cache-Control': 'no-store',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
   });
   res.end(JSON.stringify(payload, null, 2));
 }
@@ -1375,6 +1379,19 @@ async function handleApi(req, res, url) {
     return;
   }
 
+  if (req.method === 'PUT' && url.pathname === '/api/blog/graph-level') {
+    const body = await readJsonBody(req);
+    const update = await updateBlogPostGraphLevel({ noteId: body.noteId, graphLevel: body.graphLevel });
+    const graph = await runNodeScript(path.join(ROOT, 'scripts/generate-graph.mjs'));
+    jsonResponse(res, 200, {
+      update,
+      graph,
+      snapshot: await readGraphSnapshot(),
+      diagnostics: await readGraphDiagnostics(),
+    });
+    return;
+  }
+
   if (req.method === 'GET' && url.pathname === '/api/graph/snapshot') {
     jsonResponse(res, 200, await readGraphSnapshot());
     return;
@@ -1420,6 +1437,11 @@ async function handleApi(req, res, url) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', `http://${HOST}:${PORT}`);
   try {
+    if (req.method === 'OPTIONS') {
+      jsonResponse(res, 204, {});
+      return;
+    }
+
     if (url.pathname === '/') {
       htmlResponse(res, pageHtml());
       return;

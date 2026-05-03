@@ -42,14 +42,14 @@ export function buildRenderableGraph(data: GraphData, options: FilterOptions = {
   const focusId = options.focusId;
   const locale = options.locale ?? 'en';
   const filters = options.filters ?? {};
-  const localizedData = filterGraphDataByLocale(data, locale);
+  const localizedData = filterGraphDataByLocale(data, locale, { onlyExistingNotes: filters.onlyExistingNotes });
   const depth = filters.depth ?? DEFAULT_DEPTH;
   const direction: GraphDirection = filters.showBacklinks === false
     ? 'outgoing'
     : filters.showForwardLinks === false
       ? 'incoming'
       : 'both';
-  const indexes = createGraphIndexes(localizedData);
+  const indexes = createGraphIndexes(localizedData, { onlyExistingNotes: filters.onlyExistingNotes });
   const searchQuery = filters.searchQuery ?? '';
 
   if (mode !== 'local' || !focusId) {

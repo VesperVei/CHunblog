@@ -259,6 +259,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       layout: { ...options.settings.layout },
     },
   };
+  let currentFullData = fullData;
   let simulation = null;
   let scene = null;
   let currentData = null;
@@ -368,6 +369,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
         },
         navigateOnClick: false,
         navigateOnDoubleClick: true,
+        onNodeContextMenu: currentOptions.onNodeContextMenu,
       }
       : {
         beforeNavigate: () => {
@@ -380,6 +382,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
           );
         },
         navigateOnClick: true,
+        onNodeContextMenu: currentOptions.onNodeContextMenu,
       });
     attachNodeDrag(scene.node, simulation, currentOptions.settings.forces.alphaTargetOnDrag ?? 0.25);
     scene.node
@@ -517,7 +520,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       },
     };
 
-    const nextGraphData = buildGraphData(fullData, currentOptions);
+    const nextGraphData = buildGraphData(currentFullData, currentOptions);
     const layoutPreset = getEffectiveLayoutPreset(currentOptions.mode, currentOptions.settings);
     const isLocalDepthOnlyUpdate = currentOptions.mode === 'local'
       && layoutPreset !== 'brain'
@@ -554,7 +557,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     };
 
     if (previousPreset !== nextPreset || previousFilters !== nextFilters) {
-      setData(buildGraphData(fullData, currentOptions));
+      setData(buildGraphData(currentFullData, currentOptions));
       return;
     }
 
@@ -571,7 +574,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     }
   };
 
-  setData(buildGraphData(fullData, currentOptions));
+  setData(buildGraphData(currentFullData, currentOptions));
 
   return {
     ...zoomControls,
@@ -621,6 +624,10 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     updateAppearance,
     updateFilters,
     setData,
+    replaceFullData(nextFullData: GraphData) {
+      currentFullData = nextFullData;
+      setData(buildGraphData(currentFullData, currentOptions));
+    },
     destroy() {
       if (destroyed) {
         return;

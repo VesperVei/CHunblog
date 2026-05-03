@@ -1,6 +1,10 @@
 import type { GraphData, GraphNode } from '../types';
 
 export function hasLocaleGraphEntry(node: GraphNode, locale: string) {
+  if (node.exists === false || node.kind === 'missing_note') {
+    return Boolean(node.titles?.[locale]);
+  }
+
   return Boolean(node.titles?.[locale] && node.urls?.[locale]);
 }
 
@@ -8,8 +12,14 @@ export function labelForNode(node: GraphNode, locale: string) {
   return node.titles?.[locale] || node.id;
 }
 
-export function filterGraphDataByLocale(data: GraphData, locale: string): GraphData {
-  const nodes = data.nodes.filter((node) => hasLocaleGraphEntry(node, locale));
+export function filterGraphDataByLocale(data: GraphData, locale: string, options: { onlyExistingNotes?: boolean } = {}): GraphData {
+  const nodes = data.nodes.filter((node) => {
+    if (options.onlyExistingNotes && node.exists === false) {
+      return false;
+    }
+
+    return hasLocaleGraphEntry(node, locale);
+  });
   const visibleIds = new Set(nodes.map((node) => node.id));
 
   return {
@@ -18,13 +28,17 @@ export function filterGraphDataByLocale(data: GraphData, locale: string): GraphD
     links: data.links.filter((link) => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
-      return visibleIds.has(sourceId) && visibleIds.has(targetId);
+      if (!visibleIds.has(sourceId) || !visibleIds.has(targetId)) {
+        return false;
+      }
+
+      return !options.onlyExistingNotes || link.exists !== false;
     }),
   };
 }
 
-export function createGraphIndexes(data: GraphData) {
-  const validLinks = data.links.filter((item) => item.exists);
+export function createGraphIndexes(data: GraphData, options: { onlyExistingNotes?: boolean } = {}) {
+  const validLinks = data.links.filter((item) => !options.onlyExistingNotes || item.exists !== false);
   const outgoing = new Map<string, string[]>();
   const incoming = new Map<string, string[]>();
   const directLinkSet = new Set<string>();
