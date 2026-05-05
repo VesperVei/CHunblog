@@ -12,6 +12,7 @@ const BLOG_CONTENT_GLOB = 'src/content/blog/**/index*.{md,mdx}';
 const OBSIDIAN_SOURCE_GLOB = 'src/content/my_md/*.md';
 const GRAPH_FILE = path.join(ROOT, 'public/graph.json');
 const GRAPH_DIAGNOSTICS_FILE = path.join(ADMIN_CACHE_DIR, 'graph-diagnostics.json');
+const GRAPH_LEVEL_OVERRIDES_FILE = path.join(ADMIN_CACHE_DIR, 'graph-level-overrides.json');
 const GRAPH_PRESETS_FILE = path.join(ROOT, 'src/data/graph-presets.json');
 const TRANSLATION_CONFIG_FILE = path.join(ADMIN_CACHE_DIR, 'translation-config.json');
 
@@ -96,6 +97,91 @@ async function updateGraphLevelInFile(filePath, graphLevel) {
     filePath,
     relativePath: path.relative(ROOT, filePath),
     changed: write.changed,
+  };
+}
+
+function graphLevelValuesEqual(left, right) {
+  return normalizeGraphLevelInput(left) === normalizeGraphLevelInput(right);
+}
+
+function normalizeGraphLevelOverrideEntry(noteId, entry = {}) {
+  return {
+    noteId: String(noteId),
+    title: String(entry.title ?? noteId),
+    graphLevel: normalizeGraphLevelInput(entry.graphLevel),
+    previousGraphLevel: normalizeGraphLevelInput(entry.previousGraphLevel),
+    blogFiles: Array.isArray(entry.blogFiles) ? entry.blogFiles.map((item) => String(item)) : [],
+    sourceFiles: Array.isArray(entry.sourceFiles) ? entry.sourceFiles.map((item) => String(item)) : [],
+    updatedAt: entry.updatedAt ? String(entry.updatedAt) : null,
+  };
+}
+
+async function readGraphLevelOverridesRaw() {
+  const stored = await readJsonFile(GRAPH_LEVEL_OVERRIDES_FILE, { updatedAt: null, items: {} });
+  const items = Object.fromEntries(Object.entries(stored?.items ?? {}).map(([noteId, entry]) => [noteId, normalizeGraphLevelOverrideEntry(noteId, entry)]));
+  return {
+    updatedAt: stored?.updatedAt ? String(stored.updatedAt) : null,
+    items,
+  };
+}
+
+async function writeGraphLevelOverridesRaw(payload) {
+  const items = Object.fromEntries(Object.entries(payload?.items ?? {}).map(([noteId, entry]) => [noteId, normalizeGraphLevelOverrideEntry(noteId, entry)]));
+  await writeJsonFile(GRAPH_LEVEL_OVERRIDES_FILE, {
+    updatedAt: payload?.updatedAt ?? new Date().toISOString(),
+    items,
+  });
+}
+
+async function collectGraphLevelTargets(noteId) {
+  const targetNoteId = String(noteId ?? '').trim();
+  if (!targetNoteId) {
+    throw new Error('noteId is required.');
+  }
+
+  const blogFiles = await fg(BLOG_CONTENT_GLOB, { absolute: true });
+  const matchedBlogFiles = [];
+  let title = targetNoteId;
+  let currentGraphLevel;
+
+  for (const filePath of blogFiles) {
+    const raw = await fs.readFile(filePath, 'utf8');
+    const { data } = matter(raw);
+    const entryId = toEntryId(filePath);
+    const lang = getLangFromId(entryId) ?? null;
+    const slug = getSlugFromId(entryId, lang !== null);
+    const currentNoteId = data.note_id ? String(data.note_id) : slug;
+    if (currentNoteId !== targetNoteId) {
+      continue;
+    }
+
+    matchedBlogFiles.push(path.relative(ROOT, filePath));
+    title = String(data.title ?? title);
+    if (currentGraphLevel === undefined) {
+      currentGraphLevel = normalizeGraphLevelInput(data.graphLevel);
+    }
+  }
+
+  if (matchedBlogFiles.length === 0) {
+    throw new Error(`No blog content found for note_id: ${targetNoteId}`);
+  }
+
+  const matchedSourceFiles = [];
+  const sourceFiles = await fg(OBSIDIAN_SOURCE_GLOB, { absolute: true });
+  for (const filePath of sourceFiles) {
+    const raw = await fs.readFile(filePath, 'utf8');
+    const { data } = matter(raw);
+    if (data.note_id && String(data.note_id) === targetNoteId) {
+      matchedSourceFiles.push(path.relative(ROOT, filePath));
+    }
+  }
+
+  return {
+    noteId: targetNoteId,
+    title,
+    currentGraphLevel: currentGraphLevel ?? null,
+    blogFiles: matchedBlogFiles,
+    sourceFiles: matchedSourceFiles,
   };
 }
 
@@ -205,51 +291,127 @@ export async function scanBlogPosts() {
 }
 
 export async function updateBlogPostGraphLevel({ noteId, graphLevel } = {}) {
+  const targets = await collectGraphLevelTargets(noteId);
+  const nextGraphLevel = normalizeGraphLevelInput(graphLevel);
+  const overrides = await readGraphLevelOverridesRaw();
+  const existing = overrides.items[targets.noteId];
+
+  if (graphLevelValuesEqual(nextGraphLevel, targets.currentGraphLevel)) {
+    if (existing) {
+      delete overrides.items[targets.noteId];
+      overrides.updatedAt = new Date().toISOString();
+      await writeGraphLevelOverridesRaw(overrides);
+    }
+
+    return {
+      noteId: targets.noteId,
+      title: targets.title,
+      graphLevel: nextGraphLevel,
+      previousGraphLevel: targets.currentGraphLevel,
+      staged: false,
+      removed: Boolean(existing),
+      blogFiles: targets.blogFiles,
+      sourceFiles: targets.sourceFiles,
+    };
+  }
+
+  const nextEntry = normalizeGraphLevelOverrideEntry(targets.noteId, {
+    noteId: targets.noteId,
+    title: targets.title,
+    graphLevel: nextGraphLevel,
+    previousGraphLevel: existing?.previousGraphLevel ?? targets.currentGraphLevel,
+    blogFiles: targets.blogFiles,
+    sourceFiles: targets.sourceFiles,
+    updatedAt: new Date().toISOString(),
+  });
+  overrides.items[targets.noteId] = nextEntry;
+  overrides.updatedAt = nextEntry.updatedAt;
+  await writeGraphLevelOverridesRaw(overrides);
+
+  return {
+    ...nextEntry,
+    staged: true,
+    removed: false,
+  };
+}
+
+export async function readGraphLevelOverrides() {
+  const overrides = await readGraphLevelOverridesRaw();
+  const items = Object.values(overrides.items).sort((left, right) => {
+    const leftTime = Date.parse(left.updatedAt ?? '') || 0;
+    const rightTime = Date.parse(right.updatedAt ?? '') || 0;
+    return rightTime - leftTime || left.title.localeCompare(right.title, 'zh-CN');
+  });
+
+  return {
+    file: path.relative(ROOT, GRAPH_LEVEL_OVERRIDES_FILE),
+    updatedAt: overrides.updatedAt,
+    items,
+    summary: {
+      pending: items.length,
+    },
+  };
+}
+
+export async function deleteGraphLevelOverride(noteId) {
   const targetNoteId = String(noteId ?? '').trim();
   if (!targetNoteId) {
     throw new Error('noteId is required.');
   }
 
-  const nextGraphLevel = normalizeGraphLevelInput(graphLevel);
-  const blogFiles = await fg(BLOG_CONTENT_GLOB, { absolute: true });
-  const matchedBlogFiles = [];
+  const overrides = await readGraphLevelOverridesRaw();
+  const existing = overrides.items[targetNoteId];
+  if (!existing) {
+    return { noteId: targetNoteId, removed: false };
+  }
 
-  for (const filePath of blogFiles) {
-    const raw = await fs.readFile(filePath, 'utf8');
-    const { data } = matter(raw);
-    const entryId = toEntryId(filePath);
-    const lang = getLangFromId(entryId) ?? null;
-    const slug = getSlugFromId(entryId, lang !== null);
-    const currentNoteId = data.note_id ? String(data.note_id) : slug;
-    if (currentNoteId === targetNoteId) {
-      matchedBlogFiles.push(filePath);
+  delete overrides.items[targetNoteId];
+  overrides.updatedAt = new Date().toISOString();
+  await writeGraphLevelOverridesRaw(overrides);
+  return { noteId: targetNoteId, removed: true };
+}
+
+export async function commitGraphLevelOverrides({ noteIds } = {}) {
+  const overrides = await readGraphLevelOverridesRaw();
+  const selectedIds = Array.isArray(noteIds) && noteIds.length > 0
+    ? new Set(noteIds.map((item) => String(item)))
+    : null;
+  const targets = Object.values(overrides.items).filter((item) => !selectedIds || selectedIds.has(item.noteId));
+
+  const results = [];
+  for (const item of targets) {
+    const currentTargets = await collectGraphLevelTargets(item.noteId);
+    const blogUpdates = [];
+    for (const relativePath of currentTargets.blogFiles) {
+      blogUpdates.push(await updateGraphLevelInFile(path.join(ROOT, relativePath), item.graphLevel));
     }
-  }
 
-  if (matchedBlogFiles.length === 0) {
-    throw new Error(`No blog content found for note_id: ${targetNoteId}`);
-  }
-
-  const blogUpdates = [];
-  for (const filePath of matchedBlogFiles) {
-    blogUpdates.push(await updateGraphLevelInFile(filePath, nextGraphLevel));
-  }
-
-  const sourceUpdates = [];
-  const sourceFiles = await fg(OBSIDIAN_SOURCE_GLOB, { absolute: true });
-  for (const filePath of sourceFiles) {
-    const raw = await fs.readFile(filePath, 'utf8');
-    const { data } = matter(raw);
-    if (data.note_id && String(data.note_id) === targetNoteId) {
-      sourceUpdates.push(await updateGraphLevelInFile(filePath, nextGraphLevel));
+    const sourceUpdates = [];
+    for (const relativePath of currentTargets.sourceFiles) {
+      sourceUpdates.push(await updateGraphLevelInFile(path.join(ROOT, relativePath), item.graphLevel));
     }
+
+    delete overrides.items[item.noteId];
+    results.push({
+      noteId: item.noteId,
+      title: item.title,
+      graphLevel: item.graphLevel,
+      previousGraphLevel: item.previousGraphLevel,
+      updated: [...blogUpdates, ...sourceUpdates],
+      changed: [...blogUpdates, ...sourceUpdates].some((entry) => entry.changed),
+    });
   }
+
+  overrides.updatedAt = new Date().toISOString();
+  await writeGraphLevelOverridesRaw(overrides);
 
   return {
-    noteId: targetNoteId,
-    graphLevel: nextGraphLevel,
-    updated: [...blogUpdates, ...sourceUpdates],
-    changed: [...blogUpdates, ...sourceUpdates].some((item) => item.changed),
+    file: path.relative(ROOT, GRAPH_LEVEL_OVERRIDES_FILE),
+    results,
+    summary: {
+      committed: results.length,
+      changed: results.filter((item) => item.changed).length,
+    },
   };
 }
 

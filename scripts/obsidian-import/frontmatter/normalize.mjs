@@ -86,6 +86,25 @@ function normalizeControlledArray(value) {
   return items.length > 0 ? [...new Set(items)] : undefined;
 }
 
+function deriveTypeFromTags(tags, frontmatter) {
+  if (tags.includes('writeup')) return 'writeup';
+  return normalizeNullish(frontmatter.type ?? frontmatter['类型']);
+}
+
+function deriveDomainFromTags(tags, frontmatter) {
+  const explicitDomain = normalizeNullish(frontmatter.domain ?? frontmatter['领域'] ?? frontmatter['方向']);
+  const resolvedExplicitDomain = resolveTag(explicitDomain) ?? explicitDomain;
+  const allowedDomains = ['pwn', 'web', 'rev', 'crypto', 'misc'];
+
+  if (allowedDomains.includes(resolvedExplicitDomain)) return resolvedExplicitDomain;
+
+  for (const domain of allowedDomains) {
+    if (tags.includes(domain)) return domain;
+  }
+
+  return undefined;
+}
+
 function buildExtraTagCandidates(frontmatter) {
   return [
     frontmatter.note_type,
@@ -108,6 +127,11 @@ const MAPPED_KEYS = new Set([
   '利用路线',
   '涉及区域',
   'role',
+  'type',
+  'domain',
+  '类型',
+  '领域',
+  '方向',
   '笔记ID',
   '笔记类型',
   '创建时间',
@@ -153,6 +177,8 @@ export function buildFrontmatter(sourcePath, frontmatter, locale, overrides = {}
     description: cleanString(overrides.description) ?? deriveDescription(frontmatter, title, locale),
     note_id: noteId,
     note_type: normalizeNullish(frontmatter.note_type ?? frontmatter['笔记类型']),
+    type: deriveTypeFromTags(tagResult.tags, frontmatter),
+    domain: deriveDomainFromTags(tagResult.tags, frontmatter),
     created_at: createdAt,
     updated_at: normalizeDateValue(frontmatter.updated_at ?? frontmatter.modify_time),
     tags: tagResult.tags,

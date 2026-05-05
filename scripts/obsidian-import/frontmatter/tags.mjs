@@ -3,6 +3,22 @@ import { cleanString, normalizeArray } from '../utils.mjs';
 const MAX_TAGS = 5;
 
 const TAG_ALIASES = new Map([
+  ['复盘', 'writeup'],
+  ['wp', 'writeup'],
+  ['writeup', 'writeup'],
+  ['write-up', 'writeup'],
+  ['题解', 'writeup'],
+  ['pwn', 'pwn'],
+  ['web', 'web'],
+  ['rev', 'rev'],
+  ['reverse', 'rev'],
+  ['re', 'rev'],
+  ['逆向', 'rev'],
+  ['crypto', 'crypto'],
+  ['密码', 'crypto'],
+  ['密码学', 'crypto'],
+  ['misc', 'misc'],
+  ['杂项', 'misc'],
   ['格式化字符串', 'format-string'],
   ['format-string', 'format-string'],
   ['fmtstr', 'format-string'],
@@ -24,6 +40,15 @@ const TAG_ALIASES = new Map([
   ['one-gadget', 'one-gadget'],
   ['brop', 'brop'],
   ['ret2syscall', 'ret2syscall'],
+]);
+
+const TAG_PRIORITY = new Map([
+  ['writeup', 0],
+  ['pwn', 1],
+  ['web', 1],
+  ['rev', 1],
+  ['crypto', 1],
+  ['misc', 1],
 ]);
 
 function normalizeTagKey(value) {
@@ -62,8 +87,13 @@ export function normalizeTags({ tags, extraCandidates = [] } = {}) {
     accepted.push(tag);
   }
 
-  const normalized = accepted.slice(0, MAX_TAGS);
-  const overflow = accepted.slice(MAX_TAGS);
+  const prioritized = [...accepted].sort((left, right) => {
+    const leftPriority = TAG_PRIORITY.get(left) ?? 10;
+    const rightPriority = TAG_PRIORITY.get(right) ?? 10;
+    return leftPriority - rightPriority;
+  });
+  const normalized = prioritized.slice(0, MAX_TAGS);
+  const overflow = prioritized.slice(MAX_TAGS);
 
   if (rejected.length > 0) {
     diagnostics.push({

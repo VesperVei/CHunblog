@@ -36,6 +36,7 @@ const blog = defineCollection({
       draft: z.boolean().optional().default(false),
       tags: z.array(z.string()).optional().default([]),
       type: z.string().optional(),
+      domain: z.enum(['pwn', 'web', 'rev', 'crypto', 'misc']).optional(),
       heroImage: image().optional(),
       note_id: z.string().optional(),
       note_type: z.string().optional(),

@@ -268,6 +268,11 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
   let hasAutoFitted = false;
   let autoFitTimer = 0;
 
+  const clearAutoFitTimer = () => {
+    window.clearTimeout(autoFitTimer);
+    autoFitTimer = 0;
+  };
+
   const showEmptyState = (message: string) => {
     const empty = document.createElement('div');
     empty.className = 'graph-empty';
@@ -326,7 +331,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       return;
     }
 
-    window.clearTimeout(autoFitTimer);
+    clearAutoFitTimer();
     autoFitTimer = window.setTimeout(() => {
       const bounds = expandBounds(resolveGraphBounds(currentData?.nodes ?? [], 36), width * 0.68, height * 0.68);
       if (bounds) {
@@ -398,8 +403,10 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       });
   };
 
-  const rebuildScene = (nextGraphData: GraphData) => {
+  const rebuildScene = (nextGraphData: GraphData, options: { skipAutoFit?: boolean; restoreTransform?: any } = {}) => {
+    const { skipAutoFit = false, restoreTransform } = options;
     stopSimulation();
+    clearAutoFitTimer();
 
     currentData = withDegrees(withDepthFromFocus(cloneRenderableGraph(nextGraphData) as GraphData, currentOptions.focusId) as GraphData);
     hoverState = createEmptyHoverState();
@@ -415,9 +422,15 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     simulation.on('tick', renderFrame);
     renderFrame();
     simulation.alpha(1).restart();
-    scheduleAutoFit();
-
     root.replaceChildren(svg.node());
+
+    if (restoreTransform) {
+      zoomControls.setTransform(restoreTransform, { animate: false });
+    }
+
+    if (!skipAutoFit) {
+      scheduleAutoFit();
+    }
   };
 
   const incrementallyUpdateDepth = (nextGraphData: GraphData) => {
@@ -452,17 +465,22 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     scheduleAutoFit();
   };
 
-  const setData = (nextGraphData: GraphData) => {
+  const setData = (nextGraphData: GraphData, options: { skipAutoFit?: boolean; preserveViewport?: boolean } = {}) => {
+    const { skipAutoFit = false, preserveViewport = false } = options;
     if (!nextGraphData.nodes.length) {
       scene = null;
       currentData = null;
       hoverState = createEmptyHoverState();
       stopSimulation();
+      clearAutoFitTimer();
       showEmptyState(currentOptions.mode === 'local' ? 'No related graph data yet.' : 'No graph data available.');
       return;
     }
 
-    rebuildScene(nextGraphData);
+    rebuildScene(nextGraphData, {
+      skipAutoFit,
+      restoreTransform: preserveViewport ? zoomControls.getCurrentTransform() : undefined,
+    });
   };
 
   const updateAppearance = (nextAppearance) => {
@@ -624,9 +642,12 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
     updateAppearance,
     updateFilters,
     setData,
-    replaceFullData(nextFullData: GraphData) {
+    replaceFullData(nextFullData: GraphData, options: { preserveViewport?: boolean; skipAutoFit?: boolean } = {}) {
       currentFullData = nextFullData;
-      setData(buildGraphData(currentFullData, currentOptions));
+      setData(buildGraphData(currentFullData, currentOptions), {
+        preserveViewport: options.preserveViewport ?? true,
+        skipAutoFit: options.skipAutoFit ?? true,
+      });
     },
     destroy() {
       if (destroyed) {
@@ -634,7 +655,7 @@ export async function createGraphView(root: HTMLElement, options: GraphViewOptio
       }
 
       destroyed = true;
-      window.clearTimeout(autoFitTimer);
+      clearAutoFitTimer();
       stopSimulation();
     },
   };

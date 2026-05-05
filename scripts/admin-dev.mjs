@@ -5,8 +5,11 @@ import path from 'node:path';
 import { generateFriendsData, readFriendsSource, writeFriendsSource } from './generate-friends-data.mjs';
 import { runObsidianImport, saveUploadedObsidianNote, scanObsidianSources } from './import-obsidian-blog.mjs';
 import {
+  commitGraphLevelOverrides,
+  deleteGraphLevelOverride,
   readAdminTranslationConfig,
   readGraphDiagnostics,
+  readGraphLevelOverrides,
   readGraphPresets,
   readGraphSnapshot,
   scanBlogPosts,
@@ -440,6 +443,7 @@ function pageHtml() {
         <button class="metric" type="button" data-graph-view="overview"><strong id="metricGraphNodes">-</strong><span>Graph 节点</span></button>
         <button class="metric" type="button" data-graph-view="overview"><strong id="metricGraphLinks">-</strong><span>Graph 边</span></button>
         <button class="metric" type="button" data-graph-view="issues"><strong id="metricGraphMissing">-</strong><span>Missing 异常</span></button>
+        <button class="metric" type="button" data-graph-view="overrides"><strong id="metricGraphOverrides">-</strong><span>待写回项</span></button>
         <button class="metric" type="button" data-graph-view="presets"><strong id="metricGraphPresets">-</strong><span>内置模板</span></button>
       </section>
       <div class="grid">
@@ -451,6 +455,11 @@ function pageHtml() {
         <section class="panel" data-graph-panel="issues" hidden>
           <div class="panel-header"><h2 class="panel-title">异常记录</h2><button class="secondary" id="generateGraph">重新生成 graph</button></div>
           <div class="panel-body"><div id="graphIssues"></div></div>
+        </section>
+
+        <section class="panel" data-graph-panel="overrides" hidden>
+          <div class="panel-header"><h2 class="panel-title">待写回 graphLevel</h2><div class="actions"><button class="secondary" id="reloadGraphOverrides">重新读取</button><button id="commitGraphOverrides">确认更新</button></div></div>
+          <div class="panel-body"><div id="graphOverrides"></div></div>
         </section>
 
         <section class="panel" data-graph-panel="presets" hidden>
@@ -484,6 +493,7 @@ function pageHtml() {
       blogSummary: null,
       graph: null,
       graphDiagnostics: { runs: [] },
+      graphOverrides: { items: [], summary: { pending: 0 } },
       graphPresets: [],
       translationConfig: null,
       editingFriendIndex: null,
@@ -718,11 +728,13 @@ function pageHtml() {
       $('metricGraphNodes').textContent = summary.nodes;
       $('metricGraphLinks').textContent = summary.links;
       $('metricGraphMissing').textContent = summary.missing;
+      $('metricGraphOverrides').textContent = state.graphOverrides?.summary?.pending || 0;
       $('metricGraphPresets').textContent = state.graphPresets.length;
       const types = Object.entries(summary.types || {}).map(([key, value]) => '<span class="pill">' + escapeHtml(key) + ': ' + value + '</span>').join('');
       const levels = Object.entries(summary.graphLevels || {}).map(([key, value]) => '<span class="pill">' + escapeHtml(key) + ': ' + value + '</span>').join('');
       $('graphOverview').innerHTML = '<div class="card-list"><article class="info-card"><h3>public/graph.json</h3><p>生成时间：' + escapeHtml(state.graph?.generatedAt || '未生成') + '</p><div class="note-meta"><span class="pill">nodes: ' + summary.nodes + '</span><span class="pill">links: ' + summary.links + '</span><span class="pill">missing: ' + summary.missing + '</span></div></article><article class="info-card"><h3>类型分布</h3><div class="tag-list">' + (types || '<span class="tag">暂无</span>') + '</div></article><article class="info-card"><h3>GraphLevel 分布</h3><div class="tag-list">' + (levels || '<span class="tag">暂无</span>') + '</div></article></div>';
       renderGraphIssues();
+      renderGraphOverrides();
       renderGraphPresets();
     }
 
@@ -737,6 +749,51 @@ function pageHtml() {
     function renderGraphPresets() {
       $('graphPresetsJson').value = JSON.stringify(state.graphPresets, null, 2);
       $('graphPresetList').innerHTML = state.graphPresets.length ? '<div class="card-list">' + state.graphPresets.map((preset) => '<article class="info-card"><h3>' + escapeHtml(preset.name) + '</h3><div class="note-meta"><span class="pill">' + escapeHtml(preset.id) + '</span><span class="pill">layout: ' + escapeHtml(preset.layout?.preset || 'force') + '</span><span class="pill">' + (preset.builtin === false ? 'custom' : 'builtin') + '</span></div><p>' + escapeHtml(preset.description || '无描述') + '</p></article>').join('') + '</div>' : '<p class="empty-state">没有模板。</p>';
+    }
+
+    function renderGraphOverrides() {
+      const items = state.graphOverrides?.items || [];
+      $('graphOverrides').innerHTML = '<div class="card-list"><article class="info-card"><h3>暂存说明</h3><p>这里显示当前已经参与 graph.json 生成、但尚未写回 src/content/blog/**/index*.mdx 的 graphLevel 变更。确认更新后会统一写回 blog，并在存在对应 note_id 时同步写回 src/content/my_md/*.md。</p></article>' +
+        (items.length ? items.map((item) => '<article class="managed-card"><div class="managed-card-head"><div><h3>' + escapeHtml(item.title || item.noteId) + '</h3><div class="note-meta"><span class="pill">note_id: ' + escapeHtml(item.noteId) + '</span><span class="pill">原值: ' + escapeHtml(item.previousGraphLevel ?? '未设置') + '</span><span class="pill">待写回: ' + escapeHtml(item.graphLevel ?? '未设置') + '</span></div></div><div class="managed-card-actions"><input type="number" data-graph-override-input="' + escapeHtml(item.noteId) + '" value="' + escapeHtml(item.graphLevel ?? '') + '" placeholder="清空表示未设置" style="width: 8rem;" /><button data-graph-override-save="' + escapeHtml(item.noteId) + '">保存数值</button><button class="secondary" data-graph-override-remove="' + escapeHtml(item.noteId) + '">移除</button></div></div><p>' + escapeHtml((item.blogFiles || []).join('\\n') || '无 blog 文件') + '</p>' + ((item.sourceFiles || []).length ? '<p>' + escapeHtml(item.sourceFiles.join('\\n')) + '</p>' : '<p class="hint">未找到对应的 Obsidian 源文件，确认更新时会仅写回 blog 内容。</p>') + '</article>').join('') : '<p class="empty-state">当前没有待写回 graphLevel 项。</p>') + '</div>';
+
+      document.querySelectorAll('[data-graph-override-save]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const noteId = button.dataset.graphOverrideSave;
+          const input = document.querySelector('[data-graph-override-input="' + CSS.escape(noteId) + '"]');
+          const rawValue = input?.value?.trim?.() ?? '';
+          await withBusy(button, '保存中...', async () => {
+            const payload = await api('/api/blog/graph-level', { method: 'PUT', body: JSON.stringify({ noteId, graphLevel: rawValue === '' ? null : Number(rawValue) }) });
+            applyGraphPayload(payload);
+            log('已更新暂存 graphLevel', payload.update, 'graph');
+            toast('已更新暂存项');
+          });
+        });
+      });
+
+      document.querySelectorAll('[data-graph-override-remove]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const noteId = button.dataset.graphOverrideRemove;
+          await withBusy(button, '移除中...', async () => {
+            const payload = await api('/api/graph/overrides/' + encodeURIComponent(noteId), { method: 'DELETE' });
+            applyGraphPayload(payload);
+            log('已移除暂存 graphLevel', payload.removed, 'graph');
+            toast('已移除暂存项');
+          });
+        });
+      });
+    }
+
+    function applyGraphPayload(payload) {
+      if (payload.snapshot) {
+        state.graph = payload.snapshot;
+      }
+      if (payload.diagnostics) {
+        state.graphDiagnostics = payload.diagnostics;
+      }
+      if (payload.pendingOverrides) {
+        state.graphOverrides = payload.pendingOverrides;
+      }
+      renderGraph();
     }
 
     function friendFromForm(formElement) {
@@ -973,14 +1030,16 @@ function pageHtml() {
     }
 
     async function loadGraph() {
-      const [snapshot, diagnostics, presets] = await Promise.all([
+      const [snapshot, diagnostics, presets, overrides] = await Promise.all([
         api('/api/graph/snapshot'),
         api('/api/graph/diagnostics'),
         api('/api/graph/presets'),
+        api('/api/graph/overrides'),
       ]);
       state.graph = snapshot;
       state.graphDiagnostics = diagnostics;
       state.graphPresets = presets.presets;
+      state.graphOverrides = overrides;
       renderGraph();
     }
 
@@ -1209,9 +1268,7 @@ function pageHtml() {
     $('generateGraph').addEventListener('click', async (event) => {
       await withBusy(event.currentTarget, '生成中...', async () => {
         const payload = await api('/api/graph/generate', { method: 'POST', body: '{}' });
-        state.graph = payload.snapshot;
-        state.graphDiagnostics = payload.diagnostics;
-        renderGraph();
+        applyGraphPayload(payload);
         log('Graph 已重新生成', { summary: state.graph.summary, stdout: payload.stdout, stderr: payload.stderr }, 'graph');
         toast('Graph 已重新生成');
       });
@@ -1223,6 +1280,27 @@ function pageHtml() {
         renderGraph();
         log('Graph 模板已读取', { count: state.graphPresets.length }, 'graph');
         toast('Graph 模板已读取');
+      });
+    });
+    $('reloadGraphOverrides').addEventListener('click', async (event) => {
+      await withBusy(event.currentTarget, '读取中...', async () => {
+        state.graphOverrides = await api('/api/graph/overrides');
+        renderGraph();
+        log('待写回 graphLevel 已读取', state.graphOverrides.summary, 'graph');
+        toast('待写回列表已刷新');
+      });
+    });
+    $('commitGraphOverrides').addEventListener('click', async (event) => {
+      if (!state.graphOverrides?.items?.length) {
+        toast('当前没有待写回项');
+        return;
+      }
+      if (!confirm('确认将当前全部待写回 graphLevel 统一写回 blog/frontmatter 吗？')) return;
+      await withBusy(event.currentTarget, '提交中...', async () => {
+        const payload = await api('/api/graph/overrides/commit', { method: 'POST', body: '{}' });
+        applyGraphPayload(payload);
+        log('graphLevel 待写回项已全部提交', payload.commit, 'graph');
+        toast('已确认更新 ' + (payload.commit?.summary?.committed || 0) + ' 项');
       });
     });
     $('saveGraphPresets').addEventListener('click', async (event) => {
@@ -1388,6 +1466,7 @@ async function handleApi(req, res, url) {
       graph,
       snapshot: await readGraphSnapshot(),
       diagnostics: await readGraphDiagnostics(),
+      pendingOverrides: await readGraphLevelOverrides(),
     });
     return;
   }
@@ -1399,6 +1478,38 @@ async function handleApi(req, res, url) {
 
   if (req.method === 'GET' && url.pathname === '/api/graph/diagnostics') {
     jsonResponse(res, 200, await readGraphDiagnostics());
+    return;
+  }
+
+  if (req.method === 'GET' && url.pathname === '/api/graph/overrides') {
+    jsonResponse(res, 200, await readGraphLevelOverrides());
+    return;
+  }
+
+  if (req.method === 'DELETE' && url.pathname.startsWith('/api/graph/overrides/')) {
+    const noteId = decodeURIComponent(url.pathname.slice('/api/graph/overrides/'.length));
+    const removed = await deleteGraphLevelOverride(noteId);
+    const graph = await runNodeScript(path.join(ROOT, 'scripts/generate-graph.mjs'));
+    jsonResponse(res, 200, {
+      removed,
+      graph,
+      snapshot: await readGraphSnapshot(),
+      diagnostics: await readGraphDiagnostics(),
+      pendingOverrides: await readGraphLevelOverrides(),
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && url.pathname === '/api/graph/overrides/commit') {
+    const commit = await commitGraphLevelOverrides();
+    const graph = await runNodeScript(path.join(ROOT, 'scripts/generate-graph.mjs'));
+    jsonResponse(res, 200, {
+      commit,
+      graph,
+      snapshot: await readGraphSnapshot(),
+      diagnostics: await readGraphDiagnostics(),
+      pendingOverrides: await readGraphLevelOverrides(),
+    });
     return;
   }
 
@@ -1419,6 +1530,7 @@ async function handleApi(req, res, url) {
       ...output,
       snapshot: await readGraphSnapshot(),
       diagnostics: await readGraphDiagnostics(),
+      pendingOverrides: await readGraphLevelOverrides(),
     });
     return;
   }

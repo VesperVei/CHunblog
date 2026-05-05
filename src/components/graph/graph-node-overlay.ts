@@ -78,7 +78,10 @@ async function updateNodeGraphLevel(options: GraphLevelContextMenuOptions, graph
 
     if (payload.snapshot) {
       updateGraphCache(graphUrl, payload.snapshot);
-      controls?.replaceFullData?.(payload.snapshot);
+      controls?.replaceFullData?.(payload.snapshot, {
+        preserveViewport: true,
+        skipAutoFit: true,
+      });
       setSelectedNodeId(node.id);
       syncDetailDrawer();
     }

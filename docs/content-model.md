@@ -96,6 +96,7 @@ Optional metadata used by Obsidian-style content:
 - `updated_at`
 - `note_id`
 - `note_type`
+- `domain`
 - `aliases`
 - `cssclasses`
 - `contest`
@@ -140,7 +141,7 @@ If `siteConfig.defaultLocale` is set, single-language mode is enabled. Routes ar
 
 Tags are read from blog frontmatter. Tag lists are computed per language with `getTagList(lang)` in `src/utils/pages.ts`. Tag detail pages filter posts by exact tag name.
 
-Obsidian imports intentionally publish only a small set of stable flat tag slugs. `scripts/obsidian-import/frontmatter/tags.mjs` owns the alias table. Current public tags are focused on core exploitation techniques, such as `format-string`, `heap`, `uaf`, `double-free`, `rop`, `ret2libc`, `stack-pivot`, `orw`, `one-gadget`, `brop`, and `ret2syscall`. Import diagnostics record unrecognized tags and tags omitted by the per-post tag limit, instead of silently polluting the public tag list.
+Obsidian imports intentionally publish only a small set of stable flat tag slugs. `scripts/obsidian-import/frontmatter/tags.mjs` owns the alias table. Current public tags include the `writeup` content label, CTF/security domains such as `pwn`, `web`, `rev`, `crypto`, and `misc`, and core exploitation techniques such as `format-string`, `heap`, `uaf`, `double-free`, `rop`, `ret2libc`, `stack-pivot`, `orw`, `one-gadget`, `brop`, and `ret2syscall`. The Obsidian tag `复盘` is normalized to `writeup`; generated imports with the normalized `writeup` tag also receive `type: writeup`. Generated imports with a normalized domain tag receive the matching `domain` field. Import diagnostics record unrecognized tags and tags omitted by the per-post tag limit, instead of silently polluting the public tag list.
 
 Do not turn one-off Obsidian labels, contest names, challenge names, architecture labels, protection mechanisms, difficulty strings, or old nested tags such as `arch/...`, `mitigation/...`, `tech/...`, and `note/...` into public tags. Use structured fields such as `contest`, `challenge`, `difficulty`, `architecture`, `protections`, `vulnerability`, and `techniques` for that metadata.
 
