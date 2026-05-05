@@ -38,14 +38,7 @@ function normalizeGraphLevelValue(value) {
 }
 
 function deriveNoteId(frontmatter) {
-  const explicitId = sanitizeNoteId(frontmatter.note_id ?? frontmatter['笔记ID']);
-  if (explicitId) return explicitId;
-
-  const createdAt = normalizeDateValue(frontmatter.created_at ?? frontmatter.creation_time ?? frontmatter.createTime);
-  if (!createdAt) return undefined;
-
-  const digits = createdAt.replace(/\D/g, '');
-  return digits || undefined;
+  return sanitizeNoteId(frontmatter.note_id ?? frontmatter['笔记ID']);
 }
 
 function deriveTitle(frontmatter, filePath) {
@@ -86,6 +79,10 @@ function normalizeControlledArray(value) {
   return items.length > 0 ? [...new Set(items)] : undefined;
 }
 
+function hasAssemblyInstructionTag(frontmatter) {
+  return normalizeArray(frontmatter.tags).some((tag) => tag.replace(/\s+/g, '') === '汇编指令');
+}
+
 function deriveTypeFromTags(tags, frontmatter) {
   if (tags.includes('writeup')) return 'writeup';
   return normalizeNullish(frontmatter.type ?? frontmatter['类型']);
@@ -97,6 +94,8 @@ function deriveDomainFromTags(tags, frontmatter) {
   const allowedDomains = ['pwn', 'web', 'rev', 'crypto', 'misc'];
 
   if (allowedDomains.includes(resolvedExplicitDomain)) return resolvedExplicitDomain;
+
+  if (hasAssemblyInstructionTag(frontmatter)) return 'rev';
 
   for (const domain of allowedDomains) {
     if (tags.includes(domain)) return domain;
@@ -169,7 +168,7 @@ export function buildFrontmatter(sourcePath, frontmatter, locale, overrides = {}
     extraCandidates: buildExtraTagCandidates(frontmatter),
   });
 
-  if (!noteId) throw new Error(`Missing note_id and unable to derive one from created_at: ${sourcePath}`);
+  if (!noteId) throw new Error(`Missing required note_id/笔记ID: ${sourcePath}`);
   if (!createdAt) throw new Error(`Missing created_at/creation_time/createTime: ${sourcePath}`);
 
   const normalized = {

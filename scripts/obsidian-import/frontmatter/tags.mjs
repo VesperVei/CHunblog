@@ -19,6 +19,7 @@ const TAG_ALIASES = new Map([
   ['密码学', 'crypto'],
   ['misc', 'misc'],
   ['杂项', 'misc'],
+  ['汇编指令', '汇编指令'],
   ['格式化字符串', 'format-string'],
   ['format-string', 'format-string'],
   ['fmtstr', 'format-string'],
@@ -47,6 +48,7 @@ const TAG_PRIORITY = new Map([
   ['pwn', 1],
   ['web', 1],
   ['rev', 1],
+  ['汇编指令', 1],
   ['crypto', 1],
   ['misc', 1],
 ]);

@@ -106,6 +106,17 @@ function cleanupHtmlLine(line) {
     });
   }
 
+  const comparisonCount = countMatches(next, /<=/g);
+  if (comparisonCount > 0) {
+    next = next.replace(/<=/g, '&lt;=');
+    diagnostics.push({
+      type: 'html-cleanup',
+      severity: 'info',
+      message: 'Escaped comparison operators for MDX compatibility.',
+      count: comparisonCount,
+    });
+  }
+
   return { line: next, diagnostics };
 }
 

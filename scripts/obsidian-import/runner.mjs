@@ -156,7 +156,7 @@ export async function printCliSummary() {
     console.log('[import-obsidian] English translation disabled: set LLM_TRANSLATION_CONFIG.model in scripts/lib/translate.mjs, or override it with OBSIDIAN_LLM_MODEL / LLM_MODEL.');
   }
 
-  console.log(`Imported ${results.length} Obsidian notes (${summary.written} written, ${summary.skipped} unchanged, ${summary.translated} translated, ${summary.reused} cached translations reused).`);
+  console.log(`Imported ${results.length} Obsidian notes (${summary.written} written, ${summary.skipped} unchanged, ${summary.translated} translated, ${summary.reused} cached translations reused, ${summary.failed} failed).`);
   for (const result of results) {
     for (const diagnostic of result.diagnostics ?? []) {
       console.log(`- ${path.basename(result.source)} diagnostic: ${diagnostic.type} - ${diagnostic.message}`);
@@ -169,6 +169,6 @@ export async function printCliSummary() {
       else if (localized.cached && localized.locale !== SOURCE_LOCALE) tags.push('cached');
       console.log(`- ${path.basename(result.source)} -> ${path.relative(ROOT, localized.output)} [${tags.join(', ')}; ${action}]`);
     }
-    if (result.error) console.log(`- ${path.basename(result.source)} failed: ${result.error.message}`);
+    if (result.error) console.error(`- ${path.basename(result.source)} error: ${result.error.message}`);
   }
 }
