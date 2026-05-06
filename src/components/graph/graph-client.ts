@@ -19,6 +19,21 @@ const GRAPH_PRESETS_STORAGE_KEY = 'graph:view-presets';
 const GRAPH_ACTIVE_PRESET_KEY = 'graph:active-preset-id';
 const graphDataCache = new Map<string, Promise<any>>();
 
+function createGraphError(message: string) {
+  const empty = document.createElement('div');
+  empty.className = 'graph-empty';
+  empty.textContent = message;
+  return empty;
+}
+
+function getGraphErrorMessage(error: unknown, graphUrl: string) {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return `Unable to load graph data from ${graphUrl}.`;
+}
+
 type GraphClientState = {
   graphUrl: string;
   mode: GraphViewMode;
@@ -357,56 +372,73 @@ function writeGraphState(root: HTMLElement, state: GraphClientState) {
 
 async function loadGraphData(graphUrl: string) {
   if (!graphDataCache.has(graphUrl)) {
-    graphDataCache.set(graphUrl, fetch(graphUrl).then((response) => response.json()));
+    graphDataCache.set(graphUrl, (async () => {
+      const response = await fetch(graphUrl);
+      if (!response.ok) {
+        throw new Error(`Unable to load graph data from ${graphUrl} (${response.status} ${response.statusText}).`);
+      }
+
+      return response.json();
+    })());
   }
 
-  return graphDataCache.get(graphUrl)!;
+  try {
+    return await graphDataCache.get(graphUrl)!;
+  } catch (error) {
+    graphDataCache.delete(graphUrl);
+    throw error;
+  }
 }
 
 async function initGraph(root: HTMLElement) {
   const currentState = readGraphState(root);
-  const fullData = await loadGraphData(currentState.graphUrl);
-  const controls = await createGraphView(root, {
-    ...currentState,
-    graphUrl: currentState.graphUrl,
-    onNodeContextMenu: (event, node) => {
-      const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-      if (getEffectiveLayoutPreset(state.mode, state.settings) !== 'brain') {
-        return;
+  try {
+    const fullData = await loadGraphData(currentState.graphUrl);
+    const controls = await createGraphView(root, {
+      ...currentState,
+      graphUrl: currentState.graphUrl,
+      onNodeContextMenu: (event, node) => {
+        const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+        if (getEffectiveLayoutPreset(state.mode, state.settings) !== 'brain') {
+          return;
+        }
+
+        event.preventDefault();
+        root.dispatchEvent(new CustomEvent('graph:node-contextmenu', {
+          detail: { node, clientX: event.clientX, clientY: event.clientY },
+        }));
+      },
+    }, fullData);
+    (root as any).__graphControls = controls;
+    (root as any).__graphState = currentState;
+    bindGraphThemeSync(root);
+
+    if (isLocalGraphState(currentState)) {
+      if (!(root as any).__graphLocalGraphUnsubscribe) {
+        (root as any).__graphLocalGraphUnsubscribe = subscribeLocalGraphState(
+          currentState.focusId,
+          createRootSubscriberId(root),
+          (sharedState) => {
+            const rootState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+            const nextState: GraphClientState = {
+              ...rootState,
+              settings: sharedState.settings,
+              activePresetId: sharedState.activePresetId ?? rootState.activePresetId,
+            };
+            applyNextState(root, nextState, 'settings', { skipLocalGraphSync: true });
+            const shell = root.closest<HTMLElement>('[data-graph-shell]');
+            if (shell) {
+              syncSettingsUI(shell, root);
+            }
+          },
+        );
       }
 
-      event.preventDefault();
-      root.dispatchEvent(new CustomEvent('graph:node-contextmenu', {
-        detail: { node, clientX: event.clientX, clientY: event.clientY },
-      }));
-    },
-  }, fullData);
-  (root as any).__graphControls = controls;
-  (root as any).__graphState = currentState;
-  bindGraphThemeSync(root);
-
-  if (isLocalGraphState(currentState)) {
-    if (!(root as any).__graphLocalGraphUnsubscribe) {
-      (root as any).__graphLocalGraphUnsubscribe = subscribeLocalGraphState(
-        currentState.focusId,
-        createRootSubscriberId(root),
-        (sharedState) => {
-          const rootState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-          const nextState: GraphClientState = {
-            ...rootState,
-            settings: sharedState.settings,
-            activePresetId: sharedState.activePresetId ?? rootState.activePresetId,
-          };
-          applyNextState(root, nextState, 'settings', { skipLocalGraphSync: true });
-          const shell = root.closest<HTMLElement>('[data-graph-shell]');
-          if (shell) {
-            syncSettingsUI(shell, root);
-          }
-        },
-      );
+      syncSharedLocalGraphState(root, currentState, { publish: true });
     }
-
-    syncSharedLocalGraphState(root, currentState, { publish: true });
+  } catch (error) {
+    console.error('Failed to initialize graph view', error);
+    root.replaceChildren(createGraphError(getGraphErrorMessage(error, currentState.graphUrl)));
   }
 }
 

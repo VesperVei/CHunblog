@@ -2,7 +2,6 @@
 import { DEFAULT_DEPTH, DEFAULT_LAYOUT, getAvailableLayoutsForMode, resolveGraphSettings } from '../../graph/constants';
 import I18nKey from '../../i18n/i18nKey';
 import { useTranslations } from '../../i18n/translation';
-import graphClientUrl from './graph-client.ts?url';
 
 interface Props {
   graphUrl?: string;
@@ -1563,4 +1562,6 @@ const serializedVisibleSettingsFields = visibleSettingsFields ? JSON.stringify(v
   }
 </style>
 
-<script type="module" src={graphClientUrl}></script>
+<script>
+  import './graph-client.ts';
+</script>

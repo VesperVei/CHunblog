@@ -1,4 +1,4 @@
-import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm';
+import * as d3 from 'd3';
 import { DEFAULT_FORCE_SETTINGS, getEffectiveCollisionRadius } from '../constants';
 import { toPhysicalForces } from './physical-forces';
 import type { GraphEdge, GraphLayoutMode, GraphNode, GraphSettings } from '../types';
