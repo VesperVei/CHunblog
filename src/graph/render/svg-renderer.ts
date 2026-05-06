@@ -286,6 +286,10 @@ function isSelectedNode(node: GraphNode, focusId?: string) {
   return node.id === focusId;
 }
 
+function isMissingNode(node: GraphNode) {
+  return node.exists === false || node.kind === 'missing_note';
+}
+
 function getBaseNodeRadius(node: GraphNode, appearance: GraphAppearanceSettings, focusId?: string, context?: GraphAppearanceContext) {
   if (context && shouldUseObsidianLocalColors(context)) {
     return getObsidianNodeStyle(node, appearance, focusId, createEmptyHoverState(), context).radius;
@@ -347,6 +351,10 @@ function getNodeFill(node: GraphNode, settings: GraphSettings, _locale: string, 
     return 'var(--graph-node-hover)';
   }
 
+  if (isMissingNode(node)) {
+    return 'var(--graph-node-missing)';
+  }
+
   return 'var(--graph-node-default)';
 }
 
@@ -361,6 +369,10 @@ function getNodeStroke(node: GraphNode, focusId: string | undefined, hoverState:
 
   if (hoverState.connectedNodeIds.has(node.id)) {
     return 'var(--graph-node-stroke)';
+  }
+
+  if (isMissingNode(node)) {
+    return 'var(--graph-node-missing-stroke)';
   }
 
   return 'transparent';
@@ -546,6 +558,7 @@ export function applyGraphAppearance(scene, _data: GraphData, settings: GraphSet
   updateArrowMarkerColor(scene, scene.markerId, getGraphArrowColor(getThemeMode(context.isDarkTheme)));
 
   scene.link
+    .classed('is-missing', (edge) => edge.exists === false)
     .classed('is-connected', (edge) => hoverState.connectedLinkIds.has(edgeKey(edge)))
     .classed('is-dimmed', (edge) => Boolean(hoverState.hoveredNodeId) && !hoverState.connectedLinkIds.has(edgeKey(edge)))
     .style('stroke', (edge) => shouldUseObsidianLocalColors(context)
@@ -562,6 +575,7 @@ export function applyGraphAppearance(scene, _data: GraphData, settings: GraphSet
     .attr('marker-end', (edge) => appearance.showArrows ? `url(#${scene.markerId})` : null);
 
   scene.node
+    .classed('is-missing', (node) => isMissingNode(node))
     .classed('is-selected', (node) => isSelectedNode(node, focusId))
     .classed('is-hovered', (node) => hoverState.hoveredNodeId === node.id)
     .classed('is-connected', (node) => hoverState.connectedNodeIds.has(node.id))
@@ -619,6 +633,7 @@ export function bindNodeNavigation(nodeSelection, locale: string, navigationSear
   beforeNavigate?: () => void;
   onNodeClick?: (item: GraphNode) => void;
   onNodeDoubleClick?: (item: GraphNode) => void;
+  onNodeContextMenu?: (event: MouseEvent, item: GraphNode) => void;
   navigateOnClick?: boolean;
   navigateOnDoubleClick?: boolean;
 } = {}) {
@@ -656,5 +671,14 @@ export function bindNodeNavigation(nodeSelection, locale: string, navigationSear
     if (options.navigateOnDoubleClick) {
       navigateToNode(item, locale, navigationSearch, options.beforeNavigate);
     }
+  });
+
+  nodeSelection.on('contextmenu', (event, item) => {
+    if (event.defaultPrevented || (item as any).__dragMoved) {
+      (item as any).__dragMoved = false;
+      return;
+    }
+
+    options.onNodeContextMenu?.(event, item);
   });
 }

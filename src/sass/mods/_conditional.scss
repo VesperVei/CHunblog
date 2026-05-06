@@ -119,11 +119,21 @@ body[data-article-list-style="classic"] {
       &.draft,
       &.archive,
       &.featured,
+      &.writeup,
       &.hot,
-      &.poor {
+      &.poor,
+      &.domain-pwn,
+      &.domain-web,
+      &.domain-rev,
+      &.domain-crypto,
+      &.domain-misc {
         background-color: transparent;
 
         &::before {
+          display: none;
+        }
+
+        &::after {
           display: none;
         }
       }

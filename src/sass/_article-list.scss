@@ -6,19 +6,37 @@
 
   article {
     --bg-overlay: var(--accent-color-alpha);
+    --domain-atmosphere-color: var(--domain-color, var(--accent-color));
+    --domain-tint-strength: 7%;
+    --domain-watermark-size: 7rem;
+    --domain-watermark-opacity: 0.48;
+    --domain-watermark-inline-offset: -1.55rem;
+    --domain-watermark-block-offset: -1.3rem;
+    --domain-watermark-color: color-mix(in srgb, var(--domain-atmosphere-color) 58%, var(--accent-color));
+    --domain-watermark-tilt: 8deg;
+    --domain-watermark-hover-scale: 1.15;
+    --domain-watermark-hover-opacity: 0.51;
     position: relative;
     transition: var(--transition);
     box-shadow: var(--edge-highlight), var(--shadow-glass);
     border-radius: var(--rounded-corner);
     border-start-end-radius: 2.125rem;
     border-end-end-radius: 1.8125rem;
-    background-image: linear-gradient(var(--bg-overlay), var(--bg-overlay)),
+    background-image: radial-gradient(circle at 0% 100%,
+        color-mix(in srgb, var(--domain-atmosphere-color) var(--domain-tint-strength), transparent),
+        transparent 34%),
+      linear-gradient(var(--bg-overlay), var(--bg-overlay)),
       linear-gradient(var(--glass-bg), var(--glass-bg)), var(--blurnail);
     background-position: center;
     background-size: cover;
     background-color: var(--bg-overlay);
     padding: 1rem;
     overflow: hidden;
+
+    &>* {
+      position: relative;
+      z-index: 1;
+    }
 
     &:hover {
       h3 .title-arrow {
@@ -49,7 +67,7 @@
       }
     }
 
-    & > a {
+    &>a {
       position: absolute;
       inset: 0;
       border-radius: var(--rounded-corner);
@@ -106,6 +124,7 @@
     &.draft,
     &.archive,
     &.featured,
+    &.writeup,
     &.hot,
     &.poor {
       &::before {
@@ -288,6 +307,129 @@
           background-color: var(--brown-fg);
           color: var(--fg-contrast);
         }
+      }
+    }
+
+    &.writeup {
+      --writeup-fg: var(--domain-color, var(--blue-fg));
+      --writeup-bg-overlay: rgb(from var(--writeup-fg) r g b / var(--color-opacity));
+      --bg-overlay: var(--writeup-bg-overlay);
+      --domain-atmosphere-color: var(--writeup-fg);
+      --domain-watermark-color: color-mix(in srgb, var(--writeup-fg) 58%, transparent);
+      --domain-watermark-hover-scale: 1.06;
+
+      &::before {
+        -webkit-mask-image: url('/icons/phosphor/flag-banner-fold.svg');
+        mask-image: url('/icons/phosphor/flag-banner-fold.svg');
+        background-color: var(--writeup-fg);
+        transform-origin: 55% 70%;
+      }
+
+      &:hover::before,
+      &:focus-within::before {
+        transform: translateY(-56%) rotate(-2deg) scale(1.12);
+      }
+
+      :root[dir*="rtl"] &:hover::before,
+      :root[dir*="rtl"] &:focus-within::before {
+        transform: translateY(-56%) rotate(2deg) scale(1.12);
+      }
+
+      h3 {
+        color: var(--writeup-fg);
+      }
+
+      .badge {
+        background-color: var(--bg-overlay);
+        color: var(--writeup-fg);
+      }
+
+      .tags a {
+        background-color: var(--bg-overlay);
+        color: var(--writeup-fg);
+
+        &:hover {
+          background-color: var(--writeup-fg);
+          color: var(--contrast-color);
+        }
+      }
+    }
+
+    &:is(.domain-pwn, .domain-web, .domain-rev, .domain-crypto, .domain-misc) {
+      &::after {
+        position: absolute;
+        z-index: 0;
+        inset-block-end: var(--domain-watermark-block-offset);
+        inset-inline-start: var(--domain-watermark-inline-offset);
+        opacity: var(--domain-watermark-opacity);
+        transform: rotate(var(--domain-watermark-tilt)) scale(1);
+        transform-origin: left bottom;
+        transition:
+          transform var(--transition-longer),
+          opacity 180ms ease,
+          background-color 180ms ease;
+        background-color: var(--domain-watermark-color);
+        inline-size: var(--domain-watermark-size);
+        block-size: var(--domain-watermark-size);
+        mask-position: center;
+        -webkit-mask-position: center;
+        mask-repeat: no-repeat;
+        -webkit-mask-repeat: no-repeat;
+        mask-size: contain;
+        -webkit-mask-size: contain;
+        pointer-events: none;
+        content: "";
+      }
+
+      &:hover::after,
+      &:focus-within::after {
+        opacity: var(--domain-watermark-hover-opacity);
+        transform: rotate(var(--domain-watermark-tilt)) scale(var(--domain-watermark-hover-scale));
+      }
+    }
+
+    &.domain-pwn {
+      --domain-color: #f43f5e;
+
+      &::after {
+        -webkit-mask-image: url('/selecticons/bx--bomb.svg');
+        mask-image: url('/selecticons/bx--bomb.svg');
+      }
+    }
+
+    &.domain-web {
+      --domain-color: #38bdf8;
+
+      &::after {
+        -webkit-mask-image: url('/icons/phosphor/browser.svg');
+        mask-image: url('/icons/phosphor/browser.svg');
+      }
+    }
+
+    &.domain-rev {
+      --domain-color: #4ade80;
+
+      &::after {
+        -webkit-mask-image: url('/icons/phosphor/binary.svg');
+        mask-image: url('/icons/phosphor/binary.svg');
+      }
+    }
+
+    &.domain-crypto {
+      --domain-color: #fbbf24;
+
+      &::after {
+        -webkit-mask-image: url('/icons/phosphor/lock-key.svg');
+        mask-image: url('/icons/phosphor/lock-key.svg');
+      }
+    }
+
+    &.domain-misc {
+      --domain-color: #c084fc;
+
+      &::after {
+        -webkit-mask-image: url('/icons/phosphor/puzzle-piece.svg');
+        mask-image: url('/icons/phosphor/puzzle-piece.svg');
       }
     }
 

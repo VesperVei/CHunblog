@@ -88,6 +88,13 @@ export function attachZoomPan(svg, canvas, width: number, height: number) {
       svg.transition().duration(140).call(zoom.scaleBy, 1 / 1.2);
     },
     fitView,
+    getCurrentTransform() {
+      return d3.zoomTransform(svg.node());
+    },
+    setTransform(transform, options = {}) {
+      const { animate = false } = options;
+      applyTransform(transform, animate);
+    },
     getOverviewTransform() {
       return overviewTransform;
     },

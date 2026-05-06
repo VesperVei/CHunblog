@@ -143,7 +143,7 @@ function classifyRelation(indexes: ReturnType<typeof createGraphIndexes>, focusN
 }
 
 export function buildBrainRenderableGraph(data: GraphData, focusId?: string, filters: GraphFilterSettings = {}, locale = 'en') {
-  const localizedData = filterGraphDataByLocale(data, locale);
+  const localizedData = filterGraphDataByLocale(data, locale, { onlyExistingNotes: filters.onlyExistingNotes });
   if (!focusId) {
     return {
       nodes: [],
@@ -151,7 +151,7 @@ export function buildBrainRenderableGraph(data: GraphData, focusId?: string, fil
     };
   }
 
-  const indexes = createGraphIndexes(localizedData);
+  const indexes = createGraphIndexes(localizedData, { onlyExistingNotes: filters.onlyExistingNotes });
   const focusNode = indexes.nodeById.get(focusId);
   if (!focusNode) {
     return {

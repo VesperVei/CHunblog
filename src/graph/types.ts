@@ -1,6 +1,8 @@
 export type GraphNode = {
   id: string;
-  kind?: 'note';
+  kind?: 'note' | 'missing_note';
+  exists?: boolean;
+  unresolvedKey?: string;
   path?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -18,6 +20,12 @@ export type GraphNode = {
   siblingIndex?: number;
   siblingCount?: number;
   metadata?: Record<string, unknown>;
+  missing?: {
+    rawTargets: string[];
+    normalizedTarget: string;
+    sources: string[];
+    reason: 'not_found' | 'ambiguous' | 'locale_unavailable' | string;
+  };
   degree?: number;
   targetX?: number;
   targetY?: number;
@@ -118,6 +126,7 @@ export type GraphViewOptions = {
   settings: GraphSettings;
   navigationSearch?: string;
   activePresetId?: string;
+  onNodeContextMenu?: (event: MouseEvent, node: GraphNode) => void;
 };
 
 export type BrainGraphNode = GraphNode & {

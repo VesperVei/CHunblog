@@ -38,14 +38,7 @@ function normalizeGraphLevelValue(value) {
 }
 
 function deriveNoteId(frontmatter) {
-  const explicitId = sanitizeNoteId(frontmatter.note_id ?? frontmatter['笔记ID']);
-  if (explicitId) return explicitId;
-
-  const createdAt = normalizeDateValue(frontmatter.created_at ?? frontmatter.creation_time ?? frontmatter.createTime);
-  if (!createdAt) return undefined;
-
-  const digits = createdAt.replace(/\D/g, '');
-  return digits || undefined;
+  return sanitizeNoteId(frontmatter.note_id ?? frontmatter['笔记ID']);
 }
 
 function deriveTitle(frontmatter, filePath) {
@@ -86,6 +79,31 @@ function normalizeControlledArray(value) {
   return items.length > 0 ? [...new Set(items)] : undefined;
 }
 
+function hasAssemblyInstructionTag(frontmatter) {
+  return normalizeArray(frontmatter.tags).some((tag) => tag.replace(/\s+/g, '') === '汇编指令');
+}
+
+function deriveTypeFromTags(tags, frontmatter) {
+  if (tags.includes('writeup')) return 'writeup';
+  return normalizeNullish(frontmatter.type ?? frontmatter['类型']);
+}
+
+function deriveDomainFromTags(tags, frontmatter) {
+  const explicitDomain = normalizeNullish(frontmatter.domain ?? frontmatter['领域'] ?? frontmatter['方向']);
+  const resolvedExplicitDomain = resolveTag(explicitDomain) ?? explicitDomain;
+  const allowedDomains = ['pwn', 'web', 'rev', 'crypto', 'misc'];
+
+  if (allowedDomains.includes(resolvedExplicitDomain)) return resolvedExplicitDomain;
+
+  if (hasAssemblyInstructionTag(frontmatter)) return 'rev';
+
+  for (const domain of allowedDomains) {
+    if (tags.includes(domain)) return domain;
+  }
+
+  return undefined;
+}
+
 function buildExtraTagCandidates(frontmatter) {
   return [
     frontmatter.note_type,
@@ -108,6 +126,11 @@ const MAPPED_KEYS = new Set([
   '利用路线',
   '涉及区域',
   'role',
+  'type',
+  'domain',
+  '类型',
+  '领域',
+  '方向',
   '笔记ID',
   '笔记类型',
   '创建时间',
@@ -145,7 +168,7 @@ export function buildFrontmatter(sourcePath, frontmatter, locale, overrides = {}
     extraCandidates: buildExtraTagCandidates(frontmatter),
   });
 
-  if (!noteId) throw new Error(`Missing note_id and unable to derive one from created_at: ${sourcePath}`);
+  if (!noteId) throw new Error(`Missing required note_id/笔记ID: ${sourcePath}`);
   if (!createdAt) throw new Error(`Missing created_at/creation_time/createTime: ${sourcePath}`);
 
   const normalized = {
@@ -153,6 +176,8 @@ export function buildFrontmatter(sourcePath, frontmatter, locale, overrides = {}
     description: cleanString(overrides.description) ?? deriveDescription(frontmatter, title, locale),
     note_id: noteId,
     note_type: normalizeNullish(frontmatter.note_type ?? frontmatter['笔记类型']),
+    type: deriveTypeFromTags(tagResult.tags, frontmatter),
+    domain: deriveDomainFromTags(tagResult.tags, frontmatter),
     created_at: createdAt,
     updated_at: normalizeDateValue(frontmatter.updated_at ?? frontmatter.modify_time),
     tags: tagResult.tags,

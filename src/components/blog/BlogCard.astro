@@ -18,9 +18,11 @@ const postTypeIcons: Record<string, string> = {
   draft: 'pencil-simple',
   archive: 'archive',
   featured: 'star',
+  writeup: 'flag-banner-fold',
   hot: 'fire',
   poor: 'smiley-x-eyes',
 };
+
 ---
 
 <div id="article-list">
@@ -30,7 +32,11 @@ const postTypeIcons: Record<string, string> = {
     const typeIcon = post.data.type ? postTypeIcons[post.data.type] : undefined;
     return (
     <article
-      class:list={post.data.type}
+      class:list={[
+        'blog-card',
+        post.data.type,
+        post.data.domain && `domain-${post.data.domain}`,
+      ]}
       style={post.data.heroImage && `--blurnail:url('${post.data.heroImage.src}')`}
     >
       {post.data.type &&

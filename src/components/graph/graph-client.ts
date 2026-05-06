@@ -1,6 +1,7 @@
 import { DEFAULT_LAYOUT, defaultGraphSettings, getEffectiveLayoutPreset, getLayoutCapabilities, normalizeGraphSettingsForMode, resolveGraphSettings } from '../../graph/constants';
 import { getForceRelationColor } from '../../graph/color';
 import { forceLegendOrder, getForceLegendLabel } from '../../graph/color/force';
+import { closeNodeOverlayPanel } from '../../graph/interaction/node-overlay-panel';
 import { createGraphView } from '../../graph/runtime/create-graph-view';
 import {
   consumeLastNavigationLocalGraphState,
@@ -12,6 +13,7 @@ import {
 } from '../../graph/runtime/local-graph-state';
 import { BUILTIN_GRAPH_PRESETS, createPresetFromSettings, getGraphPresetById, mergePresetIntoSettings, type GraphViewPreset } from '../../graph/presets';
 import type { GraphLayoutMode, GraphNode, GraphSettings, GraphViewMode } from '../../graph/types';
+import { showGraphNodeOverlay } from './graph-node-overlay';
 
 const GRAPH_PRESETS_STORAGE_KEY = 'graph:view-presets';
 const GRAPH_ACTIVE_PRESET_KEY = 'graph:active-preset-id';
@@ -246,6 +248,14 @@ function getGraphControls(root: HTMLElement) {
   return (root as any).__graphControls;
 }
 
+function getContextMenuHost(root: HTMLElement) {
+  return root.closest<HTMLElement>('.graph-workspace') ?? root;
+}
+
+function getContextMenuAnchor(root: HTMLElement) {
+  return root;
+}
+
 function getLegendOpenState(shell: HTMLElement) {
   return Boolean((shell as any).__graphLegendOpen);
 }
@@ -297,6 +307,10 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function isMissingNode(node: GraphNode) {
+  return node.exists === false || node.kind === 'missing_note';
 }
 
 function readGraphState(root: HTMLElement): GraphClientState {
@@ -352,7 +366,21 @@ async function loadGraphData(graphUrl: string) {
 async function initGraph(root: HTMLElement) {
   const currentState = readGraphState(root);
   const fullData = await loadGraphData(currentState.graphUrl);
-  const controls = await createGraphView(root, { ...currentState, graphUrl: currentState.graphUrl }, fullData);
+  const controls = await createGraphView(root, {
+    ...currentState,
+    graphUrl: currentState.graphUrl,
+    onNodeContextMenu: (event, node) => {
+      const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+      if (getEffectiveLayoutPreset(state.mode, state.settings) !== 'brain') {
+        return;
+      }
+
+      event.preventDefault();
+      root.dispatchEvent(new CustomEvent('graph:node-contextmenu', {
+        detail: { node, clientX: event.clientX, clientY: event.clientY },
+      }));
+    },
+  }, fullData);
   (root as any).__graphControls = controls;
   (root as any).__graphState = currentState;
   bindGraphThemeSync(root);
@@ -531,7 +559,8 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
   }
 
   const title = node.titles?.[state.locale] || node.id;
-  const subtitle = node.type || node.metadata?.note_type || 'note';
+  const isMissingNode = node.exists === false || node.kind === 'missing_note';
+  const subtitle = isMissingNode ? 'missing note' : node.type || node.metadata?.note_type || 'note';
   const tags = Array.isArray(node.tags) && node.tags.length > 0
     ? node.tags.map((tag) => `<span class="graph-detail-tag">${escapeHtml(String(tag))}</span>`).join('')
     : '<span class="graph-detail-tag">—</span>';
@@ -561,7 +590,7 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
         </div>
       </div>
       <div class="graph-detail-actions">
-        <button type="button" class="graph-settings-action" data-graph-open-article="${escapeHtml(node.id)}">${escapeHtml(openArticleLabel)}</button>
+        ${isMissingNode ? '' : `<button type="button" class="graph-settings-action" data-graph-open-article="${escapeHtml(node.id)}">${escapeHtml(openArticleLabel)}</button>`}
         <button type="button" class="graph-settings-action" data-graph-focus-related="${escapeHtml(node.id)}">${escapeHtml(focusRelatedLabel)}</button>
       </div>
     </article>
@@ -800,6 +829,32 @@ function bindGraphSettings(root: HTMLElement) {
     syncDetailDrawer(shell, root);
   }) as EventListener);
 
+  root.addEventListener('graph:node-contextmenu', ((event: Event) => {
+    const customEvent = event as CustomEvent<{ node?: GraphNode; clientX?: number; clientY?: number }>;
+    const node = customEvent.detail?.node;
+    if (!node) {
+      return;
+    }
+
+    setSelectedNodeId(shell, node.id);
+    const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+    const menuHost = getContextMenuHost(root);
+    const menuAnchor = getContextMenuAnchor(root);
+    showGraphNodeOverlay({
+      menuHost,
+      menuAnchor,
+      node,
+      clientX: customEvent.detail.clientX ?? 0,
+      clientY: customEvent.detail.clientY ?? 0,
+      locale: state.locale,
+      graphUrl: state.graphUrl,
+      controls: getGraphControls(root),
+      updateGraphCache: (graphUrl, snapshot) => graphDataCache.set(graphUrl, Promise.resolve(snapshot)),
+      setSelectedNodeId: (nodeId) => setSelectedNodeId(shell, nodeId),
+      syncDetailDrawer: () => syncDetailDrawer(shell, root),
+    });
+  }) as EventListener);
+
   shell.querySelector('[data-graph-settings-reset]')?.addEventListener('click', () => {
     const state = readGraphState(root);
     const resetSettings = resolvePresetBackedSettings(
@@ -867,6 +922,10 @@ function bindGraphSettings(root: HTMLElement) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
+    if (!target.closest('[data-graph-node-overlay-panel]')) {
+      closeNodeOverlayPanel(getContextMenuHost(root));
+    }
+
     const openArticleButton = target.closest<HTMLElement>('[data-graph-open-article]');
     if (openArticleButton) {
       const node = resolveNodeById(root, openArticleButton.dataset.graphOpenArticle);
@@ -887,6 +946,12 @@ function bindGraphSettings(root: HTMLElement) {
       return;
     }
 
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeNodeOverlayPanel(getContextMenuHost(root));
+    }
   });
 
   (shell as any).__graphSettingsBound = true;
