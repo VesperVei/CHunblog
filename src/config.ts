@@ -6,8 +6,8 @@ import {
 } from "./type/config.ts";
 
 export const siteConfig: SiteConfig = {
-  title: "Goosequill",
-  description: "Goosequill example website",
+  title: "Vesper Vei",
+  description: "Personal notes, writings, and experiments by Vesper Vei.",
   // defaultLocale: "en", // Set to undefined to enable multi-language routing, or set to a locale like "en" for single-language mode
   rss: {
     enable: true,
@@ -71,15 +71,15 @@ export const navBarConfig: NavBarConfig = {
   links: [
     {
       name: "_links",
-      items: [LinkPreset.Blog, LinkPreset.About],
+      items: [LinkPreset.Blog, LinkPreset.About, LinkPreset.Friends],
     },
     {
       preset: LinkPreset.Demo,
       icon: { name: "book-bookmark" },
     },
     {
-      name: "Duckquill",
-      url: "https://duckquill.daudix.one/",
+      name: "Vesper Vei",
+      url: "/about",
     },
   ],
 };
@@ -89,9 +89,6 @@ export const footerConfig: FooterConfig = {
     LinkPreset.Home,
     LinkPreset.Blog,
     LinkPreset.About,
-    {
-      name: "Duckquill",
-      url: "https://duckquill.daudix.one/",
-    },
+    LinkPreset.Friends,
   ],
 };

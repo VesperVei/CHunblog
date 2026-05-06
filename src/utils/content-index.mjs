@@ -7,6 +7,7 @@ import { normalizeWikiTarget } from './wiki.mjs';
 
 const BLOG_CONTENT_GLOB = 'src/content/blog/**/index*.{md,mdx}';
 const BLOG_CONTENT_BASE = path.join(process.cwd(), 'src/content/blog');
+const GRAPH_LEVEL_OVERRIDES_FILE = path.join(process.cwd(), '.cache/admin-dev/graph-level-overrides.json');
 const DEFAULT_LOCALE = 'en';
 const PREFERRED_LOCALES = ['en', 'zh-cn'];
 const NODE_METADATA_EXCLUDE_KEYS = new Set([
@@ -112,8 +113,24 @@ function normalizeGraphLevel(value) {
   return undefined;
 }
 
+async function readGraphLevelOverrides() {
+  try {
+    const parsed = JSON.parse(await fs.readFile(GRAPH_LEVEL_OVERRIDES_FILE, 'utf8'));
+    return new Map(
+      Object.entries(parsed?.items ?? {})
+        .map(([noteId, entry]) => [String(noteId), normalizeGraphLevel(entry?.graphLevel)]),
+    );
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return new Map();
+    }
+    throw error;
+  }
+}
+
 export async function buildContentIndex() {
   const files = await fg(BLOG_CONTENT_GLOB, { absolute: true });
+  const graphLevelOverrides = await readGraphLevelOverrides();
   const entries = [];
   const warnings = [];
 
@@ -155,7 +172,9 @@ export async function buildContentIndex() {
     const tags = toArray(entry.data.tags);
     const langKey = entry.lang ?? DEFAULT_LOCALE;
     const metadata = extractNodeMetadata(entry.data);
-    const graphLevel = normalizeGraphLevel(entry.data.graphLevel);
+    const graphLevel = graphLevelOverrides.has(entry.noteId)
+      ? graphLevelOverrides.get(entry.noteId)
+      : normalizeGraphLevel(entry.data.graphLevel);
     const existingNode = nodesById.get(entry.noteId) ?? {
       id: entry.noteId,
       title: entry.data.title || entry.slug || entry.noteId,

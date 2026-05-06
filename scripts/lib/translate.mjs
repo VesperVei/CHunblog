@@ -68,6 +68,27 @@ function restoreMarkdownSegments(markdown, protectedSegments) {
   return restored;
 }
 
+function normalizeForValidation(value) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function validateTranslatedContent({ sourceContent, translatedContent }) {
+  if (/@@(?:CODE_BLOCK|INLINE_CODE|WIKILINK)_\d+@@/.test(translatedContent)) {
+    throw new Error("Translation response left protected Markdown tokens unrestored.");
+  }
+
+  const normalized = normalizeForValidation(translatedContent);
+  const prefix = normalizeForValidation(translatedContent.split("\n").slice(0, 14).join("\n"));
+  if (prefix.length >= 240 && normalized.indexOf(prefix, prefix.length) !== -1) {
+    throw new Error("Translation response appears to duplicate the document prefix.");
+  }
+
+  const sourceLength = normalizeForValidation(sourceContent).length;
+  if (sourceLength > 0 && normalized.length > Math.max(sourceLength * 1.9, sourceLength + 6000)) {
+    throw new Error("Translation response is unexpectedly larger than the source document.");
+  }
+}
+
 function normalizeJsonCandidate(text) {
   const trimmed = text.trim();
   const fencedMatch = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
@@ -237,9 +258,15 @@ export async function translateDocument({
     );
   }
 
+  const restoredContent = restoreMarkdownSegments(translatedContent, protectedSegments);
+  validateTranslatedContent({
+    sourceContent: content,
+    translatedContent: restoredContent,
+  });
+
   return {
     title: translatedTitle,
     description: translatedDescription,
-    content: restoreMarkdownSegments(translatedContent, protectedSegments),
+    content: restoredContent,
   };
 }

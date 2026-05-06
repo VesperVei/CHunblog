@@ -30,7 +30,7 @@ const comment = data.comment;
 ---
 
 <Base title={title} description={description}>
-  <article>
+  <article data-pagefind-filter="section:blog">
     <BlogPostHero data={data} />
     <BlogPostHeader data={data} words={words} minutes={minutes} />
     <Statements data={data} />
@@ -48,6 +48,8 @@ const comment = data.comment;
   {data.note_id && <ArticleGraph noteId={data.note_id} />}
   {data.note_id && <GraphModal noteId={data.note_id} />}
 
+  <!--
   <hr />
   <BlogPostNav prev={prev} next={next} />
+  -->
 </Base>

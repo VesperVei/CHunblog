@@ -1,6 +1,7 @@
 import { DEFAULT_LAYOUT, defaultGraphSettings, getEffectiveLayoutPreset, getLayoutCapabilities, normalizeGraphSettingsForMode, resolveGraphSettings } from '../../graph/constants';
 import { getForceRelationColor } from '../../graph/color';
 import { forceLegendOrder, getForceLegendLabel } from '../../graph/color/force';
+import { closeNodeOverlayPanel } from '../../graph/interaction/node-overlay-panel';
 import { createGraphView } from '../../graph/runtime/create-graph-view';
 import {
   consumeLastNavigationLocalGraphState,
@@ -12,6 +13,7 @@ import {
 } from '../../graph/runtime/local-graph-state';
 import { BUILTIN_GRAPH_PRESETS, createPresetFromSettings, getGraphPresetById, mergePresetIntoSettings, type GraphViewPreset } from '../../graph/presets';
 import type { GraphLayoutMode, GraphNode, GraphSettings, GraphViewMode } from '../../graph/types';
+import { showGraphNodeOverlay } from './graph-node-overlay';
 
 const GRAPH_PRESETS_STORAGE_KEY = 'graph:view-presets';
 const GRAPH_ACTIVE_PRESET_KEY = 'graph:active-preset-id';
@@ -37,6 +39,8 @@ type ApplyStateOptions = {
   skipLocalGraphSync?: boolean;
 };
 
+type VisibilityMap = Set<string> | null;
+
 type FieldScope = 'filters' | 'appearance' | 'forces' | 'layout';
 type FieldControl = 'search' | 'slider' | 'toggle' | 'select';
 type UpdateMode = 'filters' | 'appearance' | 'forces' | 'settings';
@@ -55,6 +59,27 @@ type FieldConfig = {
 const formatFloat = (value: string | boolean) => Number(value).toFixed(2);
 const formatFloat3 = (value: string | boolean) => Number(value).toFixed(3);
 const formatInteger = (value: string | boolean) => String(Math.round(Number(value)));
+
+function parseVisibilityMap(raw?: string): VisibilityMap {
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    return new Set(parsed.filter((item): item is string => typeof item === 'string'));
+  } catch {
+    return null;
+  }
+}
+
+function isVisibleByMap(map: VisibilityMap, key: string) {
+  return map ? map.has(key) : true;
+}
 
 function updateScope(state: GraphClientState, scope: FieldScope, patch: Record<string, unknown>): GraphClientState {
   return {
@@ -223,6 +248,14 @@ function getGraphControls(root: HTMLElement) {
   return (root as any).__graphControls;
 }
 
+function getContextMenuHost(root: HTMLElement) {
+  return root.closest<HTMLElement>('.graph-workspace') ?? root;
+}
+
+function getContextMenuAnchor(root: HTMLElement) {
+  return root;
+}
+
 function getLegendOpenState(shell: HTMLElement) {
   return Boolean((shell as any).__graphLegendOpen);
 }
@@ -274,6 +307,10 @@ function escapeHtml(value: string) {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function isMissingNode(node: GraphNode) {
+  return node.exists === false || node.kind === 'missing_note';
 }
 
 function readGraphState(root: HTMLElement): GraphClientState {
@@ -329,7 +366,21 @@ async function loadGraphData(graphUrl: string) {
 async function initGraph(root: HTMLElement) {
   const currentState = readGraphState(root);
   const fullData = await loadGraphData(currentState.graphUrl);
-  const controls = await createGraphView(root, { ...currentState, graphUrl: currentState.graphUrl }, fullData);
+  const controls = await createGraphView(root, {
+    ...currentState,
+    graphUrl: currentState.graphUrl,
+    onNodeContextMenu: (event, node) => {
+      const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+      if (getEffectiveLayoutPreset(state.mode, state.settings) !== 'brain') {
+        return;
+      }
+
+      event.preventDefault();
+      root.dispatchEvent(new CustomEvent('graph:node-contextmenu', {
+        detail: { node, clientX: event.clientX, clientY: event.clientY },
+      }));
+    },
+  }, fullData);
   (root as any).__graphControls = controls;
   (root as any).__graphState = currentState;
   bindGraphThemeSync(root);
@@ -422,19 +473,33 @@ function syncLegendUI(shell: HTMLElement, state: GraphClientState) {
   const legendPanel = shell.querySelector<HTMLElement>('[data-graph-legend-panel]');
   const legendToggle = shell.querySelector<HTMLButtonElement>('[data-graph-legend-toggle]');
   const legendItems = shell.querySelector<HTMLElement>('[data-graph-legend-items]');
+  const filtersHeader = shell.querySelector<HTMLElement>('[data-graph-global-filters-header]');
+  const filtersList = shell.querySelector<HTMLElement>('[data-graph-global-filters-list]');
   if (!legendPanel || !legendItems) {
     return;
   }
 
+  const legendEnabled = shell.dataset.graphLegendEnabled !== 'false';
+  const visibleGroups = parseVisibilityMap(shell.dataset.graphVisibleSettingsGroups);
+  const filtersVisible = isVisibleByMap(visibleGroups, 'filters');
+
   if (legendToggle) {
-    legendToggle.hidden = !capabilities.showGlobalLegend;
+    legendToggle.hidden = !legendEnabled || !capabilities.showGlobalLegend;
   }
-  legendPanel.hidden = !capabilities.showGlobalLegend;
-  if (!capabilities.showGlobalLegend) {
+  legendPanel.hidden = !legendEnabled || !capabilities.showGlobalLegend;
+  if (!legendEnabled || !capabilities.showGlobalLegend) {
     legendPanel.classList.remove('is-open');
     legendPanel.setAttribute('aria-hidden', 'true');
     legendToggle?.setAttribute('aria-expanded', 'false');
     return;
+  }
+
+  if (filtersHeader) {
+    filtersHeader.hidden = !filtersVisible;
+  }
+
+  if (filtersList) {
+    filtersList.hidden = !filtersVisible;
   }
 
   const isOpen = getLegendOpenState(shell);
@@ -494,7 +559,8 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
   }
 
   const title = node.titles?.[state.locale] || node.id;
-  const subtitle = node.type || node.metadata?.note_type || 'note';
+  const isMissingNode = node.exists === false || node.kind === 'missing_note';
+  const subtitle = isMissingNode ? 'missing note' : node.type || node.metadata?.note_type || 'note';
   const tags = Array.isArray(node.tags) && node.tags.length > 0
     ? node.tags.map((tag) => `<span class="graph-detail-tag">${escapeHtml(String(tag))}</span>`).join('')
     : '<span class="graph-detail-tag">—</span>';
@@ -524,7 +590,7 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
         </div>
       </div>
       <div class="graph-detail-actions">
-        <button type="button" class="graph-settings-action" data-graph-open-article="${escapeHtml(node.id)}">${escapeHtml(openArticleLabel)}</button>
+        ${isMissingNode ? '' : `<button type="button" class="graph-settings-action" data-graph-open-article="${escapeHtml(node.id)}">${escapeHtml(openArticleLabel)}</button>`}
         <button type="button" class="graph-settings-action" data-graph-focus-related="${escapeHtml(node.id)}">${escapeHtml(focusRelatedLabel)}</button>
       </div>
     </article>
@@ -534,17 +600,24 @@ function syncDetailDrawer(shell: HTMLElement, root: HTMLElement) {
 function syncSettingsUI(shell: HTMLElement, root: HTMLElement) {
   const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
   const ctx: GraphSidebarContext = { state, debug: state.debug };
-  const capabilities = getLayoutCapabilities(state.mode, state.settings);
+  const visibleGroups = parseVisibilityMap(shell.dataset.graphVisibleSettingsGroups);
+  const visibleFields = parseVisibilityMap(shell.dataset.graphVisibleSettingsFields);
 
   syncDebugVisibility(shell, state.debug);
   syncPresetUI(shell, state);
   syncLegendUI(shell, state);
   syncDetailDrawer(shell, root);
 
+  shell.querySelectorAll<HTMLElement>('[data-graph-settings-group-id]').forEach((group) => {
+    const key = group.dataset.graphSettingsGroupId || '';
+    group.hidden = !isVisibleByMap(visibleGroups, key);
+  });
+
   shell.querySelectorAll<HTMLElement>('[data-graph-setting-field]').forEach((field) => {
     const key = field.dataset.graphSettingField || '';
     const config = FIELD_CONFIG[key];
-    const visible = config ? (!config.debugOnly || ctx.debug) && (config.visible?.(ctx) ?? true) : true;
+    const visible = isVisibleByMap(visibleFields, key)
+      && (config ? (!config.debugOnly || ctx.debug) && (config.visible?.(ctx) ?? true) : true);
     field.hidden = !visible;
   });
 
@@ -642,16 +715,6 @@ function bindPresetActions(root: HTMLElement, shell: HTMLElement) {
     saveStoredPresetState(nextUserPresets, preset.id);
     const nextState = { ...currentState, activePresetId: preset.id };
     (root as any).__graphState = nextState;
-    syncSettingsUI(shell, root);
-  });
-
-  shell.querySelector('[data-graph-preset-reset]')?.addEventListener('click', () => {
-    const currentState: GraphClientState = (root as any).__graphState ?? readGraphState(root);
-    const { presets } = getAllPresets();
-    const preset = getGraphPresetById(presets, currentState.activePresetId);
-    const nextSettings = applyPresetKeepingFilters(currentState.settings, preset);
-    const nextState = { ...currentState, settings: nextSettings };
-    applyNextState(root, nextState, 'settings');
     syncSettingsUI(shell, root);
   });
 
@@ -766,6 +829,32 @@ function bindGraphSettings(root: HTMLElement) {
     syncDetailDrawer(shell, root);
   }) as EventListener);
 
+  root.addEventListener('graph:node-contextmenu', ((event: Event) => {
+    const customEvent = event as CustomEvent<{ node?: GraphNode; clientX?: number; clientY?: number }>;
+    const node = customEvent.detail?.node;
+    if (!node) {
+      return;
+    }
+
+    setSelectedNodeId(shell, node.id);
+    const state: GraphClientState = (root as any).__graphState ?? readGraphState(root);
+    const menuHost = getContextMenuHost(root);
+    const menuAnchor = getContextMenuAnchor(root);
+    showGraphNodeOverlay({
+      menuHost,
+      menuAnchor,
+      node,
+      clientX: customEvent.detail.clientX ?? 0,
+      clientY: customEvent.detail.clientY ?? 0,
+      locale: state.locale,
+      graphUrl: state.graphUrl,
+      controls: getGraphControls(root),
+      updateGraphCache: (graphUrl, snapshot) => graphDataCache.set(graphUrl, Promise.resolve(snapshot)),
+      setSelectedNodeId: (nodeId) => setSelectedNodeId(shell, nodeId),
+      syncDetailDrawer: () => syncDetailDrawer(shell, root),
+    });
+  }) as EventListener);
+
   shell.querySelector('[data-graph-settings-reset]')?.addEventListener('click', () => {
     const state = readGraphState(root);
     const resetSettings = resolvePresetBackedSettings(
@@ -833,6 +922,10 @@ function bindGraphSettings(root: HTMLElement) {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
 
+    if (!target.closest('[data-graph-node-overlay-panel]')) {
+      closeNodeOverlayPanel(getContextMenuHost(root));
+    }
+
     const openArticleButton = target.closest<HTMLElement>('[data-graph-open-article]');
     if (openArticleButton) {
       const node = resolveNodeById(root, openArticleButton.dataset.graphOpenArticle);
@@ -853,6 +946,12 @@ function bindGraphSettings(root: HTMLElement) {
       return;
     }
 
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeNodeOverlayPanel(getContextMenuHost(root));
+    }
   });
 
   (shell as any).__graphSettingsBound = true;

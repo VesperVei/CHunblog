@@ -1,0 +1,62 @@
+---
+import Icon from "../common/Icon.astro";
+import { getPrimaryAvatar, getSiteLabel, type FriendLink } from "../../data/links";
+
+interface Props {
+  link: FriendLink;
+}
+
+const { link } = Astro.props;
+
+const siteLabel = getSiteLabel(link.blog || link.url);
+const avatar = getPrimaryAvatar(link);
+const avatarLabel = link.name.slice(0, 1).toUpperCase();
+---
+
+<article class="friend-card" data-category={link.category}>
+  <a class="card-cover" href={link.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${link.name}`}></a>
+  <div class="card-head">
+    <div class="card-identity">
+      {avatar ? (
+        <img
+          class="card-avatar"
+          src={avatar}
+          alt=""
+          loading="lazy"
+          referrerpolicy="no-referrer"
+          data-avatar-label={avatarLabel}
+          onerror="const fallback=document.createElement('span'); fallback.className='card-avatar card-avatar-fallback'; fallback.setAttribute('aria-hidden','true'); fallback.textContent=this.dataset.avatarLabel||'?'; this.replaceWith(fallback);"
+        />
+      ) : (
+        <span class="card-avatar card-avatar-fallback" aria-hidden="true">{avatarLabel}</span>
+      )}
+      <div class="card-heading">
+        <h3>
+          <a href={link.url} target="_blank" rel="noopener noreferrer">
+            {link.name}
+          </a>
+        </h3>
+        <p class="card-site">{siteLabel}</p>
+      </div>
+    </div>
+    <a
+      class="card-arrow"
+      href={link.url}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Open ${link.name}`}
+    >
+      <Icon name="arrow-square-out" />
+    </a>
+  </div>
+
+  <p class="card-description">{link.description}</p>
+
+  <footer class="card-footer">
+    <ul class="card-tags" aria-label="Tags">
+      {link.tags.map((tag) => (
+        <li>{tag}</li>
+      ))}
+    </ul>
+  </footer>
+</article>

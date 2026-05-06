@@ -42,9 +42,19 @@ src/content/blog/my-post/
 
 The directory name becomes the post slug. Localized variants use suffixes such as `_en` and `_zh-cn`.
 
-Obsidian imports currently come from `src/content/my_md/*.md` through `scripts/import-obsidian-blog.mjs`. The importer writes generated blog files into `src/content/blog/<note_id>/` and keeps a local cache under `.cache/obsidian-import/` so unchanged documents are not rewritten on every dev rebuild.
+Obsidian imports currently come from `src/content/my_md/*.md` through `scripts/import-obsidian-blog.mjs`. That file is a compatibility entry; the layered implementation lives under `scripts/obsidian-import/`. The importer writes generated blog files into `src/content/blog/<note_id>/` and keeps a local cache under `.cache/obsidian-import/` so unchanged documents are not rewritten on every dev rebuild. Source notes must provide an explicit `note_id` or `笔记ID`; files missing that required id are skipped and logged as import errors instead of receiving an id derived from dates.
+
+Obsidian plugin cleanup is handled by the import transform pipeline. Dataview blocks are not executed yet; fenced `dataview` and `dataviewjs` blocks are converted to static callout placeholders and recorded as diagnostics so dynamic content loss is visible instead of silent. Meta Bind embed blocks are removed with diagnostics because they represent Obsidian-local UI modules.
+
+The import pipeline also cleans presentation-only Obsidian artifacts from Markdown body content. Progress elements are removed, `font` tags and styled `span` wrappers are stripped or converted to plain/`mark` markup, inline `style` attributes are removed, Markdown image alt text is normalized, and Obsidian image size syntax such as `![image.png|579](...)` is reduced to standard Markdown image syntax. Local Obsidian image embeds such as `![[image.png]]` are not imported as attachments yet; they remain visible in diagnostics.
+
+Code block cleanup targets Shiki Highlighter / Expressive Code syntax. Compatible meta such as `showLineNumbers`, `startLineNumber=10`, `{3-4,8-9}`, `title="..."`, `ins={...}`, and `del={...}` is preserved. Language aliases are normalized for the generated site: IDA pseudocode (`IDA`, `ida`, `pseudocode`) becomes `cpp`, explicit disassembly (`ida-asm`, `disasm`, `assembly`) becomes `asm`, and mixed debugger or dump output (`gdb`, `pwndbg`, `hex`, `hexdump`) becomes `txt`. Unknown code block meta is preserved but recorded as diagnostics.
+
+For local editing, `npm run admin` starts a dashboard at `http://127.0.0.1:4323`. Its `Blog 管理` page can upload Markdown files into `src/content/my_md/`, scan existing sources, trigger the same importer with optional LLM translation or forced retranslation, and scan generated `src/content/blog/**/index*.mdx` entries as a grouped Blog list. The import source list supports multi-select and selected-only imports; the Blog list also exposes missing-English posts for selected batch translation to `index_en.mdx`.
 
 When translation is enabled, the importer always generates the Chinese source variant first, then optionally generates `index_en.mdx` from the translated result. English generation can reuse cached translations for unchanged notes.
+
+Translation failures such as model cooldown, 429, or usage limits are reported per document/locale. They should not prevent Chinese output from being written or stop the rest of a batch import.
 
 ## Blog Frontmatter
 
@@ -86,10 +96,21 @@ Optional metadata used by Obsidian-style content:
 - `updated_at`
 - `note_id`
 - `note_type`
+- `domain`
 - `aliases`
 - `cssclasses`
+- `contest`
+- `challenge`
+- `difficulty`
+- `architecture`
+- `protections`
+- `vulnerability`
+- `techniques`
+- `affected_area`
 
 `author` can be a string or an array. It is normalized to an array by the schema.
+
+Generated Obsidian blog frontmatter should not preserve import-only or writing-process fields such as `creation_time`, `modify_time`, `createTime`, `笔记ID`, `笔记类型`, `Link`, `multiFile`, `multiMedia`, `area`, `已插入部分`, or plugin state fields. These fields may be read during import to derive stable site metadata, but they should not become public blog metadata.
 
 ## Language And Slugs
 
@@ -120,7 +141,9 @@ If `siteConfig.defaultLocale` is set, single-language mode is enabled. Routes ar
 
 Tags are read from blog frontmatter. Tag lists are computed per language with `getTagList(lang)` in `src/utils/pages.ts`. Tag detail pages filter posts by exact tag name.
 
-Because tags are language-specific content, localized posts can use localized tag names.
+Obsidian imports intentionally publish only a small set of stable flat tag slugs. `scripts/obsidian-import/frontmatter/tags.mjs` owns the alias table. Current public tags include the `writeup` content label, CTF/security domains such as `pwn`, `web`, `rev`, `crypto`, and `misc`, and core exploitation techniques such as `format-string`, `heap`, `uaf`, `double-free`, `rop`, `ret2libc`, `stack-pivot`, `orw`, `one-gadget`, `brop`, and `ret2syscall`. The Obsidian tag `复盘` is normalized to `writeup`; generated imports with the normalized `writeup` tag also receive `type: writeup`. Generated imports with a normalized domain tag receive the matching `domain` field, and source notes tagged `汇编指令` are treated as `domain: rev`. Import diagnostics record unrecognized tags and tags omitted by the per-post tag limit, instead of silently polluting the public tag list.
+
+Do not turn one-off Obsidian labels, contest names, challenge names, architecture labels, protection mechanisms, difficulty strings, or old nested tags such as `arch/...`, `mitigation/...`, `tech/...`, and `note/...` into public tags. Use structured fields such as `contest`, `challenge`, `difficulty`, `architecture`, `protections`, `vulnerability`, and `techniques` for that metadata.
 
 ## Obsidian Translation Settings
 
@@ -133,6 +156,7 @@ The importer supports an OpenAI-compatible translation endpoint. It is designed 
 - `LLM_TRANSLATION_CONFIG.forceRetranslate`: ignore cached translations for the current run.
 - `LLM_TRANSLATION_CONFIG.targetLocales`: output locales generated by the importer.
 - Environment variables such as `OBSIDIAN_LLM_MODEL`, `OBSIDIAN_LLM_BASE_URL`, and `OBSIDIAN_LLM_API_KEY` still override the file config when set.
+- The local admin dashboard can save development translation settings to `.cache/admin-dev/translation-config.json`. Those settings are applied when triggering imports from `Blog 管理`, but they are intentionally not committed. When saving a root endpoint such as `http://127.0.0.1:8317`, admin normalizes it to `http://127.0.0.1:8317/v1` for OpenAI-compatible `/chat/completions` calls.
 - `OBSIDIAN_TRANSLATE=false`: disable translation explicitly.
 - `OBSIDIAN_TRANSLATE_IN_DEV=true`: allow live translation during `pnpm dev`. By default, dev mode skips new translation requests and only reuses cached English output.
 - `OBSIDIAN_FORCE_RETRANSLATE=true`: ignore cached translations for the current run.

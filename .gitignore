@@ -27,6 +27,8 @@ pnpm-debug.log*
 # Local content and generated data
 vault/
 public/graph.json
+public/dev-search-index.json
 
 /src/content/blog/
 /src/content/my_md/
+/src/data/

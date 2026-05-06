@@ -2,29 +2,29 @@
 title: "[深育杯 2021]find_flag"
 description: "[深育杯 2021]find_flag 的导入笔记"
 note_id: "202512151812"
+type: "writeup"
+domain: "pwn"
 created_at: "2025-12-15 18:12"
 updated_at: "2026-04-28 19:00"
 tags:
+  - "writeup"
   - "pwn"
-  - "复盘"
-  - "格式化字符串"
-  - "ret2text"
+  - "format-string"
 aliases: []
 cssclasses: []
 graphLevel: 3
-比赛: "深育杯"
-题目: "find_flag"
-难度: "★★★☆☆"
-保护机制: "PIE"
-漏洞类型: "格式化字符串"
-利用技术: "ret2text"
-Link: "[[PWN题目索引]]"
-creation_time: "2025-12-15 18:12"
-modify_time: "2026-04-23 09:39"
+contest: "深育杯"
+challenge: "find_flag"
+difficulty: 3
+protections:
+  - "PIE"
+vulnerability:
+  - "format-string"
+techniques:
+  - "ret2text"
 ---
 > [!note]
 > 关联入口：[[PWN题目索引]]
-<progress value="100" max="100" style="width: 100%;"></progress>
 # find_flag - 题目复盘
 
 > [!info] 题目信息
@@ -60,14 +60,14 @@ b *$rebase(0x13BB)
 c
 ```
 ![image.png](https://chenhun.oss-cn-beijing.aliyuncs.com/photo/202512151901602.png)
-```text
+```txt
 %p..%p..%p..%p..%p..%p..%p..%p..
 ```
 ![image.png](https://chenhun.oss-cn-beijing.aliyuncs.com/photo/202512151906110.png)
 简单数一下在第6个位置出现的，所以 `off_site = 6` 
 #### canary泄漏
 接下来去寻找canary在栈上的位置，emmm这种基本功就不带截图了，哪怕看IDA都知道
-```txt
+```cpp
 char format[32]; // [rsp+0h] [rbp-60h] BYREF
 _BYTE buf_0x40[56]; // [rsp+20h] [rbp-40h] BYREF
 unsigned __int64 canary; // [rsp+58h] [rbp-8h]

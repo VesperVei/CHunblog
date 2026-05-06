@@ -30,6 +30,28 @@ The `theme-variables` mixin emits:
 
 Most visual styling uses CSS variables such as `--bg-color`, `--fg-color`, `--accent-color`, `--glass-bg`, `--shadow`, and `--rounded-corner`.
 
+The friend links page under `src/components/links/LinksPage.astro` intentionally reuses those variables directly instead of defining a separate color system. Its hover borders, active filter pills, tag accents, and soft glow all derive from the existing accent color runtime so the page stays in sync with the palette controls.
+
+The friends category now uses `src/components/links/friends-graph/FriendsGraph.astro`, which still runs on the shared graph runtime but reads from generated `src/data/friends-graph.json` data rather than the site-wide `public/graph.json`. Maintain friend/link source data in `src/data/friends.json`, then run `npm run generate:friends` or use the local admin dashboard.
+
+That friends graph can selectively hide settings groups while keeping the same graph engine. The current friends view hides the generic filters group and only exposes appearance, forces, and layout controls.
+
+The site-wide Graph view loads its built-in template presets from `src/data/graph-presets.json` through `src/graph/presets.ts`. Editing this JSON, either directly or via `npm run admin` under `Graph 管理 -> 模板管理`, changes the built-in presets available to all visitors. Browser-local presets remain stored in `localStorage` and are still private to each visitor.
+
+`scripts/generate-graph.mjs` writes `public/graph.json` and records recent graph diagnostics under `.cache/admin-dev/graph-diagnostics.json`. The admin dashboard reads those diagnostics to show the same missing wikilink issues that appear during `pnpm dev` or graph regeneration.
+
+Local graphLevel edits now stage through `.cache/admin-dev/graph-level-overrides.json`. `src/utils/content-index.mjs` reads that overrides file and lets staged values override blog frontmatter during graph generation, so `public/graph.json` can update immediately without rewriting `src/content/blog/**/index*.mdx` on every click.
+
+Graph node right-click overlays should be implemented as `graph-workspace` overlay panels, not as children inside `graph-root`. The graph runtime replaces `graph-root` contents with the SVG scene, while `graph-workspace` stays stable and already hosts legend/detail overlays. The current browser helper lives in `src/graph/interaction/node-overlay-panel.ts` and fills a static overlay host rendered by `src/components/graph/Graph.astro`, positioning it against `graph-root` bounds.
+
+The current TheBrain-specific content provider is `src/components/graph/graph-node-overlay.ts`. Right-clicking an existing note node opens a single-column overlay panel next to the node. The current first version only shows the node's `graphLevel` plus direct graphLevel actions (`提升层级`, `下沉层级`, `设为顶层`, `设为指定层级...`, `清除层级`) and a placeholder line `关系设置未实现`.
+
+These graphLevel edits still require `npm run admin` on `http://127.0.0.1:4323`, but they now stage through the admin API instead of immediately rewriting blog content. The browser calls `/api/blog/graph-level`; the admin process stores the pending value in `.cache/admin-dev/graph-level-overrides.json`, regenerates `public/graph.json`, and hot-swaps the graph data in the current view. This avoids Astro dev reloading the page just because `src/content/blog/**/index*.mdx` changed.
+
+`Graph 管理` now includes a `待写回 graphLevel` panel. It shows all staged overrides, allows quick numeric correction or removal, and exposes a `确认更新` button that writes all pending values back to matching `src/content/blog/**/index*.mdx` files and any matching `src/content/my_md/*.md` source notes before regenerating `public/graph.json` again.
+
+Planned manual parent/child/sibling metadata should remain TheBrain-specific. Keep that future YAML/frontmatter scanned only by TheBrain graph-building code instead of promoting it into generic graph behavior.
+
 ## Accent Color
 
 Accent color behavior is configured in `siteConfig.theme_color` in `src/config.ts`.
@@ -50,6 +72,8 @@ When the active theme changes, the script reapplies the accent color so derived 
 ## Expressive Code
 
 Expressive Code is configured in `astro.config.mjs`.
+
+Obsidian imports normalize Shiki Highlighter style code fences before content reaches Astro. The import pipeline preserves Expressive Code meta like `showLineNumbers`, `startLineNumber`, `{1,3-5}`, `ins={...}`, `del={...}`, and `title="..."`. Reverse-engineering aliases are normalized during import: IDA pseudocode to `cpp`, explicit disassembly to `asm`, and mixed `gdb`/`pwndbg`/hex dump output to `txt`.
 
 Current behavior:
 
@@ -89,6 +113,8 @@ Search uses Pagefind.
 - The production build command is `astro build && pagefind --site dist`.
 - Search UI components live in `src/components/search/`.
 - `siteConfig.search.enable` controls whether search should be available.
+- Production search is restricted to blog post pages via the `section: blog` Pagefind filter on the blog post layout.
+- In `pnpm dev`, search uses a cached JSON index generated by `scripts/build-dev-search-index.mjs`. Cache metadata is written to `.cache/search/`, and the served dev index is emitted to `public/dev-search-index.json`.
 
 Build output creates a Pagefind index in `dist/pagefind`.
 

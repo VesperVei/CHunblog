@@ -1,8 +1,8 @@
 ---
 interface Props {
   name: string;
-  set?: 'phosphor' | 'simple';
-  source?: 'phosphor' | 'simple';
+  set?: 'phosphor' | 'simple' | 'selecticons';
+  source?: 'phosphor' | 'simple' | 'selecticons';
   label?: string;
   class?: string;
   size?: string;
@@ -18,9 +18,10 @@ const {
 } = Astro.props;
 
 const iconSet = source ?? set ?? 'phosphor';
+const iconBase = iconSet === 'selecticons' ? 'selecticons' : `icons/${iconSet}`;
 
 const style = [
-  `--icon-url: url('/icons/${iconSet}/${name}.svg')`,
+  `--icon-url: url('/${iconBase}/${name}.svg')`,
   size ? `--icon-size: ${size}` : undefined,
 ].filter(Boolean).join('; ');
 ---

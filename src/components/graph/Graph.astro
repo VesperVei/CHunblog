@@ -18,6 +18,9 @@ interface Props {
   settingsEnabled?: boolean;
   controlsMode?: 'overlay' | 'toolbar';
   fullscreenEnabled?: boolean;
+  visibleSettingsGroups?: string[];
+  visibleSettingsFields?: string[];
+  legendEnabled?: boolean;
 }
 
 const {
@@ -34,6 +37,9 @@ const {
   settingsEnabled = false,
   controlsMode = 'overlay',
   fullscreenEnabled = false,
+  visibleSettingsGroups,
+  visibleSettingsFields,
+  legendEnabled = true,
 } = Astro.props;
 
 const t = useTranslations(locale);
@@ -70,6 +76,8 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     preset: layout,
   },
 });
+const serializedVisibleSettingsGroups = visibleSettingsGroups ? JSON.stringify(visibleSettingsGroups) : undefined;
+const serializedVisibleSettingsFields = visibleSettingsFields ? JSON.stringify(visibleSettingsFields) : undefined;
 ---
 
 <div
@@ -87,6 +95,9 @@ const initialSettings = resolveGraphSettings(mode, layout, {
   data-graph-tags-label={tagsLabel}
   data-graph-created-label={createdLabel}
   data-graph-updated-label={updatedLabel}
+  data-graph-legend-enabled={legendEnabled ? 'true' : 'false'}
+  data-graph-visible-settings-groups={serializedVisibleSettingsGroups}
+  data-graph-visible-settings-fields={serializedVisibleSettingsFields}
 >
   {controlsMode === 'toolbar' && (
     <div class="graph-toolbar" data-graph-toolbar>
@@ -137,7 +148,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
             </div>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="templates">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_templates)}</span>
@@ -148,18 +159,17 @@ const initialSettings = resolveGraphSettings(mode, layout, {
                   <select data-graph-preset-select></select>
                 </label>
                 <div class="graph-settings-actions-row">
-                  <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
-                  <button type="button" class="graph-settings-action" data-graph-preset-reset>{t(I18nKey.graph_reset_preset)}</button>
-                </div>
-                <div class="graph-settings-actions-row" data-graph-debug-only hidden>
-                  <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
                   <button type="button" class="graph-settings-action" data-graph-preset-export>{t(I18nKey.graph_export_preset)}</button>
                   <button type="button" class="graph-settings-action" data-graph-preset-import>{t(I18nKey.graph_import_preset)}</button>
+                </div>
+                <div class="graph-settings-actions-row" data-graph-debug-only hidden>
+                  <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
+                  <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
                 </div>
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="filters">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_filters)}</span>
@@ -205,7 +215,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="appearance">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_appearance)}</span>
@@ -254,7 +264,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group data-graph-debug-only hidden>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="advancedForces" data-graph-debug-only hidden>
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_advanced_forces)}</span>
@@ -298,7 +308,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="forces">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_forces)}</span>
@@ -335,7 +345,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               </div>
             </section>
 
-            <section class="graph-settings-group" data-graph-settings-group>
+            <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="layout">
               <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
                 <span class="graph-settings-chevron" aria-hidden="true"></span>
                 <span>{t(I18nKey.graph_layout_section)}</span>
@@ -389,7 +399,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           <button type="button" class="graph-settings-reset" data-graph-settings-reset>{t(I18nKey.graph_reset)}</button>
         </div>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="templates">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_templates)}</span>
@@ -400,18 +410,17 @@ const initialSettings = resolveGraphSettings(mode, layout, {
               <select data-graph-preset-select></select>
             </label>
             <div class="graph-settings-actions-row">
-              <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
-              <button type="button" class="graph-settings-action" data-graph-preset-reset>{t(I18nKey.graph_reset_preset)}</button>
-            </div>
-            <div class="graph-settings-actions-row" data-graph-debug-only hidden>
-              <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
               <button type="button" class="graph-settings-action" data-graph-preset-export>{t(I18nKey.graph_export_preset)}</button>
               <button type="button" class="graph-settings-action" data-graph-preset-import>{t(I18nKey.graph_import_preset)}</button>
+            </div>
+            <div class="graph-settings-actions-row" data-graph-debug-only hidden>
+              <button type="button" class="graph-settings-action" data-graph-preset-save>{t(I18nKey.graph_save_preset)}</button>
+              <button type="button" class="graph-settings-action" data-graph-preset-overwrite>{t(I18nKey.graph_overwrite_preset)}</button>
             </div>
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="filters">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_filters)}</span>
@@ -457,7 +466,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="appearance">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_appearance)}</span>
@@ -506,7 +515,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group data-graph-debug-only hidden>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="advancedForces" data-graph-debug-only hidden>
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_advanced_forces)}</span>
@@ -550,7 +559,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="forces">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_forces)}</span>
@@ -587,7 +596,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
           </div>
         </section>
 
-        <section class="graph-settings-group" data-graph-settings-group>
+        <section class="graph-settings-group" data-graph-settings-group data-graph-settings-group-id="layout">
           <button class="graph-settings-group-toggle" type="button" data-graph-section-toggle aria-expanded="false">
             <span class="graph-settings-chevron" aria-hidden="true"></span>
             <span>{t(I18nKey.graph_layout_section)}</span>
@@ -620,7 +629,7 @@ const initialSettings = resolveGraphSettings(mode, layout, {
   )}
 
   <div class="graph-workspace">
-    {mode === 'global' && controlsMode === 'toolbar' && (
+    {mode === 'global' && controlsMode === 'toolbar' && legendEnabled && (
       <>
         <button type="button" class="graph-side-toggle graph-toolbar-button" data-graph-legend-toggle aria-expanded="false">
           {legendFiltersLabel}
@@ -634,10 +643,10 @@ const initialSettings = resolveGraphSettings(mode, layout, {
 
           <div class="graph-side-panel-divider"></div>
 
-          <div class="graph-side-panel-header graph-side-panel-header-secondary">
+          <div class="graph-side-panel-header graph-side-panel-header-secondary" data-graph-global-filters-header>
             <strong>{t(I18nKey.graph_filters)}</strong>
           </div>
-          <div class="graph-side-filter-list">
+          <div class="graph-side-filter-list" data-graph-global-filters-list>
             <label class="graph-settings-toggle-row" data-graph-setting-field="showTags">
               <span>{t(I18nKey.graph_show_tags)}</span>
               <input type="checkbox" class="graph-switch" data-graph-setting-input="showTags" />
@@ -669,6 +678,14 @@ const initialSettings = resolveGraphSettings(mode, layout, {
       <div class="graph-empty">Loading graph...</div>
     </div>
 
+    <aside class="graph-node-overlay-panel" data-graph-node-overlay-panel aria-hidden="true" hidden>
+      <div class="graph-node-overlay-panel-header">
+        <strong data-graph-node-overlay-title></strong>
+        <span data-graph-node-overlay-subtitle hidden></span>
+      </div>
+      <div class="graph-node-overlay-panel-body" data-graph-node-overlay-body></div>
+    </aside>
+
     {mode === 'global' && controlsMode === 'toolbar' && (
       <aside class="graph-detail-drawer" data-graph-detail-drawer aria-hidden="true">
         <div class="graph-side-panel-header">
@@ -696,6 +713,8 @@ const initialSettings = resolveGraphSettings(mode, layout, {
     --graph-node-hover: color-mix(in srgb, var(--accent-color) 92%, white 8%);
     --graph-node-selected: var(--accent-color);
     --graph-node-stroke: color-mix(in srgb, var(--accent-color) 52%, var(--fg-color));
+    --graph-node-missing: color-mix(in srgb, var(--fg-muted-5) 72%, transparent);
+    --graph-node-missing-stroke: color-mix(in srgb, var(--fg-muted-5) 78%, var(--bg-color));
     --graph-link-default: color-mix(in srgb, var(--fg-muted-5) 86%, transparent);
     --graph-link-highlight: color-mix(in srgb, var(--accent-color) 82%, white 12%);
     --graph-dim-opacity: 0.18;
@@ -842,6 +861,14 @@ const initialSettings = resolveGraphSettings(mode, layout, {
   .graph-link-line,
   .graph-node {
     vector-effect: non-scaling-stroke;
+  }
+
+  .graph-link-line.is-missing {
+    stroke-dasharray: 4 5;
+  }
+
+  .graph-node.is-missing {
+    stroke-dasharray: 3 3;
   }
 
   .graph-node,
@@ -1022,6 +1049,140 @@ const initialSettings = resolveGraphSettings(mode, layout, {
 
   .graph-settings-action:active {
     transform: scale(0.98);
+  }
+
+  .graph-node-overlay-panel {
+    position: absolute;
+    z-index: 8;
+    display: grid;
+    min-width: 14rem;
+    max-width: min(20rem, calc(100% - 1rem));
+    min-height: 7rem;
+    padding: 0.45rem;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 0.8rem;
+    background: var(--graph-panel-bg);
+    box-shadow: var(--edge-highlight), var(--shadow-glass);
+    backdrop-filter: saturate(1.1) blur(0.55rem);
+    color: var(--graph-panel-text);
+    overflow: auto;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(0.35rem) scale(0.985);
+    transition: opacity 180ms ease-out, transform 180ms ease-out, visibility 180ms ease-out;
+  }
+
+  .graph-node-overlay-panel[hidden] {
+    display: none;
+  }
+
+  .graph-node-overlay-panel.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(0) scale(1);
+  }
+
+  .graph-node-overlay-panel.is-busy {
+    cursor: wait;
+    opacity: 0.82;
+  }
+
+  .graph-node-overlay-panel-header {
+    display: grid;
+    gap: 0.18rem;
+    padding: 0.45rem 0.6rem 0.35rem;
+  }
+
+  .graph-node-overlay-panel-header strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.9rem;
+  }
+
+  .graph-node-overlay-panel-header span {
+    color: var(--graph-muted);
+    font-size: 0.76rem;
+  }
+
+  .graph-node-overlay-panel-body {
+    display: block;
+    min-height: 4.5rem;
+    padding: 0.5rem 0.6rem 0.65rem;
+    color: var(--graph-panel-text);
+    font-size: 0.92rem;
+    line-height: 1.5;
+  }
+
+  .graph-node-overlay-stack {
+    display: grid;
+    gap: 0.8rem;
+    width: 100%;
+  }
+
+  .graph-node-overlay-field {
+    display: grid;
+    gap: 0.18rem;
+  }
+
+  .graph-node-overlay-field span {
+    color: var(--graph-muted);
+    font-size: 0.76rem;
+    letter-spacing: 0.03em;
+  }
+
+  .graph-node-overlay-field strong {
+    font-size: 1rem;
+    font-weight: 700;
+  }
+
+  .graph-node-overlay-actions {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .graph-node-overlay-action {
+    appearance: none;
+    width: 100%;
+    border: 1px solid var(--graph-panel-border);
+    border-radius: 0.7rem;
+    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+    padding: 0.55rem 0.7rem;
+    color: var(--graph-panel-text);
+    font: inherit;
+    font-size: 0.86rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 180ms ease-out, border-color 180ms ease-out, transform 160ms ease-out, opacity 160ms ease-out;
+  }
+
+  .graph-node-overlay-action:hover:not(:disabled),
+  .graph-node-overlay-action:focus-visible:not(:disabled) {
+    background: color-mix(in srgb, var(--graph-accent) 13%, transparent);
+    border-color: color-mix(in srgb, var(--graph-accent) 30%, var(--graph-panel-border));
+    outline: none;
+  }
+
+  .graph-node-overlay-action:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+
+  .graph-node-overlay-action:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .graph-node-overlay-action.is-danger {
+    color: color-mix(in srgb, var(--graph-accent) 30%, #ff7d7d);
+  }
+
+  .graph-node-overlay-placeholder {
+    border-top: 1px solid var(--graph-panel-border);
+    padding-top: 0.7rem;
+    color: var(--graph-muted);
+    font-size: 0.8rem;
   }
 
   .graph-settings-group {

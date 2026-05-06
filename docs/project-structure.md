@@ -17,6 +17,7 @@ src/
   assets/        Images imported through Astro.
   components/    Reusable Astro components.
   content/       MDX pages and blog posts.
+  data/          Structured UI data such as friend links.
   i18n/          Translation keys and language strings.
   layouts/       Page-level layout shells.
   pages/         Astro filesystem routes.
@@ -33,6 +34,7 @@ Routes are defined in `src/pages/`.
 - `src/pages/index.astro`: root index. In multilingual mode it redirects to `/en`.
 - `src/pages/[lang]/index.astro`: localized home page.
 - `src/pages/about/index.astro` and `src/pages/[lang]/about.astro`: about pages.
+- `src/pages/links.astro` and `src/pages/[lang]/links.astro`: friend links page rendered from structured data instead of MDX page content.
 - `src/pages/blog/[...page].astro` and `src/pages/[lang]/blog/[...page].astro`: paginated blog lists.
 - `src/pages/blog/[slug].astro` and `src/pages/[lang]/blog/[slug].astro`: blog post detail pages.
 - `src/pages/tags/index.astro` and `src/pages/[lang]/tags/index.astro`: tag index pages.
@@ -52,6 +54,7 @@ In multilingual mode, the unprefixed pages usually redirect or return empty outp
 
 - `components/blog/`: blog cards, lists, post metadata, tags, TOC, pagination, comment provider components, and previous/next navigation.
 - `components/common/`: icons, formatted dates, generated CSS variables, Mermaid setup, and shared scripts.
+- `components/links/`: friend links page layout and link cards. The dedicated friends relationship graph now lives under `components/links/friends-graph/`.
 - `components/shell/`: HTML head metadata and footer pieces used by page layouts.
 - `components/markdown/`: MDX rendering wrapper.
 - `components/nav/`: header, nav links, language switcher, theme switcher, accent color controls, and feed menu.
@@ -74,3 +77,13 @@ Theme variables are defined in `src/sass/_variables.scss`. The project uses CSS 
 - `src/utils/theme-script.ts`: client-side theme and accent color controls.
 - `src/utils/remark-mermaid.js`: remark plugin for Mermaid support.
 - `src/utils/link-presets.ts`: named navigation link presets.
+- `src/data/friends.json`: human-maintained friend/link source data used by the local admin dashboard and friend data generator. Visible front-page cards can use `order` for per-category sorting.
+- `src/data/links.ts`: generated links data for the blog, tech, and other categories on the links page. Do not hand-edit it; update `src/data/friends.json` and run `npm run generate:friends`.
+- `src/data/friends-graph.json`: generated relationship graph data for the friends category, including tag anchors and optional friend-to-friend relation edges.
+- `src/data/graph-presets.json`: built-in Graph view presets shown to every visitor in the Graph settings template selector. It is editable through `npm run admin` under `Graph 管理 -> 模板管理`.
+
+## Import Scripts
+
+- `scripts/import-obsidian-blog.mjs`: compatibility entry for CLI, build, dev, and admin Obsidian imports. Keep its exported API stable for `runObsidianImport`, `scanObsidianSources`, `saveUploadedObsidianNote`, and `importOne`.
+- `scripts/obsidian-import/`: layered Obsidian import implementation. It separates config, cache, source scanning, frontmatter normalization/serialization, Markdown transform pipeline, plugin-specific cleanup, output writing, and translation orchestration.
+- `scripts/obsidian-import/plugins/`: static cleanup for Obsidian plugin syntax. Dataview is currently conservative: fenced `dataview`/`dataviewjs` blocks become static callout placeholders plus import diagnostics; the importer does not execute Dataview queries. Code block cleanup keeps Shiki Highlighter / Expressive Code meta and normalizes common reverse-engineering languages such as IDA pseudocode to `cpp`, disassembly to `asm`, and debugger/dump output to `txt`.

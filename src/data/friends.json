@@ -1,0 +1,194 @@
+{
+  "friends": [
+    {
+      "id": "vespervei",
+      "name": "VesperVei",
+      "titleZh": "VesperVei",
+      "titleEn": "VesperVei",
+      "url": "https://github.com/VesperVei",
+      "blog": "https://vespervei.com",
+      "description": "博客站主，专注 Pwn 与开发。",
+      "githubId": "VesperVei",
+      "tags": [
+        "Pwn",
+        "博客",
+        "开发"
+      ],
+      "category": "blog",
+      "order": 10,
+      "graph": true,
+      "hidden": true
+    },
+    {
+      "id": "IDCM-svg",
+      "name": "SEZUVEM='s Blog",
+      "titleZh": "时光机",
+      "titleEn": "TimeMachine",
+      "url": "https://github.com/IDCM-svg",
+      "blog": "https://idcm-svg.github.io/HFTTC.github.io/",
+      "description": "一位志同道合的 Pwn 友，他的 WP 也很出色。",
+      "githubId": "IDCM-svg",
+      "tags": [
+        "Pwn",
+        "博客"
+      ],
+      "category": "blog",
+      "order": 10,
+      "graph": true,
+      "hidden": false,
+      "relation": "兄弟"
+    },
+    {
+      "id": "lingchen",
+      "name": "凌晨备忘录",
+      "titleZh": "凌晨备忘录",
+      "titleEn": "Lingchen Notes",
+      "url": "https://github.com/octocat",
+      "description": "总能在技术讨论和日常碎片之间，保持一种认真又松弛的记录感。",
+      "githubId": "octocat",
+      "tags": [
+        "技术",
+        "写作"
+      ],
+      "category": "blog",
+      "graph": true,
+      "hidden": true
+    },
+    {
+      "id": "aster",
+      "name": "Aster",
+      "titleZh": "Aster",
+      "titleEn": "Aster",
+      "url": "https://github.com/torvalds",
+      "description": "没有固定博客，但会把代码、工具和奇怪的兴趣整理得很干净。",
+      "githubId": "torvalds",
+      "tags": [
+        "工具",
+        "工程"
+      ],
+      "category": "tech",
+      "graph": true,
+      "hidden": true,
+      "relation": "队友",
+      "relationWith": "lingchen"
+    },
+    {
+      "id": "mori",
+      "name": "Mori",
+      "titleZh": "Mori",
+      "titleEn": "Mori",
+      "url": "https://github.com/gaearon",
+      "description": "更像一个长期在线的朋友书签，偶尔分享链接，偶尔分享生活。",
+      "githubId": "gaearon",
+      "tags": [
+        "日常",
+        "分享"
+      ],
+      "category": "other",
+      "graph": true,
+      "hidden": true
+    },
+    {
+      "id": "desk-lamp",
+      "name": "拾页台灯",
+      "titleZh": "拾页台灯",
+      "titleEn": "拾页台灯",
+      "url": "https://example.com/desk-lamp",
+      "description": "写作与摄影并行的个人空间，常有安静但耐读的生活观察。",
+      "tags": [
+        "博客",
+        "个人",
+        "写作"
+      ],
+      "category": "blog",
+      "order": 20,
+      "graph": false,
+      "hidden": false
+    },
+    {
+      "id": "northbound",
+      "name": "Northbound",
+      "titleZh": "Northbound",
+      "titleEn": "Northbound",
+      "url": "https://example.com/northbound",
+      "description": "偏前端与开发工具的长期记录，内容扎实，更新克制。",
+      "tags": [
+        "技术",
+        "前端",
+        "工具"
+      ],
+      "category": "tech",
+      "order": 10,
+      "graph": false,
+      "hidden": false
+    },
+    {
+      "id": "stack-window",
+      "name": "Stack Window",
+      "titleZh": "Stack Window",
+      "titleEn": "Stack Window",
+      "url": "https://example.com/stack-window",
+      "description": "专注漏洞利用、调试和二进制学习路径整理的技术小站。",
+      "tags": [
+        "技术",
+        "Pwn",
+        "笔记"
+      ],
+      "category": "tech",
+      "order": 20,
+      "graph": false,
+      "hidden": false
+    },
+    {
+      "id": "paper-window",
+      "name": "Paper Window",
+      "titleZh": "Paper Window",
+      "titleEn": "Paper Window",
+      "url": "https://example.com/paper-window",
+      "description": "记录网页设计、排版实验与小而美的交互灵感。",
+      "tags": [
+        "设计",
+        "排版",
+        "灵感"
+      ],
+      "category": "other",
+      "graph": false,
+      "hidden": false
+    },
+    {
+      "id": "island-manual",
+      "name": "小岛说明书",
+      "titleZh": "小岛说明书",
+      "titleEn": "小岛说明书",
+      "url": "https://example.com/island-manual",
+      "description": "收藏阅读、电影与城市碎片，也偶尔写一点缓慢的思考。",
+      "tags": [
+        "阅读",
+        "随笔",
+        "收藏"
+      ],
+      "category": "other",
+      "graph": false,
+      "hidden": false
+    },
+    {
+      "id": "ErinaYip",
+      "name": "ErinaYip",
+      "titleZh": "ErinaYip",
+      "titleEn": "ErinaYip",
+      "url": "https://github.com/ErinaYip",
+      "description": "本站点的原作者，没有开源的贡献，就没有本博客的诞生",
+      "githubId": "ErinaYip",
+      "tags": [
+        "Web",
+        "开发"
+      ],
+      "category": "friends",
+      "order": 10,
+      "graph": true,
+      "hidden": false,
+      "relation": "队友",
+      "relationWith": "vespervei"
+    }
+  ]
+}

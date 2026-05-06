@@ -1,8 +1,42 @@
 ---
+import I18nKey from '../../i18n/i18nKey';
+import { useTranslations } from '../../i18n/translation';
+import { detectLocale } from '../../utils/i18n';
+
+const currentLocale = detectLocale(Astro.url.pathname);
+const t = useTranslations(currentLocale);
+
+const labels = currentLocale === 'zh-cn'
+  ? {
+      loading: '正在加载搜索…',
+      ready: '搜索博客文章…',
+      devReady: '搜索博客文章（Dev）…',
+      error: '搜索暂时不可用',
+      untitled: '未命名',
+      moreMatches: '还有 {count} 处匹配',
+    }
+  : {
+      loading: 'Loading search...',
+      ready: 'Search blog posts...',
+      devReady: 'Search blog posts (Dev)...',
+      error: 'Search is unavailable right now',
+      untitled: 'Untitled',
+      moreMatches: '{count} more matches',
+    };
 ---
 
-<div id="search-container">
-  <input id="search-bar" type="text" placeholder="Search..." autocomplete="off" disabled />
+<div
+  id="search-container"
+  data-locale={currentLocale}
+  data-search-label={t(I18nKey.search)}
+  data-placeholder-loading={labels.loading}
+  data-placeholder-ready={labels.ready}
+  data-placeholder-dev={labels.devReady}
+  data-placeholder-error={labels.error}
+  data-untitled-label={labels.untitled}
+  data-more-matches-template={labels.moreMatches}
+>
+  <input id="search-bar" type="text" placeholder={labels.loading} autocomplete="off" disabled />
   <div id="search-results-container">
     <div id="search-results"></div>
   </div>
